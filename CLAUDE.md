@@ -231,6 +231,7 @@ Il progetto è su GitHub: **https://github.com/iTzQuick/my** (pubblico, ramo `ma
 - Dopo una modifica: `build.py` → controlli → commit → push. Si rifanno e si caricano anche `dist/` (gioco, app, Atlante, diagramma), così si scaricano anche dal telefono.
 - **Non vanno nella repo** (vedi `.gitignore`): `dist/all.js`, `tools/*_out.json`, le schermate di prova nella radice, le cartelle `tmp_*`.
 - È pubblica: non metterci dati personali. I commit usano l'indirizzo «noreply» di GitHub.
+- `netlify.toml` dice a Netlify di pubblicare `dist/app`: se il sito Netlify è collegato alla repo, ogni push con `dist/` aggiornato aggiorna l'app. Senza questo file Netlify pubblicava la radice e dava «Page not found».
 
 ## Pubblicazione
 - **App sul telefono (iPhone di Davide)**: `build.py` prepara anche `dist/app/` (index.html con manifest, icone, `sw.js`) e `dist/my-app.zip`. Si pubblica su **Netlify**: la prima volta trascinando `dist/app` su app.netlify.com/drop; per aggiornare, `python build.py` e poi si trascina di nuovo `dist/app` nella pagina «Deploys» dello stesso sito. Su iPhone: Safari → Condividi → «Aggiungi alla schermata Home». Il service worker (`src/app/sw.js`, versione = hash della build) fa funzionare il gioco offline: la pagina prende prima la rete (aggiornamenti), senza rete la copia salvata; i Google Fonts restano in cache. Prova in locale: `python tools/test_app.py` (manifest, SW, gioco offline). Icone: `python tools/icone_app.py` (solo se cambia il logo).
