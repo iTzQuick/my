@@ -38,8 +38,8 @@ ev({id:'vicino_lite',min:25,max:85,cond:()=>['affitto','proprieta'].includes(S.c
   {l:'Chiama i vigili',pers:{C:1,A:-1},e:{f:2},fut:[1,'vicino_causa'],r:'Multa per il vicino. Ti guarda malissimo.',k:''},
   {l:'Righi la sua macchina',pers:{A:-4,C:-2},e:{k:-6,f:3},fx:()=>{const n=creaNemico('vicino',null,'M');n.nome=n.nome;log(`${n.nome}, il vicino, ora ce l'ha a morte con te.`,'b')},r:'Una bella riga lungo la portiera. Soddisfazione, per ora.'}]});
 ev({id:'vicino_causa',link:1,t:'Carta bollata',x:'Il vicino ti fa causa: sostiene che il tuo condizionatore è sul suo muro.',c:[
-  {l:'Prendi un avvocato',costo:2000,fut:[2,'vicino_sentenza'],r:'Inizia una causa civile. Ci vorrà tempo.',k:''},
-  {l:'Proponi un accordo',costo:800,e:{f:3},r:'Sposti il condizionatore e fate pace con una bottiglia di vino.'},
+  {l:'Prendi un avvocato',costo:()=>P(2000),fut:[2,'vicino_sentenza'],r:'Inizia una causa civile. Ci vorrà tempo.',k:''},
+  {l:'Proponi un accordo',costo:()=>P(800),e:{f:3},r:'Sposti il condizionatore e fate pace con una bottiglia di vino.'},
   {l:'Ignora la lettera',fx:()=>{soldi(-P(4000));return ['Non ti presenti in tribunale. Perdi in contumacia: 4.000 € e spese.','b']}}]});
 ev({id:'vicino_sentenza',link:1,auto:{p:.5,si:{e:{m:3000,f:8},r:'Il giudice ti dà ragione: il vicino ti risarcisce 3.000 €.',k:'g'},no:{e:{m:-4000,f:-6},r:'Il giudice dà ragione al vicino. Paghi 4.000 € tra danni e spese.',k:'b'}}});
 
@@ -69,7 +69,7 @@ ev({id:'amore_estivo2',link:1,cond:d=>d.p&&d.p.ruolo==='Partner',t:'Un anno di t
 
 /* ---------- Catene: la startup dell'amico ---------- */
 ev({id:'startup_amico',min:22,max:50,chi:['Amico'],cond:()=>S.soldi>=P(5000),t:'L\'idea geniale',x:'{Tuo} {P} ha un\'idea per una startup e cerca un socio. Servono 5.000 €.',c:[
-  {l:'Entra come socio',costo:5000,x:5000,e:{rel:8},fut:[2,'startup_cresce'],r:'Firmate i documenti in un bar. Che emozione.',k:''},
+  {l:'Entra come socio',costo:()=>P(5000),x:5000,e:{rel:8},fut:[2,'startup_cresce'],r:'Firmate i documenti in un bar. Che emozione.',k:''},
   {l:'Rifiuta',e:{rel:-3},r:'Gli auguri buona fortuna.'}]});
 ev({id:'startup_cresce',link:1,t:'La startup cresce',x:'La startup con {P} va bene: un fondo d\'investimento vuole entrare.',c:[
   {l:'Continua e punta in alto',fut:[2,'startup_finale'],e:{f:5},r:'Ufficio nuovo, dieci dipendenti e notti in bianco.',k:'g'},
@@ -89,26 +89,26 @@ ev({id:'eredita3',link:1,t:'Un segreto di famiglia',x:'Dopo mesi di ricerche sco
 
 /* ---------- Catene: truffa sentimentale ---------- */
 ev({id:'truffa_amore',min:30,max:85,cond:()=>single(),w:.6,t:'Un messaggio',x:'Una persona affascinante conosciuta online ti scrive ogni giorno. Ora ti chiede 2.000 € per il biglietto aereo per venirti a trovare.',c:[
-  {l:'Manda i soldi',costo:2000,fut:[1,'truffa_amore2'],r:'Bonifico fatto. Non vedi l\'ora di incontrarl{o}.',k:''},
+  {l:'Manda i soldi',costo:()=>P(2000),fut:[1,'truffa_amore2'],r:'Bonifico fatto. Non vedi l\'ora di incontrarl{o}.',k:''},
   {l:'Chiedi una videochiamata',e:{i:2},r:'Trova sempre una scusa. Capisci che è una truffa e blocchi il profilo.'},
   {l:'Blocca',pers:{C:1},r:'Troppo bello per essere vero.'}]});
 ev({id:'truffa_amore2',link:1,t:'Un\'emergenza',x:'All\'aeroporto «ha avuto un problema»: servono altri 5.000 € subito.',c:[
-  {l:'Manda anche questi',costo:5000,fx:()=>{mod('felicita',-15);return ['Il profilo sparisce. Era una truffa sentimentale: hai perso 7.000 €.','b']}},
+  {l:'Manda anche questi',costo:()=>P(5000),fx:()=>{mod('felicita',-15);return ['Il profilo sparisce. Era una truffa sentimentale: hai perso 7.000 €.','b']}},
   {l:'Rifiuta',e:{f:-8},r:'Il profilo sparisce. Hai perso 2.000 €, ma hai capito in tempo.'}]});
 
 /* ---------- Catene: l'usuraio ---------- */
-ev({id:'usuraio',min:20,max:75,cond:()=>S.soldi<-2000,t:'Soldi facili',x:'Un conoscente ti presenta un tizio che presta soldi «senza troppe domande».',c:[
+ev({id:'usuraio',min:20,max:75,cond:()=>S.soldi<-P(2000),t:'Soldi facili',x:'Un conoscente ti presenta un tizio che presta soldi «senza troppe domande».',c:[
   {l:'Prendi 10.000 €',e:{m:10000,k:-2},fut:[1,'usura2'],r:'Contanti in una busta. Nessun contratto.',k:''},
   {l:'Rifiuta',e:{k:1},r:'Non ti fidi. Hai ragione.'}]});
 ev({id:'usura2',link:1,t:'Il conto',x:'Il tizio rivuole 15.000 €. Entro una settimana.',c:[
-  {l:'Paga',costo:15000,r:'Paghi e chiudi la faccenda. Lezione costosa.',k:'b'},
+  {l:'Paga',costo:()=>P(15000),r:'Paghi e chiudi la faccenda. Lezione costosa.',k:'b'},
   {l:'Denuncialo',p:.6,si:{e:{k:5,f:6},fx:()=>{creaNemico('usura')},r:'Lo arrestano per usura. Ma i suoi amici non dimenticano.'},no:{e:{s:-15,f:-10},r:'La denuncia non va avanti e ti fanno visita in due.'}},
   {l:'Prendi tempo',fut:[1,'usura3'],r:'«Una settimana, non di più.»',k:'b'}]});
 ev({id:'usura3',link:1,auto:{p:.5,si:{e:{s:-20,f:-12,m:-15000},r:'Ti aspettano sotto casa. Finisci in ospedale e paghi comunque.',k:'b'},no:{e:{m:-18000,f:-8},r:'Paghi 18.000 € tra interessi e «disturbo». Finalmente è finita.',k:'b'}}});
 
 /* ---------- Eventi rari e folli ---------- */
 ev({id:'superenalotto',min:18,max:95,w:.12,t:'La schedina',x:'Giochi al Superenalotto con le date di nascita della tua famiglia.',c:[
-  {l:'Gioca',costo:2,p:.004,si:{fx:()=>{const x=r(2,60)*1000000;soldi(x);mod('felicita',30);S.fama=clamp(S.fama+10);notizia(`Un fortunato vincitore di ${S.citta} porta a casa il jackpot del Superenalotto.`);return [`HAI FATTO 6! Vinci ${eur(x)}! Il telefono non smette di squillare.`,'g']}},no:{e:{gio:1},r:'Nemmeno un numero. Sarà per la prossima.'}},
+  {l:'Gioca',costo:()=>P(2),p:.004,si:{fx:()=>{const x=r(2,60)*1000000;soldi(x);mod('felicita',30);S.fama=clamp(S.fama+10);notizia(`Un fortunato vincitore di ${S.citta} porta a casa il jackpot del Superenalotto.`);return [`HAI FATTO 6! Vinci ${eur(x)}! Il telefono non smette di squillare.`,'g']}},no:{e:{gio:1},r:'Nemmeno un numero. Sarà per la prossima.'}},
   {l:'Non ci credo',pers:{C:1},r:'Risparmi 2 €.'}]});
 ev({id:'alieni',min:14,max:95,once:1,w:.06,t:'La luce',x:'Una notte, tornando a casa, vedi una luce fortissima sopra i campi. Ti risvegli all\'alba in un campo di girasoli.',c:[
   {l:'Racconta tutto ai giornali',e:{f:4},fx:()=>{S.fama=clamp(S.fama+6)},r:'Nessuno ti crede, ma ti invitano in un programma TV del sabato sera.'},
@@ -135,7 +135,7 @@ ev({id:'piccione',min:5,max:95,w:.3,t:'In piazza',x:'Un piccione ti ruba il pani
   {l:'Inseguilo',e:{f:1,sport:1},r:'Lo insegui per tutta la piazza. I turisti filmano.'},
   {l:'Arrenditi',e:{f:-1},r:'Il piccione mangia meglio di te.'}]});
 ev({id:'quadro',min:25,max:90,once:1,w:.12,t:'Il mercatino',x:'Al mercatino compri un vecchio quadro per 20 €. Un signore ti dice che potrebbe essere di un pittore famoso.',c:[
-  {l:'Fallo periziare',costo:500,p:.2,si:{e:{m:150000,f:15},r:'È autentico! Una casa d\'aste lo vende per 150.000 €.'},no:{e:{f:-2},r:'È una crosta. Ma ora è la crosta più famosa del quartiere.'}},
+  {l:'Fallo periziare',costo:()=>P(500),p:.2,si:{e:{m:150000,f:15},r:'È autentico! Una casa d\'aste lo vende per 150.000 €.'},no:{e:{f:-2},r:'È una crosta. Ma ora è la crosta più famosa del quartiere.'}},
   {l:'Appendilo in salotto',e:{f:2},r:'Ci sta benissimo sopra il divano.'}]});
 ev({id:'valigia',min:20,max:75,once:1,w:.12,t:'La valigia sbagliata',x:'All\'aeroporto prendi per sbaglio una valigia identica alla tua. Dentro ci sono 50.000 € in contanti.',c:[
   {l:'Consegnala alla polizia',e:{k:8,m:2000,f:4},r:'Ti ringraziano e ti danno una ricompensa. I soldi erano di un\'indagine in corso.'},
@@ -145,7 +145,7 @@ ev({id:'guinness',min:16,max:60,once:1,w:.1,t:'Il record',x:'Un amico ti iscrive
   {l:'Accetta la sfida',p:.2,si:{e:{f:10},fx:()=>{S.fama=clamp(S.fama+5)},r:'Ventitré arancini! Entri nel libro dei record.'},no:{e:{s:-4,f:-2},r:'Ti fermi a nove. Mal di pancia per due giorni.'}},
   {l:'Fai il tifo',e:{f:2},r:'Ti godi lo spettacolo.'}]});
 ev({id:'invito_reale',min:20,max:80,once:1,w:.05,t:'Un invito importante',x:'Per un errore di indirizzo ricevi un invito a un matrimonio reale in Europa.',c:[
-  {l:'Ci vai',costo:2500,e:{f:12},fx:()=>{S.fama=clamp(S.fama+4)},r:'Nessuno ti chiede niente. Balli il valzer con una contessa.'},
+  {l:'Ci vai',costo:()=>P(2500),e:{f:12},fx:()=>{S.fama=clamp(S.fama+4)},r:'Nessuno ti chiede niente. Balli il valzer con una contessa.'},
   {l:'Restituisci l\'invito',e:{k:2},r:'Ti rispondono con una lettera di ringraziamento col sigillo.'}]});
 ev({id:'gatto_ladro',min:8,max:90,w:.2,cond:()=>S.animali.some(a=>a.t==='Gatto'),t:'Il ladro di casa',x:()=>`${S.animali.find(a=>a.t==='Gatto').nome} porta a casa ogni giorno un oggetto dei vicini: calzini, guanti, perfino un portafoglio.`,c:[
   {l:'Restituisci tutto',e:{k:3,f:3},r:'I vicini ridono. Diventate amici.'},
@@ -157,8 +157,8 @@ ev({id:'nebbia',min:18,max:90,cond:()=>inReg('Lombardia','Piemonte','Emilia-Roma
   {l:'Fermati in un\'area di servizio',e:{f:1},r:'Un caffè e aspetti che si alzi.'},
   {l:'Vai come sempre',p:.7,si:{r:'Arrivi. Non sai bene come.',k:''},no:{fx:()=>{if(S.veicoli[0])S.veicoli[0].stato=clamp(S.veicoli[0].stato-40);mod('salute',-10)},r:'Tamponamento a catena. Ammaccature per te e per l\'auto.',k:'b'}}]});
 ev({id:'settimana_bianca',min:8,max:65,cond:inZona('Nord-ovest','Nord-est'),t:'Settimana bianca',x:'Gli amici organizzano una settimana sulla neve.',c:[
-  {l:'Scia sulle piste nere',costo:900,p:()=>.6+S.abil.sport/250,si:{e:{f:9,sport:4},r:'Neve fresca, sole e polenta al rifugio.'},no:{e:{s:-12,f:-4},fx:()=>{ammala('Frattura al braccio',2)},r:'Una caduta spettacolare. Torni con il gesso.'}},
-  {l:'Solo sci di fondo e cioccolata calda',costo:600,e:{f:6,s:2},r:'Pace, silenzio e boschi innevati.'},
+  {l:'Scia sulle piste nere',costo:()=>P(900),p:()=>.6+S.abil.sport/250,si:{e:{f:9,sport:4},r:'Neve fresca, sole e polenta al rifugio.'},no:{e:{s:-12,f:-4},fx:()=>{ammala('Frattura al braccio',2)},r:'Una caduta spettacolare. Torni con il gesso.'}},
+  {l:'Solo sci di fondo e cioccolata calda',costo:()=>P(600),e:{f:6,s:2},r:'Pace, silenzio e boschi innevati.'},
   {l:'Resta a casa',e:{f:-1},r:'Guardi le foto degli altri.'}]});
 ev({id:'bagna_cauda',min:16,max:90,cond:inReg('Piemonte'),t:'Bagna cauda',x:'Serata di bagna cauda con gli amici: aglio a volontà.',c:[
   {l:'Intingi tutto',e:{f:6},fx:()=>{const p=partnerAttuale();if(p&&!p.conv)p.rapporto=clamp(p.rapporto-3)},r:'Buonissima. Per due giorni nessuno ti si avvicina.'},
@@ -169,24 +169,24 @@ ev({id:'focaccia',min:6,max:90,cond:inReg('Liguria'),t:'Colazione ligure',x:()=>
   {l:'Provala',e:{f:4,cucina:1},r:'Strano, ma ti piace. Diventa un rito.'},
   {l:'Brioche, grazie',pers:{O:-1},r:()=>`${chiFocaccia()} ti guarda con compassione.`}]});
 ev({id:'navigli',min:18,max:60,cond:inCitta('Milano'),t:'Aperitivo sui Navigli',x:'Gli amici ti trascinano all\'aperitivo sui Navigli. Lo spritz costa 12 €.',c:[
-  {l:'Offri tu il giro',costo:80,e:{f:5},fx:()=>relAmici(5),r:'Serata da cartolina sul naviglio.'},
+  {l:'Offri tu il giro',costo:()=>P(80),e:{f:5},fx:()=>relAmici(5),r:'Serata da cartolina sul naviglio.'},
   {l:'Proponi il bar sotto casa',e:{f:2},r:'Spritz a 4 €. Nessuno si lamenta.'}]});
 ev({id:'derby',min:10,max:85,cond:inCitta('Torino','Milano','Roma','Genova'),t:'Il derby',x:()=>`Domenica c'è il derby cittadino. ${S.eta<16?'Hai un biglietto per andarci con la famiglia.':'Hai un biglietto per la curva.'}`,c:[
-  {l:'Vai allo stadio',costo:60,p:.5,si:{e:{f:9},r:'Vincete all\'ultimo minuto. Pianti e abbracci con sconosciuti.'},no:{e:{f:-5},r:()=>`Sconfitta. Lunedì ${S.lavoro?'al lavoro':iscritto()?'a scuola':'al bar'} sarà durissima.`}},
+  {l:'Vai allo stadio',costo:()=>P(60),p:.5,si:{e:{f:9},r:'Vincete all\'ultimo minuto. Pianti e abbracci con sconosciuti.'},no:{e:{f:-5},r:()=>`Sconfitta. Lunedì ${S.lavoro?'al lavoro':iscritto()?'a scuola':'al bar'} sarà durissima.`}},
   {l:'Guardala al bar',cond:()=>S.eta>=16,e:{f:3},r:'Birra, urla e moviola infinita.'},
   {l:'Guardala in TV',cond:()=>S.eta<16,e:{f:3},r:'Urla dal divano e moviola infinita.'}]});
 ev({id:'acqua_alta',min:6,max:95,cond:inCitta('Venezia'),t:'Acqua alta',x:'Suona la sirena: acqua alta in città.',c:[
   {l:'Stivali e via',e:{f:1},r:'Cammini sulle passerelle tra i turisti a piedi nudi.'},
   {l:'Aiuta il negozio sotto casa',e:{k:4,s:-1},r:'Sacchi e paratie. Il negoziante ti regala una bottiglia.'}]});
 ev({id:'riviera',min:15,max:45,cond:inReg('Emilia-Romagna','Marche'),t:'Estate in Riviera',x:'Una settimana in Riviera: piadina, ombrelloni e discoteche.',c:[
-  {l:'Vai con gli amici',costo:600,e:{f:9,bev:1},fx:()=>relAmici(6),r:'Sole, piadina con lo squacquerone e alba sulla spiaggia.'},
+  {l:'Vai con gli amici',costo:()=>P(600),e:{f:9,bev:1},fx:()=>relAmici(6),r:'Sole, piadina con lo squacquerone e alba sulla spiaggia.'},
   {l:'Lavora come bagnino',e:{m:2500,sport:4},r:"Una stagione al sole, 2.500 € e un'abbronzatura perfetta."}]});
 ev({id:'sagra',min:6,max:95,cond:inZona('Nord-est','Nord-ovest','Centro'),t:'La sagra',x:'Nel paese vicino c\'è la sagra: polenta, salsicce e orchestra di liscio.',c:[
   {l:'Vai e mangia tutto',e:{f:5,s:-1},r:'Tre porzioni e un ballo con la signora del banco della lotteria.'},
   {l:'Fai il volontario in cucina',e:{k:4,cucina:4,f:3},r:'Friggi per sei ore. Ti senti parte del paese.'}]});
 ev({id:'rifugio',min:12,max:75,cond:inReg('Trentino-Alto Adige',"Valle d'Aosta"),t:'Il rifugio',x:'Escursione a un rifugio a 2.500 metri.',c:[
   {l:'Sali a piedi',p:()=>S.salute/100,si:{e:{f:8,s:4,sport:3},r:'Canederli in cima e una vista che toglie il fiato.'},no:{e:{s:-6},r:'A metà salita ti manca il fiato. Torni indietro.'}},
-  {l:'Prendi la funivia',costo:40,e:{f:5},r:'Vista mozzafiato senza fatica.'}]});
+  {l:'Prendi la funivia',costo:()=>P(40),e:{f:5},r:'Vista mozzafiato senza fatica.'}]});
 ev({id:'palio',min:6,max:95,cond:inCitta('Siena'),t:'Il Palio',x:'Arriva il Palio. La tua contrada corre.',c:[
   {l:'Tifa in piazza',p:.12,si:{e:{f:15},r:'La tua contrada vince! Festeggi per una settimana.'},no:{e:{f:-3},r:'Vince la contrada rivale. Lutto cittadino.'}},
   {l:'Guardalo in TV',e:{f:2},r:'Novanta secondi di adrenalina.'}]});
@@ -208,7 +208,7 @@ ev({id:'caffe_sospeso',min:14,max:95,cond:inReg('Campania'),t:'Il caffè sospeso
   {l:'Sì, anche due',e:{k:3,f:2},r:'Un piccolo gesto che ti mette di buon umore.'},
   {l:'Oggi no',e:{k:-1},r:'Bevi il tuo caffè e vai.'}]});
 ev({id:'pizza_portafoglio',min:6,max:90,cond:inCitta('Napoli'),t:'Pizza a portafoglio',x:'Passeggiando per il centro senti il profumo della pizza a portafoglio.',c:[
-  {l:'Prendine due',costo:6,e:{f:5},r:'Piegata in quattro, bollente, perfetta.'},
+  {l:'Prendine due',costo:()=>P(6),e:{f:5},r:'Piegata in quattro, bollente, perfetta.'},
   {l:'Tira dritto',e:{f:-1},r:'Il profumo ti segue fino a casa.'}]});
 ev({id:'taranta',min:14,max:80,cond:inReg('Puglia'),t:'La Notte della Taranta',x:'Ad agosto c\'è il grande concerto di pizzica nel Salento.',c:[
   {l:'Balla fino all\'alba',e:{f:9,s:2,sport:2},fx:()=>{if(single()&&S.eta>=18&&chance(.3))coda.unshift({e:EV.incontro,d:{}})},r:'Tamburelli, sudore e cento persone che ballano con te.'},
@@ -273,7 +273,7 @@ ev({id:'fallimento',link:1,t:'La cassa è vuota',x:()=>`${S.azienda?S.azienda.n:
 ev({id:'soc_hater',min:13,max:90,cond:()=>social()&&S.social.follower>800,t:'L\'hater',x:'Un utente anonimo ti insulta sotto ogni post.',c:[
   {l:'Blocca',e:{f:1},r:'Sparito. Ne arriverà un altro.'},
   {l:'Rispondi con ironia',p:.6,si:{fx:()=>{S.social.follower=Math.round(S.social.follower*1.08)},e:{f:4},r:'La tua risposta diventa virale.'},no:{e:{f:-4},r:'Si scatena una rissa nei commenti.'}},
-  {l:'Denuncia per diffamazione',cond:()=>S.eta>=18,costo:1500,p:.5,si:{e:{f:6,m:3000},r:'La polizia postale lo trova. Ti risarcisce 3.000 €.'},no:{e:{f:-2},r:'Profilo all\'estero, impossibile trovarlo.'}}]});
+  {l:'Denuncia per diffamazione',cond:()=>S.eta>=18,costo:()=>P(1500),p:.5,si:{e:{f:6,m:3000},r:'La polizia postale lo trova. Ti risarcisce 3.000 €.'},no:{e:{f:-2},r:'Profilo all\'estero, impossibile trovarlo.'}}]});
 ev({id:'soc_brand',min:14,max:90,cond:()=>social()&&S.social.follower>=5000,t:'Sponsorizzazione',x:'Un marchio di integratori ti propone di pubblicizzare i suoi prodotti.',c:[
   {l:'Accetta',fx:()=>{const x=P(Math.round(S.social.follower*.06));soldi(x);if(chance(.3)){S.social.follower=Math.round(S.social.follower*.85);return [`Incassi ${eur(x)}, ma i follower scoprono che il prodotto è una bufala. Ne perdi parecchi.`,'b']}return [`Incassi ${eur(x)}. Facile.`,'g']}},
   {l:'Rifiuta: non lo useresti mai',e:{k:3},r:'I follower apprezzano la tua coerenza.'}]});
@@ -292,10 +292,10 @@ ev({id:'soc_vecchio_post',min:20,max:80,cond:()=>social()&&S.fama>=10,t:'Il vecc
 ev({id:'paparazzi',min:16,max:95,cond:()=>S.fama>=30,t:'I paparazzi',x:'Un paparazzo ti fotografa in spiaggia.',c:[
   {l:'Posa',e:{f:2},fx:()=>{S.fama=clamp(S.fama+2)},r:'Finisci in copertina su un settimanale.'},
   {l:'Scappa',e:{f:-3},r:'La foto in fuga è ancora più ridicola.'},
-  {l:'Querela il giornale',costo:3000,p:.5,si:{e:{m:15000,f:4},r:'Il giudice ti dà ragione: 15.000 € di risarcimento.'},no:{e:{f:-3},r:'Querela respinta: era un luogo pubblico.'}}]});
+  {l:'Querela il giornale',costo:()=>P(3000),p:.5,si:{e:{m:15000,f:4},r:'Il giudice ti dà ragione: 15.000 € di risarcimento.'},no:{e:{f:-3},r:'Querela respinta: era un luogo pubblico.'}}]});
 ev({id:'scandalo',min:18,max:95,cond:()=>S.fama>=35,t:'Lo scandalo',x:'Un giornale scandalistico pubblica una storia inventata su di te.',c:[
   {l:'Smentisci tutto',p:()=>S.fatti.addettoStampa?.85:.5,si:{e:{f:-1},r:'La smentita convince. Storia sgonfiata.'},no:{fx:()=>{S.fama=clamp(S.fama-5);S.social.follower=Math.round(S.social.follower*.85)},e:{f:-8},r:'Nessuno ti crede. Mesi difficili.'}},
-  {l:'Querela per diffamazione',costo:5000,p:.6,si:{e:{m:25000,f:6},r:'Vinci la causa: 25.000 € e una rettifica in prima pagina.'},no:{e:{f:-6},r:'La causa va per le lunghe e i giornali ci sguazzano.'}},
+  {l:'Querela per diffamazione',costo:()=>P(5000),p:.6,si:{e:{m:25000,f:6},r:'Vinci la causa: 25.000 € e una rettifica in prima pagina.'},no:{e:{f:-6},r:'La causa va per le lunghe e i giornali ci sguazzano.'}},
   {l:'Silenzio totale',e:{f:-5},r:'Aspetti che passi. Passa, lentamente.'}]});
 ev({id:'fan_ossessivo',min:16,max:90,cond:()=>S.fama>=40,t:'Il fan',x:'Un fan ossessivo si apposta ogni giorno sotto casa tua.',c:[
   {l:'Chiama la polizia',e:{f:-2},r:'Gli vietano di avvicinarsi.'},
@@ -317,9 +317,9 @@ ev({id:'selfie',min:14,max:95,cond:()=>S.fama>=20,t:'Il selfie',x:'Un gruppo di 
 ev({id:'nem_voci',min:10,max:95,chi:['Nemico'],t:'Le voci',x:'{P} sparge voci false su di te.',c:[
   {l:'Ignora',e:{f:-3},fx:d=>{d.p.rancore=clamp(d.p.rancore-5)},r:'Le voci si spengono da sole, piano piano.'},
   {l:'Affrontal{po}',p:.5,si:{fx:d=>{d.p.rancore=clamp(d.p.rancore-15)},e:{f:3},r:'Davanti a tutti ritratta.'},no:{fx:d=>{d.p.rancore=clamp(d.p.rancore+10)},e:{f:-4},r:'Finisce in una scenata pubblica.'}},
-  {l:'Denuncia per diffamazione',cond:()=>S.eta>=18,costo:1500,p:.45,si:{fx:d=>{S.relazioni=S.relazioni.filter(x=>x!==d.p)},e:{f:6},r:'Condannat{po}. Non ti darà più fastidio.'},no:{e:{f:-3},r:'Archiviata per mancanza di prove.'}}]});
+  {l:'Denuncia per diffamazione',cond:()=>S.eta>=18,costo:()=>P(1500),p:.45,si:{fx:d=>{S.relazioni=S.relazioni.filter(x=>x!==d.p)},e:{f:6},r:'Condannat{po}. Non ti darà più fastidio.'},no:{e:{f:-3},r:'Archiviata per mancanza di prove.'}}]});
 ev({id:'nem_auto',min:18,max:95,chi:['Nemico'],cond:()=>haAuto(),t:'La riga',x:'Trovi la macchina rigata da una parte all\'altra. Sospetti di {P}.',c:[
-  {l:'Ripara',costo:400,r:'Carrozziere e tanta pazienza.',k:''},
+  {l:'Ripara',costo:()=>P(400),r:'Carrozziere e tanta pazienza.',k:''},
   {l:'Vendicati',p:.6,si:{e:{f:4,k:-5},fx:d=>{d.p.rancore=clamp(d.p.rancore+15)},r:'Gomme a terra per {P}. Pari e patta.'},no:{e:{k:-5},pr:'graffiti',r:'Una telecamera ti riprende.'}},
   {l:'Denuncia contro ignoti',e:{f:-1},r:'Il verbale finisce in un cassetto.'}]});
 ev({id:'nem_lavoro',min:18,max:67,chi:['Nemico'],cond:()=>lavora(),t:'Il nuovo collega',x:'{P} viene assunt{po} nella tua azienda e ti mette i bastoni tra le ruote.',c:[
@@ -352,12 +352,12 @@ ev({id:'zio_pranzo',min:14,max:60,chi:['Zio'],t:'Il pranzo di Natale',x:()=>pick
 ev({id:'zio_america',min:20,max:80,once:1,w:.3,chi:['Zio'],pc:p=>p.eta>=60,t:'Lo zio d\'America',x:'{Tuo} {P}, emigrat{po} in America decenni fa, ti nomina nel testamento.',c:[
   {l:'Accetta l\'eredità',fx:d=>{const x=P(r(100,500)*1000);soldi(x);d.p.vivo=false;mod('felicita',8);return [`${d.p.nome} ti lascia ${eur(x)}. Lo zio d'America esiste davvero.`,'g']}}]});
 ev({id:'cugino_affare',min:20,max:65,chi:['Cugino'],pc:p=>p.eta>=20,cond:()=>S.soldi>=P(3000),t:'L\'affare del cugino',x:'{Tuo} {P} ti propone di investire 3.000 € in un «affare sicuro».',c:[
-  {l:'Investi',costo:3000,p:.25,si:{e:{m:9000,rel:10,f:5},r:'Incredibile: l\'affare funziona. Triplichi i soldi.'},no:{e:{rel:-10,f:-5},r:'Spariti. Il cugino non risponde più al telefono.'}},
+  {l:'Investi',costo:()=>P(3000),p:.25,si:{e:{m:9000,rel:10,f:5},r:'Incredibile: l\'affare funziona. Triplichi i soldi.'},no:{e:{rel:-10,f:-5},r:'Spariti. Il cugino non risponde più al telefono.'}},
   {l:'Rifiuta',e:{rel:-3},r:'«Peggio per te», dice.'}]});
 ev({id:'cugino_matrimonio',min:16,max:80,chi:['Cugino'],pc:p=>p.eta>=24&&!p.sposato,t:'Il matrimonio del cugino',x:'{Tuo} {P} si sposa. Pranzo di dodici portate.',c:[
-  {l:'Vai e fai un bel regalo',costo:200,e:{f:6,rel:10},fx:d=>{d.p.sposato=true;if(single()&&S.eta>=18&&chance(.3))coda.unshift({e:EV.incontro,d:{x:'matrimonio'}})},r:'Balli, confetti e zie commosse.'},
+  {l:'Vai e fai un bel regalo',costo:()=>P(200),e:{f:6,rel:10},fx:d=>{d.p.sposato=true;if(single()&&S.eta>=18&&chance(.3))coda.unshift({e:EV.incontro,d:{x:'matrimonio'}})},r:'Balli, confetti e zie commosse.'},
   {l:'Inventa una scusa',e:{rel:-10},fx:d=>{d.p.sposato=true},r:'La famiglia se lo ricorderà.'}]});
-ev({id:'suocera',min:20,max:90,chi:['Suocero'],pc:p=>p.sesso==='F',t:'La suocera',x:'{Tua} suocera {P} critica come tieni la casa.',c:[
+ev({id:'suocera',min:20,max:90,chi:['Suocero'],pc:p=>p.sesso==='F',t:'La suocera',x:'Tua suocera {P} critica come tieni la casa.',c:[
   {l:'Sorridi e annuisci',pers:{A:2},e:{f:-2,rel:4},r:'Pazienza infinita.'},
   {l:'Rispondi a tono',pers:{A:-3},e:{rel:-15},fx:()=>{const p=partnerAttuale();if(p)p.rapporto=clamp(p.rapporto-6)},r:'Litigata storica. Il tuo partner è in mezzo.'},
   {l:'Chiedi al partner di intervenire',fx:()=>{const p=partnerAttuale();if(p)p.rapporto=clamp(p.rapporto+r(-6,6))},r:'Il partner ci prova. Con risultati alterni.',k:''}]});
@@ -365,7 +365,7 @@ ev({id:'suoceri_casa',min:22,max:50,chi:['Suocero'],cond:()=>!casaMia(),t:'Un ai
   {l:'Accetta',e:{m:20000,rel:5},fx:()=>{const p=partnerAttuale();if(p)p.rapporto=clamp(p.rapporto+6)},r:'20.000 € per la casa. Ora però avranno qualcosa da dire sull\'arredamento.'},
   {l:'Rifiuta con gentilezza',e:{rel:-4,k:1},r:'Preferite farcela da soli.'}]});
 ev({id:'cognato_prestito',min:20,max:80,chi:['Cognato'],pc:p=>p.eta>=18,cond:()=>S.soldi>=P(1000),t:'Il cognato',x:'{Tuo} {P} ti chiede 1.000 € in prestito.',c:[
-  {l:'Presta',costo:1000,x:1000,fut:[1,'restituzione'],e:{rel:6},r:'Bonifico fatto.',k:''},
+  {l:'Presta',costo:()=>P(1000),x:1000,fut:[1,'restituzione'],e:{rel:6},r:'Bonifico fatto.',k:''},
   {l:'Rifiuta',e:{rel:-8},r:'Pranzi di famiglia un po\' più freddi.'}]});
 ev({id:'nuovo_compagno',min:6,max:30,once:1,chi:['Madre','Padre'],cond:()=>!!S.fatti.separati&&!vivi(['Patrigno']).length,t:'Una nuova persona',x:'{Tuo} {P} ti presenta la persona con cui ha iniziato una relazione.',c:[
   {l:'Dagli una possibilità',fx:d=>{const p=nuovaPersona('Patrigno',sessoCompagnoNpc(d.p),d.p.eta+r(-5,5),null,{rapporto:r(45,70)});return [`Conosci ${p.nome}. Sembra una brava persona.`,'g']}},
@@ -391,7 +391,7 @@ ev({id:'clan_infiltrato',min:18,max:80,cond:()=>!!S.crim.clan&&S.carcere===0,t:'
   {l:'Lo smascheri',fx:()=>{S.crim.clan.lealta=clamp(S.crim.clan.lealta+15)},r:'Avevi ragione: era un infiltrato. Il clan ti è grato.',k:'g'}]});
 ev({id:'indagine',link:1,auto:{fx:d=>{processo(d.x||'furto');return ['Un\'indagine risale a un vecchio colpo. Ti convocano in procura.','b']}}});
 ev({id:'ricettatore',min:16,max:70,cond:()=>S.crim.exp>=2,t:'Merce a metà prezzo',x:'Un ricettatore ti offre uno smartphone nuovo a metà prezzo. Chiaramente rubato.',c:[
-  {l:'Compra',costo:400,p:.8,si:{e:{f:3,k:-3},r:'Telefono nuovo. Non fai domande.'},no:{e:{k:-3},pr:'ricettazione',r:'Il telefono era tracciato.'}},
+  {l:'Compra',costo:()=>P(400),p:.8,si:{e:{f:3,k:-3},r:'Telefono nuovo. Non fai domande.'},no:{e:{k:-3},pr:'ricettazione',r:'Il telefono era tracciato.'}},
   {l:'Rifiuta',e:{k:2},r:'Meglio pagarlo il doppio che avere problemi.'}]});
 ev({id:'pentimento',min:20,max:90,cond:()=>S.crim.colpi>=3&&!S.crim.clan&&S.carcere===0,t:'Allo specchio',x:'Una sera ripensi a tutti i colpi che hai fatto.',c:[
   {l:'Decidi di cambiare vita',pers:{C:3,A:2},e:{k:10,f:4},fx:()=>{S.crim.exp=Math.max(0,S.crim.exp-5)},r:'Chiudi con quel mondo. Ti senti più leggero.'},
@@ -422,8 +422,8 @@ ev({id:'reinserimento',link:1,t:'Ricominciare',x:'Una cooperativa sociale offre 
 
 /* ---------- Fisco ---------- */
 ev({id:'dichiarazione',min:22,max:95,cond:()=>conAz()||S.prop.some(p=>p.affittata)||(S.lavoro&&JOB[S.lavoro.id].var),t:'La dichiarazione dei redditi',x:'Il commercialista prepara la tua dichiarazione dei redditi.',c:[
-  {l:'Dichiara tutto',costo:300,e:{k:1},r:'Paghi la parcella e dormi tranquill{o}.',k:''},
+  {l:'Dichiara tutto',costo:()=>P(300),e:{k:1},r:'Paghi la parcella e dormi tranquill{o}.',k:''},
   {l:'Dimentica qualche entrata',e:{m:4000,k:-4},fut:[2,'controllo_fiscale'],r:'Risparmi 4.000 € di tasse. Per ora.',k:''}]});
 ev({id:'controllo_fiscale',link:1,cond:()=>chance(.45),t:'La Guardia di Finanza',x:'La Guardia di Finanza controlla i tuoi conti degli ultimi anni.',c:[
-  {l:'Prendi un tributarista',costo:3000,p:.5,si:{e:{f:4},r:'Trova un cavillo. Te la cavi.'},no:{e:{m:-15000,f:-6},r:'Sanzione di 15.000 €.'}},
+  {l:'Prendi un tributarista',costo:()=>P(3000),p:.5,si:{e:{f:4},r:'Trova un cavillo. Te la cavi.'},no:{e:{m:-15000,f:-6},r:'Sanzione di 15.000 €.'}},
   {l:'Paga subito la sanzione ridotta',e:{m:-10000,f:-3},r:'10.000 € e la questione è chiusa.'}]});

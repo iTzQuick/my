@@ -22,7 +22,7 @@ function relD(p,d){p.rapporto=clamp(p.rapporto+passo(d))}
 /* Dolore e preoccupazioni che pesano davvero: stress subito e una tensione che dura qualche mese */
 function pesa(st,ten){if(!S.bis)return;S.bis.stress=clamp(S.bis.stress+st);S.tensione=(S.tensione||0)+(ten||0)}
 function soldi(d){S.soldi=Math.round(S.soldi+d)}
-function log(t,k){if(S&&S.log.length)S.log[S.log.length-1].righe.push({t,k:k||''})}
+function log(t,k){if(S&&S.log.length)S.log[S.log.length-1].righe.push({t:prezzi(t),k:k||''})}
 function nuovoBloccoLog(){
   const L=S.log;
   if(L.length&&!L[L.length-1].righe.length&&L.length>1)L.pop();
@@ -36,7 +36,7 @@ function eff(o,d){
     const v=val(o[k]);
     if(STAT[k])mod(STAT[k],v);
     else if(k==='k')S.karma=clamp(S.karma+v);
-    else if(k==='m')soldi(v);
+    else if(k==='m')soldi(typeof o[k]==='function'?v:P(v));   // importi scritti ai prezzi del 2026
     else if(k in ABIL)S.abil[k]=clamp(S.abil[k]+v);
     else if(k==='voto')S.scuola.voto=clamp(S.scuola.voto+v);
     else if(k==='perf'){if(S.lavoro)S.lavoro.perf=clamp(S.lavoro.perf+v)}
@@ -104,7 +104,7 @@ const ESTRANEI=['Amico','Partner','Nemico','Conoscente'];
 function nomeEstraneo(sesso,annoN){if(annoN<1975||!chance(.08))return null;const g0=pick(NOMI_STRANIERI);return {nome:pick(g0[sesso==='F'?'F':'M']),cognome:pick(g0.c)}}
 function nuovaPersona(ruolo,sesso,eta,cognome,x){
   const aN=S.anno-Math.max(0,eta),st=!cognome&&ESTRANEI.includes(ruolo)&&!(x&&x.nome)?nomeEstraneo(sesso,aN):null;
-  const p={id:S.nextId++,ruolo,sesso,nome:st?st.nome:nomeLibero(sesso,aN),cognome:cognome||(st?st.cognome:pick(COGNOMI)),eta:Math.max(0,eta),rapporto:r(55,85),vivo:true,tr:0,mn:r(0,11)};
+  const p={id:S.nextId++,ruolo,sesso,nome:st?st.nome:nomeLibero(sesso,aN),cognome:cognome||(st?st.cognome:pick(COGNOMI)),eta:Math.max(0,eta),rapporto:r(55,85),vivo:true,tr:0,mn:eta<=0&&S.t>0?S.mese:r(0,11)};
   Object.assign(p,x||{});
   if(!p.pers)p.pers=x&&x.tr!==undefined?persDaTr(x.tr):nuovoCarattere(x&&x.genitori);
   delete p.genitori;
@@ -128,7 +128,7 @@ function nuovoAmico(silenzio){
   return p;
 }
 function convivi(p){
-  p.conv=true;
+  p.conv=true;p.lontano=false;p.dove=null;
   if(S.casa.tipo==='genitori'||S.casa.tipo==='figlio'){S.casa=affittoBase('Bilocale');log(`Tu e ${p.nome} prendete un bilocale in affitto insieme.`,'g')}
 }
 
@@ -267,7 +267,9 @@ function nuovaVita(o){
   S.fatti.intesaGenitori=clamp(70-Math.abs(madre.pers.A-padre.pers.A)*.2-(madre.pers.N+padre.pers.N-100)*.3+(madre.pers.A+padre.pers.A-100)*.25+r(-15,15));
   const fr=[];
   if(F.fratelli)for(const x of F.fratelli)fr.push(nuovaPersona('Fratello',x.sesso,x.eta,S.cognome,{nome:x.nome,rapporto:r(50,85),genitori:[madre,padre]}));
-  else{const nFr=pesata([[0,40],[1,40],[2,15],[3,5]]);for(let i=0;i<nFr;i++){const max=Math.min(12,madre.eta-19);if(max<1)break;fr.push(nuovaPersona('Fratello',pick(['M','F']),r(1,max),S.cognome,{rapporto:r(50,85),genitori:[madre,padre]}))}}
+  else{const nFr=pesata([[0,40],[1,40],[2,15],[3,5]]),maxM=Math.min(12,madre.eta-19)*12+11,usati=[0];
+    for(let i=0;i<nFr&&maxM>=15;i++){let m=0;for(let g=0;g<30&&!m;g++){const x=r(15,maxM);if(usati.every(u=>Math.abs(u-x)>=15))m=x}if(!m)break;   // mesi di vita del fratello
+      usati.push(m);fr.push(nuovaPersona('Fratello',pick(['M','F']),Math.floor(m/12),S.cognome,{rapporto:r(50,85),genitori:[madre,padre],mn:(S.mese-m%12+12)%12}))}}
   for(const f of fr)f.look=lookFiglio(madre.look,padre.look,f.sesso);
   [[madre,null],[padre,S.cognome]].forEach(([gen,cog])=>{
     const base=gen.eta+r(22,32);
@@ -576,8 +578,8 @@ function finanzeMese(){
   const v=bilancioMese(false);let t=0;for(const [,x] of v){soldi(x);t+=x}
   t+=(S.fatti.extraMese||0)-(S.fatti.spesaSvago||0);
   S.fatti.ultimoMese=t;S.fatti.bilAnno=(S.fatti.bilAnno||0)+t;
-  if(S.soldi<-5000&&S.eta>=18&&chance(.08))log('I debiti ti tolgono il sonno.','b');
-  if(S.soldi<-25000&&S.eta>=18&&!coda.some(q=>q.e.id==='debiti')&&S.t-(S.fatti.debitiT||-99)>=12){S.fatti.debitiT=S.t;coda.push({e:EV.debiti,d:{}})}
+  if(S.soldi<-P(5000)&&S.eta>=18&&chance(.08))log('I debiti ti tolgono il sonno.','b');
+  if(S.soldi<-P(25000)&&S.eta>=18&&!coda.some(q=>q.e.id==='debiti')&&S.t-(S.fatti.debitiT||-99)>=12){S.fatti.debitiT=S.t;coda.push({e:EV.debiti,d:{}})}
 }
 function casaMia(){return S.casa.tipo==='proprieta'?S.prop.find(p=>p.id===S.casa.pid):null}
 function affittoBase(t,citta,prov){const a=AFFITTI.find(x=>x.t===t)||AFFITTI[1];const c=citta?cittaInfo(citta,prov):luogo();return {tipo:'affitto',n:a.t,costo:Math.round(a.mq*c.mq*.075*(a.k||1)*ip()/100)*100}}
@@ -611,7 +613,7 @@ function evProcesso(id){
   const R=REATI[id];
   return {id:'processo',k:'Giustizia',t:S.eta<18?'Tribunale per i minorenni':'In tribunale',x:`Sei accusat${g('o','a')} di: ${R.n.toLowerCase()}.`,c:[
     {l:'Avvocato d\'ufficio',sub:'Gratis, ma meno efficace',fx:()=>sentenza(id,.25,false)},
-    {l:'Avvocato privato',sub:eur(4000),costo:4000,fx:()=>sentenza(id,.55,false)},
+    {l:'Avvocato privato',sub:()=>eur(P(4000)),costo:()=>P(4000),fx:()=>sentenza(id,.55,false)},
     {l:'Patteggia',sub:'Ammetti la colpa e ottieni uno sconto',fx:()=>sentenza(id,0,true)}]};
 }
 function sentenza(id,pa,patt){
@@ -621,7 +623,7 @@ function sentenza(id,pa,patt){
   S.fedina.push(R.n);S.karma=clamp(S.karma-6);mod('felicita',-8);
   let pat='';if(R.patente&&S.patente){S.patente=false;S.fatti.sospesa=S.eta;pat=' Ti ritirano la patente.'}
   if(R.g===1){const m=patt?300:700;soldi(-m);return [`Condannat${g('o','a')} a una multa di ${eur(m)}. Ora la tua fedina penale è sporca.${pat}`,'b']}
-  if(R.g===2){if(patt){soldi(-1500);return [`Patteggi: ${eur(1500)} di multa e lavori di pubblica utilità. Fedina penale sporca.${pat}`,'b']}return [`Condannat${g('o','a')} a 8 mesi con la condizionale. Niente carcere, ma la fedina penale è sporca.${pat}`,'b']}
+  if(R.g===2){if(patt){soldi(-P(1500));return [`Patteggi: ${eur(P(1500))} di multa e lavori di pubblica utilità. Fedina penale sporca.${pat}`,'b']}return [`Condannat${g('o','a')} a 8 mesi con la condizionale. Niente carcere, ma la fedina penale è sporca.${pat}`,'b']}
   const anni=R.g===3?r(1,3):r(3,7);const n=Math.max(0,anni-(patt?2:0));
   if(n===0)return [`Patteggi una pena sospesa. Eviti il carcere per un soffio.${pat}`,'b'];
   entraCarcere(n);return [`Il giudice ti condanna a ${n} ${n===1?'anno':'anni'} di carcere.${pat}`,'b'];

@@ -62,8 +62,8 @@ function iscrizione(k){
     const tri=I.lauree.filter(l=>l.liv==='triennale'&&!I.lauree.some(m=>m.n===l.n&&m.liv!=='triennale'));
     return showSheet({k:'Studi',t:'Laurea magistrale',p:'Due anni per specializzarti.',chiudi:true,scelte:tri.map(l=>({l:`Magistrale in ${l.n}`,fx:()=>{Object.assign(sc,{stato:'magistrale',tipo:l.n,anni:2,voto:clamp(45+S.intelligenza/2+r(-8,8)),fuori:0,diff:.6,sk:null});return [`Ti iscrivi alla magistrale in ${l.n}.`,'g']}}))});
   }
-  if(k==='master')return showSheet({k:'Studi',t:'Master',p:`Un anno, ${eur(8000)}. Alcuni ruoli da manager lo richiedono.`,chiudi:true,scelte:[
-    {l:'Master in Business Administration',costo:8000,fx:()=>{Object.assign(sc,{stato:'master',tipo:'Business Administration',anni:1,voto:60,fuori:0});return ['Ti iscrivi al master.','g']}}]});
+  if(k==='master')return showSheet({k:'Studi',t:'Master',p:`Un anno, ${eur(P(8000))}. Alcuni ruoli da manager lo richiedono.`,chiudi:true,scelte:[
+    {l:'Master in Business Administration',costo:()=>P(8000),fx:()=>{Object.assign(sc,{stato:'master',tipo:'Business Administration',anni:1,voto:60,fuori:0});return ['Ti iscrivi al master.','g']}}]});
   if(k==='dottorato'){
     const mag=I.lauree.filter(l=>l.liv!=='triennale');
     return showSheet({k:'Studi',t:'Dottorato di ricerca',p:'Tre anni con borsa di studio. Serve superare la selezione.',chiudi:true,scelte:mag.map(l=>({l:`Dottorato in ${l.n}`,p:()=>Math.min(.85,(l.voto-85)/30+S.intelligenza/300),
@@ -74,7 +74,7 @@ function iscrizione(k){
 }
 function esameStato(n){
   const A=ABILITAZIONI.find(x=>x.n===n);
-  return azione(una('esame_'+n,400,()=>{
+  return azione(una('esame_'+n,P(400),()=>{
     if(chance(A.p+(S.intelligenza-50)/200)){S.istr.abil.push(n);mod('felicita',10);return [`Superi l'esame di Stato: ora sei abilitat${g('o','a')} come ${n.toLowerCase()}!`,'g']}
     mod('felicita',-6);return ['Non superi l\'esame di Stato. Riprova l\'anno prossimo.','b'];
   }));
@@ -247,9 +247,11 @@ function schedaPersona(p){
   if(rc.length)r0.push('Si ricorda: '+rc.map(x=>x.s.toLowerCase()).join('; ')+'.');
   return r0.join('\n');
 }
+/* Da minorenni ci si innamora di coetanei (al massimo 2 anni di differenza), da adulti di adulti */
+function etaAmore(){return S.eta<18?Math.max(11,S.eta+r(-2,2)):Math.max(18,S.eta+r(-5,5))}
 function candidato(){
   const ses=S.attrazione==='E'?pick(['M','F']):(S.attrazione||(S.sesso==='M'?'F':'M'));
-  const pers=nuovoCarattere(),eta=Math.max(18,S.eta+r(-5,5)),st=nomeEstraneo(ses,S.anno-eta);return {sesso:ses,nome:st?st.nome:nomeLibero(ses,S.anno-eta),cognome:st?st.cognome:pick(COGNOMI),eta,asp:r(20,98),pers,tr:trDaPers(pers)};
+  const pers=nuovoCarattere(),eta=etaAmore(),st=nomeEstraneo(ses,S.anno-eta);return {sesso:ses,nome:st?st.nome:nomeLibero(ses,S.anno-eta),cognome:st?st.cognome:pick(COGNOMI),eta,asp:r(20,98),pers,tr:trDaPers(pers)};
 }
 function appuntamento(c,bonus){
   if(!c)return ['Non c\'era nessuno.','x'];
@@ -264,7 +266,7 @@ function cercaAmore(){
   showSheet({k:'Amore',t:"Cerca l'amore",p:'Dove vuoi conoscere qualcuno?',chiudi:true,scelte:[
     {l:'App di incontri',sub:'Tre profili da scegliere',disabled:fatto('app'),fx:()=>{segnaAz('app');const cs=[candidato(),candidato(),candidato()];
       showSheet({k:'App di incontri',t:'Scegli un profilo',p:'Il successo dipende dal tuo aspetto, da quanto sei felice e da quanto sei una brava persona.',chiudi:true,scelte:cs.map(c=>({l:`${c.nome}, ${c.eta} anni`,sub:`${tratto(c)} · aspetto ${c.asp}/100`,fx:()=>appuntamento(c)}))});return KEEP}},
-    {l:'Esci in un locale',sub:eur(40),costo:40,disabled:fatto('locale'),fx:()=>{segnaAz('locale');eff({bev:1});coda.unshift({e:EV.incontro,d:{}});return null}},
+    {l:'Esci in un locale',sub:()=>eur(P(40)),costo:()=>P(40),disabled:fatto('locale'),fx:()=>{segnaAz('locale');eff({bev:1});coda.unshift({e:EV.incontro,d:{}});return null}},
     {l:'Fatti presentare da un amico',sub:amici.length?'Più probabilità di successo':'Ti serve almeno un amico',disabled:!amici.length||fatto('presenta'),fx:()=>{segnaAz('presenta');coda.unshift({e:EV.incontro,d:{x:'amico'}});return null}},
     {l:'Cambia preferenze',fx:()=>{S.attrazione=null;cercaAmore();return KEEP}}]});
 }
@@ -299,7 +301,7 @@ function adotta(A){
   return [`Accogli in casa ${a.nome}, ${A.t==='Gatto'?'un gatto':A.t==='Cane'?'un cane':A.t==='Coniglio'?'un coniglio':'un pappagallo'}.`,'g'];
 }
 function adottaAnimale(){
-  showSheet({k:'Animali',t:'Adotta un animale',p:'Ogni animale costa circa 500 € l\'anno, ma rende più felici.',chiudi:true,scelte:ANIMALI.map(A=>({l:`${A.t}`,sub:eur(A.t==='Pappagallo'?300:120),costo:A.t==='Pappagallo'?300:120,fx:()=>{if(S.eta<18&&chance(.5))return ['I tuoi genitori dicono di no.','b'];return adotta(A)}}))});
+  showSheet({k:'Animali',t:'Adotta un animale',p:'Ogni animale costa circa 500 € l\'anno, ma rende più felici.',chiudi:true,scelte:ANIMALI.map(A=>({l:`${A.t}`,sub:eur(P(A.t==='Pappagallo'?300:120)),costo:P(A.t==='Pappagallo'?300:120),fx:()=>{if(S.eta<18&&chance(.5))return ['I tuoi genitori dicono di no.','b'];return adotta(A)}}))});
 }
 /* apriAnimale(): in e2_lusso.js (legame, pappa, cure) */
 
@@ -440,9 +442,9 @@ const ATTIVITA=[
   {sez:'Tempo libero',id:'cinema',n:'Cinema',d:'Ultimo film uscito',costo:10,min:6,en:3,fx:()=>{eff({f:[1,3]});return [pick(['Un thriller da brividi.','Una commedia che ti fa piangere dal ridere.','Un film d\'autore. Ti sei addormentat'+g('o','a')+'.']),'g']}},
   {sez:'Tempo libero',id:'vacanza',n:'Vacanza',d:'Scegli la meta',costo:0,da:400,min:18,en:0,fx:()=>{showSheet({k:'Vacanza',t:'Dove vai?',p:partnerAttuale()?`Partirai con ${partnerAttuale().nome}.`:'',chiudi:true,scelte:METE.map(m=>m.n.endsWith(S.citta)?{...m,n:m.n.replace(S.citta,S.citta==='Firenze'?'Napoli':'Firenze')}:m).map(m=>({l:m.n,sub:eur(P(m.c)),costo:P(m.c),fx:()=>{segnaAz('att_vacanza');eff({f:m.f,lingue:m.l||0});S.bis.stress=clamp(S.bis.stress-20);S.bis.energia=clamp(S.bis.energia+15);if(chance(.3))segnaVita('viaggio');const pa=partnerAttuale();if(pa)pa.rapporto=clamp(pa.rapporto+8);return [`${m.n}: ricordi che durano tutta la vita.`,'g']}}))});delete S.azioni.att_vacanza;return KEEP}},
   {sez:'Fortuna',id:'gratta',n:'Gratta e Vinci',d:'Biglietto da 5 €',costo:5,min:18,ripeti:1,fx:()=>{eff({gio:1});
-    if(chance(.0005)){soldi(500000);mod('felicita',30);return ['Non ci credi: hai vinto 500.000 €!','g']}
-    if(chance(.01)){soldi(500);mod('felicita',6);return ['Hai vinto 500 €!','g']}
-    if(chance(.2)){soldi(10);return ['Vinci 10 €. Hai raddoppiato.','g']}
+    if(chance(.0005)){soldi(P(500000));mod('felicita',30);return ['Non ci credi: hai vinto 500.000 €!','g']}
+    if(chance(.01)){soldi(P(500));mod('felicita',6);return ['Hai vinto 500 €!','g']}
+    if(chance(.2)){soldi(P(10));return ['Vinci 10 €. Hai raddoppiato.','g']}
     return [`Niente. Ritenta, sarai più fortunat${g('o','a')}.`,'']}},
   {sez:'Fortuna',id:'scommessa',n:'Scommessa sportiva',d:'Schedina da 20 €',costo:20,min:18,ripeti:1,fx:()=>{eff({gio:1});if(chance(.12)){const x=r(4,30)*20;soldi(x);return [`La schedina è vincente: ${eur(x)}!`,'g']}return ['Ti tradisce l\'ultima partita, al 90°.','']}},
   {sez:'Fortuna',id:'casino',n:'Casinò',d:'Una serata a Sanremo',costo:500,min:18,fx:()=>{eff({gio:2});if(chance(.35)){const x=r(6,30)*100;soldi(x);mod('felicita',6);return [`Serata fortunata alla roulette: vinci ${eur(x)}!`,'g']}mod('felicita',-3);return ['Il banco vince sempre.','b']}},

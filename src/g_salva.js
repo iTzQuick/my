@@ -1,4 +1,5 @@
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
+const VERSIONE='sviluppo';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 
@@ -81,6 +82,21 @@ function mostraCodice(c){
   showSheet({k:'Salvataggio',t:'Il tuo codice',p:'Non è stato possibile copiarlo da solo. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
   const t=document.createElement('textarea');t.className='codice';t.readOnly=true;t.value=c;$('#shA').prepend(t);setTimeout(()=>{t.focus();t.select()},50);
 }
+/* «Segnala un problema» (ROADMAP 0.7): diario degli ultimi 3 mesi, situazione e codice della partita, da incollare in chat */
+async function segnalaProblema(){
+  const L=S.lavoro,pa=partnerAttuale();
+  const testa=[`Segnalazione da my · versione ${VERSIONE} · ${new Date().toLocaleString('it-IT')}`,'',
+    'Cosa non va (scrivilo qui): ','',
+    `${S.nome} ${S.cognome}, ${S.sesso==='F'?'donna':'uomo'}, ${S.eta} anni · ${MESI[S.mese]} ${S.anno} · ${S.citta} (${luogo().reg})`,
+    `Salute ${S.salute} · felicità ${S.felicita} · stress ${S.bis.stress} · energia ${S.bis.energia} · soldi ${eur(S.soldi)}`,
+    `Lavoro: ${L?L.nome:'nessuno'} · studi: ${S.scuola.stato} · casa: ${S.casa.tipo}${pa?` · ${pa.ruolo.toLowerCase()}: ${pa.nome} (${pa.eta})`:''}`,
+    '','Diario degli ultimi 3 mesi:'];
+  const diario=S.log.slice(-3).flatMap(b=>[`— ${MESI[b.mese]} ${b.anno} (${b.eta} anni)`,...b.righe.map(x=>'  '+x.t)]);
+  const t=[...testa,...diario,'','Codice della partita (per ricaricarla):',await codiceDa(S)].join('\n');
+  try{await navigator.clipboard.writeText(t);toast('Segnalazione copiata: incollala in chat e scrivi cosa non va.')}
+  catch(e){showSheet({k:'Segnala un problema',t:'La tua segnalazione',p:'Non è stato possibile copiarla da sola. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
+    const a=document.createElement('textarea');a.className='codice';a.readOnly=true;a.value=t;$('#shA').prepend(a);setTimeout(()=>{a.focus();a.select()},50);return KEEP}
+}
 function caricaFile(){
   const i=document.createElement('input');i.type='file';i.accept='.my,.vitamia,.txt,.json,text/plain,application/json';
   i.onchange=async()=>{const f=i.files&&i.files[0];if(!f)return;try{caricaStato(await statoDaCodice(await f.text()));toast('Partita caricata!')}catch(e){toast('Questo file non è un salvataggio di my valido.')}};
@@ -111,7 +127,8 @@ function apriSalvataggi(){
     {l:'Scarica il file di salvataggio',sub:'Lo ricarichi quando vuoi, anche su un altro dispositivo',fx:()=>{scaricaFile().then(r=>{if(r){toast(r[0])}});return null}},
     {l:'Copia il codice di salvataggio',sub:'Da incollare in una nota o in chat',fx:()=>{copiaCodice().then(r=>{if(r&&r!==KEEP)toast(r[0])});return null}},
     {l:'Carica una partita da file',fx:()=>{caricaFile();return null}},
-    {l:'Incolla un codice',fx:()=>{incollaCodice();return KEEP}}
+    {l:'Incolla un codice',fx:()=>{incollaCodice();return KEEP}},
+    {l:'Segnala un problema',sub:'Copia il diario degli ultimi 3 mesi e la partita, da incollare in chat',fx:()=>{segnalaProblema();return null}}
   ];
   if(SALVA.db)sc.unshift({l:'Salva online adesso',sub:'Sul tuo account claude.ai',fx:()=>{salvaOnline().then(ok=>toast(ok?'Salvato online.':'Salvataggio online non riuscito.'));return null}});
   sc.forEach(c=>c._incl=0);

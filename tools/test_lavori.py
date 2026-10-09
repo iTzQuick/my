@@ -63,7 +63,7 @@ JS = r'''
  ok('Avvocato con partita IVA: alla fine niente NASpI',pv&&!S.naspi);
  out.push(`Netto annuo su 30.000 € lordi: dipendente ${eur(netto(30000))}, partita IVA (primi 5 anni) ${eur(nettoPiva(30000,{contratto:{da:S.t}}))}`);
  // 10. part-time: ore e stipendio al 60%
- S=JSON.parse(base);S.eta=35;assumi(JOB.imp);S.lavoro.contratto={t:'ind'};const h0=oreLavoro(),l0=ralEff(S.lavoro);S.lavoro.ptv=true;
+ S=JSON.parse(base);S.eta=35;assumi(JOB.imp);S.lavoro.contratto={t:'ind'};S.lavoro.ptv=false;const h0=oreLavoro(),l0=ralEff(S.lavoro);S.lavoro.ptv=true;
  ok('Part-time: ore e stipendio al 60%',oreLavoro()===Math.round(h0*.6)&&Math.abs(ralEff(S.lavoro)-l0*.6)<1,`${h0} → ${oreLavoro()} ore`);
  // 11. divario: le donne assunte con circa il 4% in meno a parità di lavoro
  const media=ses=>{let t=0;for(let i=0;i<400;i++){S=JSON.parse(base);S.sesso=ses;S.eta=30;assumi(JOB.imp);t+=S.lavoro.stip}return t/400};

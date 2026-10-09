@@ -115,7 +115,7 @@ const QUIZ=[
   ['Chi ha dipinto la Gioconda?','Leonardo da Vinci','Michelangelo','Raffaello'],
   ['Qual è la capitale dell\'Australia?','Canberra','Sydney','Melbourne'],
   ['Quanti deputati siedono alla Camera dopo la riforma del 2020?','400','630','500'],
-  ['Un prodotto da 80 € scontato del 25% costa…','60 €','55 €','65 €'],
+  ['Un prodotto da 80 euro scontato del 25% costa…','60 euro','55 euro','65 euro'],
   ['Quale elemento chimico ha il simbolo Fe?','Ferro','Fluoro','Fosforo'],
   ['In che anno è caduto il muro di Berlino?','1989','1991','1987'],
   ['Chi ha scritto «I promessi sposi»?','Alessandro Manzoni','Giovanni Verga','Ugo Foscolo'],

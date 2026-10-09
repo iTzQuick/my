@@ -18,6 +18,8 @@ Ogni fase ha una priorità (🔴 alta · 🟠 media · 🟢 bassa), una stima di
 > - nomi per generazione.
 >
 > Il controllo dei testi (0.1) esiste: `tools/lint_testi.py`, per ora solo per le parole da grandi. I risultati prima e dopo sono al punto 2bis di ANALISI.md.
+>
+> **9 ottobre 2026, sera — Fase 0 quasi chiusa:** invarianti ogni mese (`tools/invarianti.py`, anche dentro `fuzz.py`), archivio di 18 salvataggi di 3 versioni vecchie (`tools/archivio_salvataggi.py`), picchi delle crescite, lint dei testi completo, «Segnala un problema». Gli invarianti hanno trovato e fatto correggere 6 errori (fratelli nati a pochi mesi, partner adulti per ragazzi di 15–17 anni, suoceri di 129 anni, cugini con zii troppo giovani, conviventi «lontani», lavoro sotto l'età minima nel controllo); il lint ha trovato ~110 importi che non seguivano l'inflazione e un segnaposto sbagliato. Resta la 0.5 (età delle azioni), da decidere insieme con `tools/eta_azioni_out.md`.
 
 ---
 
@@ -26,25 +28,26 @@ Le prove di Noemi hanno mostrato che gli errori più frequenti non sono crash, m
 
 | # | Cosa | Come | Fatto quando |
 |---|---|---|---|
-| 0.1 | ✅ in parte (parole per età) · **Controllore dei testi** (`tools/lint_testi.py`) | Legge tutti gli eventi e le azioni e segnala: `g()`/`gp()` in testi costanti, segnaposto non risolti (`{…}` rimasti), `l{lo}`, importi scritti a mano senza `P()`, parole da adulti (caffè, telefono, lavoro, alcol, partner, mutuo) in eventi o azioni accessibili sotto una certa età. | 0 segnalazioni, ed è nei controlli dopo ogni modifica |
-| 0.2 | **Invarianti ogni mese** nel fuzz e nella simulazione | Dopo ogni `mese()` si controlla: statistiche tra 0 e 100, nessun `NaN`/`Infinity`, soldi e follower finiti, al massimo un coniuge vivo, genitori più vecchi dei figli di almeno 15 anni, fratelli con età plausibili, nessun partner adulto per un minorenne, nessun evento su persone morte, animali con nomi diversi, niente «lontano» con chi vive nella tua città. | 1.000 vite senza violazioni |
-| 0.3 | **Salvataggi d'archivio** | Una cartella `tools/salvataggi/` con partite vere di versioni vecchie (anche quella di Noemi). A ogni build si caricano tutte e si giocano 24 mesi. | Nessun salvataggio rotto |
-| 0.4 | **Controllo crescite composte** | La simulazione stampa massimo e 99° percentile di patrimonio, follower, valore dell'azienda, borsa e collezioni, e avvisa se superano soglie realistiche. | Nessun valore «infinito» in 1.000 vite |
-| 0.5 | **Revisione per età di tutte le azioni** | Ogni bottone del gioco ha un'età minima esplicita, e un rapporto per fascia (0–2, 3–5, 6–12, 13–17) elenca cosa si vede. | Revisione fatta con Davide |
-| 0.6 | **Famiglia credibile alla nascita** | Fratelli distanziati di almeno ~15 mesi (gemelli rari), età dei genitori coerenti, nonni e zii plausibili. | Coperto da 0.2 |
-| 0.7 | **«Segnala un problema» nel gioco** | Un bottone che copia negli appunti il diario degli ultimi 3 mesi e lo stato, da incollare in chat. | Usato nelle prossime prove |
+| 0.1 | ✅ fatto · **Controllore dei testi** (`tools/lint_testi.py`) | Legge tutti gli eventi e le azioni e segnala: `g()`/`gp()` in testi costanti, segnaposto non risolti (`{…}` rimasti), `l{lo}`, importi scritti a mano senza `P()`, parole da adulti (caffè, telefono, lavoro, alcol, partner, mutuo) in eventi o azioni accessibili sotto una certa età. | 0 segnalazioni, ed è nei controlli dopo ogni modifica |
+| 0.2 | ✅ fatto (`invarianti.py`, 200 vite pulite) · **Invarianti ogni mese** nel fuzz e nella simulazione | Dopo ogni `mese()` si controlla: statistiche tra 0 e 100, nessun `NaN`/`Infinity`, soldi e follower finiti, al massimo un coniuge vivo, genitori più vecchi dei figli di almeno 15 anni, fratelli con età plausibili, nessun partner adulto per un minorenne, nessun evento su persone morte, animali con nomi diversi, niente «lontano» con chi vive nella tua città. | 1.000 vite senza violazioni |
+| 0.3 | ✅ fatto (18 partite di 3 versioni; manca quella di Noemi: basta il suo codice) · **Salvataggi d'archivio** | Una cartella `tools/salvataggi/` con partite vere di versioni vecchie (anche quella di Noemi). A ogni build si caricano tutte e si giocano 24 mesi. | Nessun salvataggio rotto |
+| 0.4 | ✅ fatto (in `invarianti.py` e `fuzz.py`; il pilota automatico non usa azienda, social e collezioni: li prova solo il fuzz) · **Controllo crescite composte** | La simulazione stampa massimo e 99° percentile di patrimonio, follower, valore dell'azienda, borsa e collezioni, e avvisa se superano soglie realistiche. | Nessun valore «infinito» in 1.000 vite |
+| 0.5 | 🟡 rapporto pronto (`tools/eta_azioni.py`), da rivedere insieme · **Revisione per età di tutte le azioni** | Ogni bottone del gioco ha un'età minima esplicita, e un rapporto per fascia (0–2, 3–5, 6–12, 13–17) elenca cosa si vede. | Revisione fatta con Davide |
+| 0.6 | ✅ fatto · **Famiglia credibile alla nascita** | Fratelli distanziati di almeno ~15 mesi (gemelli rari), età dei genitori coerenti, nonni e zii plausibili. | Coperto da 0.2 |
+| 0.7 | ✅ fatto (foglio «Salva») · **«Segnala un problema» nel gioco** | Un bottone che copia negli appunti il diario degli ultimi 3 mesi e lo stato, da incollare in chat. | Usato nelle prossime prove |
 
 ---
 
 ## Fase 1 — Ritmo e varietà (🔴, M)
-Oggi una vita media ha circa 460 eventi, ma alcuni si ripetono troppo (dati della simulazione, per vita):
+Oggi una vita media ha circa 440 eventi, ma alcuni si ripetono troppo (dati della simulazione, per vita; fino al 9/10/2026 `sim.py` contava due volte ogni evento, domanda ed esito):
 
 | Evento | Volte per vita |
 |---|---|
-| Una persona nuova | 77 |
-| Le ferie d'agosto | 54 |
-| I buoni propositi | 48 |
-| Natale | 34 |
+| Una persona nuova | ~45 |
+| Le ferie d'agosto | ~29 |
+| I buoni propositi | ~26 |
+| Natale | ~18 |
+| Il conto è in rosso | ~17 |
 
 - 1.1 **Eventi del calendario non ogni anno**: le ferie e Natale diventano un riassunto nel diario negli anni «normali», ed eventi veri solo quando c'è una novità (primo Natale col partner, ferie col neonato…).
 - 1.2 **Incontri vari**: dieci modelli diversi invece di uno (lo conosci tramite un amico, ti siede accanto in treno, è il nuovo vicino…) e frequenza che cala se hai già tante persone.

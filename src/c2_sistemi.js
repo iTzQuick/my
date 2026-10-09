@@ -2,6 +2,9 @@
 const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 const ip=()=>(S&&S.mondo?S.mondo.ip:1);
 const P=x=>Math.round(x*ip());
+/* Gli importi scritti nei testi («400 €», «1.800 €», con lo spazio normale) sono ai prezzi del 2026: prezzi() li porta all'anno del gioco.
+   eur() scrive con lo spazio non separabile, quindi un testo già convertito non cambia. Usato da fogli, esiti, diario e attività. */
+const prezzi=s=>typeof s==='string'&&S&&S.mondo?s.replace(/(\d{1,3}(?:\.\d{3})+|\d+) €/g,(m,n)=>eur(P(+n.replace(/\./g,'')))):s;
 function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
 
 /* ---------- Mondo ---------- */
@@ -221,7 +224,7 @@ function azCarcere(id){
       if(S.istr.liv>=2&&S.istr.liv<3&&G.studio>=4){S.istr.liv=3;S.istr.lauree.push({n:'Lettere',liv:'triennale',voto:r(95,110)});G.studio=0;return ['Ti laurei in Lettere al polo universitario del carcere!','g']}
       return ['Un altro anno sui libri.','g'];
     case 'palestra':eff({s:3,a:1,sport:3});return ['Ti alleni ogni giorno.','g'];
-    case 'lavora':soldi(1800);return ['Lavori in lavanderia: 1.800 € in un anno.','g'];
+    case 'lavora':soldi(P(1800));return ['Lavori in lavanderia: 1.800 € in un anno.','g'];
     case 'cucina':eff({cucina:8});if(!S.istr.cert.includes('Cuoco professionista')&&chance(.4)){S.istr.cert.push('Cuoco professionista');return ['Il corso di cucina del carcere ti dà l\'attestato da cuoco.','g']}return ['Impari a cucinare per duecento persone.','g'];
     case 'banda':if(G.banda)return ['Fai già parte di una banda.','x'];G.banda=pick(BANDE);G.rispetto=20;S.karma=clamp(S.karma-3);return [`Entri con ${G.banda}. Ora hai protezione, ma anche obblighi.`,''];
     case 'permesso':if(G.scontata<1||G.condotta<2){S.azioni[k]=0;return ['Per il permesso premio servono almeno un anno scontato e due anni di buona condotta.','x']}
@@ -233,7 +236,7 @@ function azCarcere(id){
 function evadi(modo){
   const k='c_evadi';if(S.azioni[k])return ['Gli agenti ti tengono d\'occhio. Riprova l\'anno prossimo.','x'];S.azioni[k]=1;
   const p={tunnel:.1,guardia:.35,furgone:.15}[modo];
-  if(modo==='guardia'){if(S.soldi<15000){S.azioni[k]=0;return ['Per corrompere una guardia servono 15.000 €.','x']}soldi(-15000)}
+  if(modo==='guardia'){if(S.soldi<P(15000)){S.azioni[k]=0;return ['Per corrompere una guardia servono 15.000 €.','x']}soldi(-P(15000))}
   if(chance(p)){S.carcere=0;S.latitante=true;S.casa=genitoriVivi()?{tipo:'genitori'}:affittoBase('Stanza in condivisione');mod('felicita',10);return [`Sei fuori! Liber${g('o','a')}, ma ora sei latitante.`,'g']}
   S.carcere+=2;S.galera.pena+=2;mod('salute',-5);return ['Ti scoprono. Due anni in più di pena e isolamento.','b'];
 }
@@ -253,13 +256,15 @@ function creaZii(gen,cog){
   const n=pesata([[0,25],[1,35],[2,25],[3,15]]);
   for(let i=0;i<n;i++){
     const ses=pick(['M','F']);const z=nuovaPersona('Zio',ses,Math.max(16,gen.eta+r(-10,10)),ses==='M'&&cog?cog:pick(COGNOMI),{rapporto:r(40,80),lato:gen.ruolo});
-    if(z.eta>=24&&chance(.65)){z.sposato=true;const k=pesata([[1,40],[2,40],[3,20]]);for(let j=0;j<k;j++)nuovaPersona('Cugino',pick(['M','F']),Math.max(0,S.eta+r(-8,10)),z.sesso==='M'?z.cognome:pick(COGNOMI),{rapporto:r(35,75),di:z.id})}
+    if(z.eta>=24&&chance(.65)){z.sposato=true;const k=pesata([[1,40],[2,40],[3,20]]);for(let j=0;j<k;j++)nuovaPersona('Cugino',pick(['M','F']),Math.max(0,Math.min(z.eta-20,S.eta+r(-8,10))),z.sesso==='M'?z.cognome:pick(COGNOMI),{rapporto:r(35,75),di:z.id})}
   }
 }
 function creaSuoceri(p){
   if(p.suoceri)return;p.suoceri=true;
-  nuovaPersona('Suocero','M',p.eta+r(24,32),p.cognome,{rapporto:r(35,75),famDi:p.id});
-  nuovaPersona('Suocero','F',p.eta+r(22,30),pick(COGNOMI),{rapporto:r(35,75),famDi:p.id});
+  const vivo=e=>e<=100&&chance(e<80?1:e<90?.6:.3);
+  const eP=p.eta+r(24,32),eM=p.eta+r(22,30);
+  if(vivo(eP))nuovaPersona('Suocero','M',eP,p.cognome,{rapporto:r(35,75),famDi:p.id});
+  if(vivo(eM))nuovaPersona('Suocero','F',eM,pick(COGNOMI),{rapporto:r(35,75),famDi:p.id});
   const k=pesata([[0,40],[1,40],[2,20]]);for(let i=0;i<k;i++)nuovaPersona('Cognato',pick(['M','F']),Math.max(10,p.eta+r(-8,8)),p.cognome,{rapporto:r(35,70),famDi:p.id});
   S.relazioni.filter(x=>x.famDi===p.id&&x.eta>95).forEach(x=>x.vivo=false);
 }

@@ -8,6 +8,7 @@ FILES=['b_dati.js','b2_comuni.js','b3_luoghi.js','b4_dati2.js','c_motore.js','c2
        'd_eventi.js','d2_eventi2.js','d3_emergenti.js','d4_infanzia.js','d5_adolescenza.js','d6_adulti.js','d7_vita_italiana.js','e_azioni.js','e2_lusso.js','g_salva.js','f2_crea.js','f_ui.js']
 shell=(src/'a_shell.html').read_text(encoding='utf-8')
 js='\n'.join((src/f).read_text(encoding='utf-8') for f in FILES)
+js=js.replace("const VERSIONE='sviluppo'","const VERSIONE='"+hashlib.sha1(js.encode('utf-8')).hexdigest()[:8]+"'",1)   # impronta dei sorgenti, per «Segnala un problema»
 html=shell+'\n<script>\n'+js+'\n</script>\n'
 (ROOT/'dist').mkdir(exist_ok=True)
 (ROOT/'dist'/'vitamia.html').write_text(html,encoding='utf-8')

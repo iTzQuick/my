@@ -97,7 +97,7 @@ ev({id:'ado_giornalino',min:14,max:17,once:1,t:'Il giornalino della scuola',x:'C
   {l:'Scrivi un articolo scomodo sulla mensa',e:{arte:2},pers:{O:2,A:-1},r:'Il preside non gradisce. Gli studenti sì.'},
   {l:'Fai le vignette',e:{arte:3,f:2},pers:{O:2},r:'Le tue vignette finiscono sui muri di tutta la scuola.'}]});
 ev({id:'ado_scambio',min:15,max:17,once:1,t:'Lo scambio all\'estero',x:'La scuola offre tre mesi di scambio in Irlanda, con una famiglia del posto.',c:[
-  {l:'Parti',costo:1500,fx:()=>{S.abil.lingue=clamp(S.abil.lingue+12);cambiaPers('O',3);cambiaPers('E',1);cambiaPers('N',-1);segnaVita('viaggio');mod('felicita',6);return ['Tre mesi di pioggia, scones e un inglese che non sapevi di avere.','g']}},
+  {l:'Parti',costo:()=>P(1500),fx:()=>{S.abil.lingue=clamp(S.abil.lingue+12);cambiaPers('O',3);cambiaPers('E',1);cambiaPers('N',-1);segnaVita('viaggio');mod('felicita',6);return ['Tre mesi di pioggia, scones e un inglese che non sapevi di avere.','g']}},
   {l:'Hai paura di stare lontano da casa',pers:{N:1,O:-1},r:'Lo racconteranno gli altri, al ritorno.'},
   {l:'Costa troppo per la tua famiglia',cond:()=>S.classe==='umile',fx:()=>{cambiaPers('N',1);mod('felicita',-2);return ['Ci provi con una borsa di studio, ma non basta.','']}}]});
 ev({id:'ado_scelta_futuro',min:15,max:17,once:1,t:'Che cosa farai',x:'All\'incontro di orientamento ti chiedono cosa vuoi fare dopo il diploma.',c:[
@@ -140,8 +140,8 @@ ev({id:'ado_notte_videogiochi',min:13,max:16,once:1,t:'Ancora una partita',x:'È
   {l:'Spegni e vai a dormire',pers:{C:2},r:'La squadra perde senza di te. Sopravvivranno.'},
   {l:'Fai una diretta e guadagni follower',cond:()=>S.social.attivo,fx:()=>{S.social.follower+=r(20,200);cambiaPers('E',2);cambiaPers('C',-1);return ['Duecento persone ti guardano giocare alle due di notte.','']}}]});
 ev({id:'ado_viaggio_solo',min:16,max:17,once:1,t:'Il primo viaggio da soli',x:'Con tre amici organizzate un weekend al mare senza genitori.',c:[
-  {l:'Organizzi tutto tu',costo:150,e:{f:6},pers:{C:2,E:1},r:'Treni, ostello, spesa. Tutto perfetto. Ti chiamano «la mamma del gruppo».'},
-  {l:'Ti fai trascinare e basta',costo:150,e:{f:5},pers:{C:-1,E:1},r:'Perdi il treno del ritorno. Ne vale la pena.'},
+  {l:'Organizzi tutto tu',costo:()=>P(150),e:{f:6},pers:{C:2,E:1},r:'Treni, ostello, spesa. Tutto perfetto. Ti chiamano «la mamma del gruppo».'},
+  {l:'Ti fai trascinare e basta',costo:()=>P(150),e:{f:5},pers:{C:-1,E:1},r:'Perdi il treno del ritorno. Ne vale la pena.'},
   {l:'I tuoi non ti lasciano andare',fx:()=>{relGenitori(-4);cambiaPers('N',1);mod('felicita',-3);return ['Guardi le loro foto da casa.','b']}}]});
 ev({id:'ado_volontariato',min:14,max:17,once:1,t:'Il centro anziani',x:'La scuola propone un pomeriggio a settimana in un centro per anziani.',c:[
   {l:'Ci vai con entusiasmo',e:{k:5},pers:{A:3},r:'Il signor Giuseppe ti insegna a giocare a scopa. Lo batti solo a giugno.'},
@@ -157,7 +157,7 @@ ev({id:'ado_rabbia',min:13,max:17,once:1,t:'La rabbia',x:'Per una sciocchezza ti
   {l:'Scrivi tutto quello che senti',e:{arte:1},pers:{O:1,N:-1},r:'Rileggendolo, capisci che non era rabbia: era tristezza.'},
   {l:'Te la prendi con chi c\'è',fx:()=>{const p=genV()||fratV();if(p){p.rapporto=clamp(p.rapporto-8);ricorda(p,'Te la sei pres'+g('o','a')+' con lui senza motivo'.replace('lui',gp(p,'lui','lei')))}cambiaPers('A',-2);return ['Chiedi scusa solo il giorno dopo.','b']}}]});
 ev({id:'ado_compleanno18',min:17,max:17,once:1,w:2,t:'Quasi diciott\'anni',x:'Manca poco ai diciott\'anni. Cosa vuoi per il grande giorno?',c:[
-  {l:'Una festa enorme',costo:400,e:{f:5},pers:{E:2},r:'Musica, amici e un discorso dei tuoi che ti fa piangere.'},
+  {l:'Una festa enorme',costo:()=>P(400),e:{f:5},pers:{E:2},r:'Musica, amici e un discorso dei tuoi che ti fa piangere.'},
   {l:'I soldi per la patente',fx:()=>{S.fatti.regaloPatente=1;soldi(P(700));cambiaPers('C',1);return ['Pratico. Sarai liber'+g('o','a')+' di guidare presto.','']}},
-  {l:'Un viaggio con il tuo migliore amico',costo:500,fx:()=>{const p=amicoV();if(p)p.rapporto=clamp(p.rapporto+10);cambiaPers('O',2);segnaVita('viaggio');mod('felicita',6);return ['Una settimana in giro per l\'Europa con lo zaino in spalla.','g']}},
+  {l:'Un viaggio con il tuo migliore amico',costo:()=>P(500),fx:()=>{const p=amicoV();if(p)p.rapporto=clamp(p.rapporto+10);cambiaPers('O',2);segnaVita('viaggio');mod('felicita',6);return ['Una settimana in giro per l\'Europa con lo zaino in spalla.','g']}},
   {l:'Niente: non ami essere al centro dell\'attenzione',pers:{E:-2},r:'Una pizza con i tuoi. Va benissimo così.'}]});

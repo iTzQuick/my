@@ -1,5 +1,6 @@
 # file generati dalle prove (si rifanno con i comandi di tools/)
 tools/*_out.json
+tools/*_out.md
 /*.png
 __pycache__/
 *.pyc

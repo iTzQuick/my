@@ -10,7 +10,7 @@ function showSheet(o){
   sheetOpen=true;$('#scrim').hidden=false;
   const d=o.d||{};
   $('#shK').textContent=o.k||'';$('#shT').textContent=o.t||'';
-  const P=$('#shP');P.textContent=o.p||'';P.className='';P.hidden=!o.p;
+  const P=$('#shP');P.textContent=prezzi(o.p)||'';P.className='';P.hidden=!o.p;
   const A=$('#shA');A.innerHTML='';
   const sc=(o.scelte||[]).filter(c=>!c.cond||c.cond(d));
   let attivi=0;
@@ -31,7 +31,7 @@ function showSheet(o){
   }
   sc.forEach(c=>{
     const b=document.createElement('button');b.className='opt';
-    const lab=T(c.l,d),cs=costoScelta(c,d);const sub=c.sub!==undefined?T(c.sub,d):(cs?eur(cs):'');
+    const lab=prezzi(T(c.l,d)),cs=costoScelta(c,d);const sub=c.sub!==undefined?prezzi(T(c.sub,d)):(cs?eur(cs):'');
     const povero=cs&&S.soldi<cs;
     const inc=etichettaIncl(Object.assign({},c,{l:lab,sub:sub}));
     b.innerHTML=esc(lab)+(inc?` <em class="incl${inc==='da te'?' ok':''}">${inc}</em>`:'')+(sub||povero?`<small>${esc(sub)}${povero?(sub?' · ':'')+'non hai abbastanza soldi':''}</small>`:'');
@@ -45,7 +45,7 @@ function showSheet(o){
 }
 function risultato(res){
   if(!res[0]){next();return}
-  const P=$('#shP');P.textContent=res[0];P.className=res[1]==='x'?'':(res[1]||'');P.hidden=false;
+  const P=$('#shP');P.textContent=prezzi(res[0]);P.className=res[1]==='x'?'':(res[1]||'');P.hidden=false;
   const A=$('#shA');A.innerHTML='';
   const b=document.createElement('button');b.className='btn';b.textContent='Continua';b.onclick=()=>next();A.appendChild(b);
   b.focus({preventScroll:true});
@@ -211,7 +211,7 @@ function renderScuola(V){
   if(!iscritto()&&S.eta>=18){
     if(I.liv>=2)isc.push(['uni','Iscriviti all\'università','Triennale o ciclo unico']);
     if(I.lauree.some(l=>l.liv==='triennale'&&!I.lauree.some(m=>m.n===l.n&&m.liv!=='triennale')))isc.push(['magistrale','Laurea magistrale','Due anni dopo la triennale']);
-    if(I.liv>=3&&!I.master)isc.push(['master','Master','Un anno · 8.000 €']);
+    if(I.liv>=3&&!I.master)isc.push(['master','Master',`Un anno · ${eur(P(8000))}`]);
     if(I.liv>=4&&!I.dott)isc.push(['dottorato','Dottorato di ricerca','Tre anni con borsa']);
     if(I.liv>=2)isc.push(['its','ITS','Due anni, molto pratico']);
     if(I.liv<2)isc.push(['serale','Diploma serale','Tre anni, compatibile col lavoro']);
@@ -219,7 +219,7 @@ function renderScuola(V){
   }
   if(isc.length)h+=`<div class="sec">Iscriviti</div><div class="list">${isc.map(([k,n,d])=>`<div class="job"><div><div class="jn">${n}</div><div class="jm">${d}</div></div><button class="chip pri" data-isc="${k}">Iscriviti</button></div>`).join('')}</div>`;
   const es=ABILITAZIONI.map(A=>[A,abilitazioneDisponibile(A)]).filter(([,x])=>x!==null);
-  if(es.length&&!iscritto())h+=`<div class="sec">Esami di Stato</div><div class="list">${es.map(([A,x])=>`<div class="job"><div><div class="jn">${A.desc}</div><div class="${x?'jr':'jm'}">${x||'400 € · serve per esercitare la professione'}</div></div><button class="chip pri" data-es="${A.n}" ${x||fatto('esame_'+A.n)?'disabled':''}>${fatto('esame_'+A.n)?'Fatto':'Sostieni'}</button></div>`).join('')}</div>`;
+  if(es.length&&!iscritto())h+=`<div class="sec">Esami di Stato</div><div class="list">${es.map(([A,x])=>`<div class="job"><div><div class="jn">${A.desc}</div><div class="${x?'jr':'jm'}">${x||eur(P(400))+' · serve per esercitare la professione'}</div></div><button class="chip pri" data-es="${A.n}" ${x||fatto('esame_'+A.n)?'disabled':''}>${fatto('esame_'+A.n)?'Fatto':'Sostieni'}</button></div>`).join('')}</div>`;
   if(S.eta>=6){
     h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const manca=c.req?mancanti(c.req):[];const lock=S.eta<c.min||manca.length>0;const f=fatto('corso_'+c.id);
       return `<div class="job"><div><div class="jn">${c.n}</div><div class="jm">${eur(P(c.costo))}${c.cert?` · ${c.cert}`:''}${c.sk?` · +${ABIL[Object.keys(c.sk)[0]]}`:''}${S.eta<c.min?` · dai ${c.min} anni`:manca.length?` · serve: ${esc(manca.join(', '))}`:''}</div></div><button class="chip" data-corso="${c.id}" ${ho||lock||f?'disabled':''}>${ho?'Ottenuto':f?'Fatto':'Iscriviti'}</button></div>`}).join('')}</div>`;
@@ -403,7 +403,7 @@ function renderSettimana(){
 function renderAttivita(V){
   let h='';
   if(S.malattie.length)h+=`<div class="sec">Salute</div><div class="panel">${S.malattie.map(m=>kv(esc(m.n),['','Lieve','Grave','Cronica','Gravissima'][m.g],'neg')).join('')}<div class="meta">Il medico di base cura le malattie lievi. Per quelle gravi servono lo specialista o la clinica. Le croniche si tengono sotto controllo con la terapia ogni anno.</div></div>`;
-  const card=(a,lock,done,attr,costo,key)=>`<button class="act" ${attr} ${lock||done?'disabled':''}><span class="n">${a.n}</span><span class="d">${lock?`Dai ${a.min} anni`:a.d||''}</span><span class="c">${done?attesa(key):(costo?eur(costo):a.da?'da '+eur(P(a.da)):'Gratis')}${!done&&a.en!==0?` · energia ${a.en>0||a.en===undefined?'−':'+'}${Math.abs(a.en===undefined?8:a.en)}`:''}</span></button>`;
+  const card=(a,lock,done,attr,costo,key)=>`<button class="act" ${attr} ${lock||done?'disabled':''}><span class="n">${a.n}</span><span class="d">${lock?`Dai ${a.min} anni`:prezzi(a.d)||''}</span><span class="c">${done?attesa(key):(costo?eur(costo):a.da?'da '+eur(P(a.da)):'Gratis')}${!done&&a.en!==0?` · energia ${a.en>0||a.en===undefined?'−':'+'}${Math.abs(a.en===undefined?8:a.en)}`:''}</span></button>`;
   if(S.carcere>0){
     const G=S.galera||{pena:S.carcere,scontata:0,condotta:0};
     h+=`<div class="sec">In carcere</div><div class="panel">${kv('Pena',`${G.pena} ${G.pena===1?'anno':'anni'}`)}${kv('Scontati',G.scontata)}${kv('Anni di buona condotta',G.condotta)}${G.banda?kv('Banda',esc(G.banda)):''}</div>

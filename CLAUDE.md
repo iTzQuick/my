@@ -15,23 +15,26 @@ python build.py                 # unisce src/ → dist/vitamia.html (+ dist/all.
 # apri dist/vitamia.html nel browser: si gioca e si salva in localStorage
 ```
 
-Controlli automatici (servono Python 3 e Playwright: `pip install playwright` poi `python -m playwright install chromium`):
+Controlli automatici (servono Python 3 e Playwright: `pip install playwright` poi `python -m playwright install chromium`; nel contenitore cloud di Claude Code il Chromium c'è già: `pip install playwright==1.56.0`, senza `playwright install`):
 
 ```bash
 node -e "new Function(require('fs').readFileSync('dist/all.js','utf8'))"   # sintassi JS
-python tools/fuzz.py 3          # clic casuali su tutta l'interfaccia per 3 vite: deve dare errs []
+python tools/fuzz.py 3          # clic casuali su tutta l'interfaccia per 3 vite, con gli invarianti dopo ogni mese: deve dare errs [], inv [], oltre []
+python tools/invarianti.py 200  # 200 vite controllate ogni mese (numeri validi, età e famiglia credibili, coppie, «lontano»…) + picchi di patrimonio, follower, azienda, Borsa: deve dare 0 violazioni
+python tools/archivio_salvataggi.py  # ricarica i salvataggi di versioni vecchie (tools/salvataggi/) e gioca 24 mesi: «tutti i salvataggi funzionano»
 python tools/sim.py 40          # 40 vite giocate dal pilota automatico: statistiche di bilanciamento
 python tools/test_salva.py      # salvataggio su file / codice e ricaricamento in un browser senza memoria
 python tools/test_eventi.py ad_  # apre ogni evento con quel prefisso e clicca ogni risposta (M e F): stampa testi, esiti, errori
 python tools/test_feedback.py   # riproduce le segnalazioni delle prove su telefono (età, stress, rapporti, follower…)
 python tools/test_novita.py     # ricchezza, animali, amici→amore, attività per beni ed età, ferie a pagamento (+ schermate in grafica/)
 python tools/realismo.py 200     # 200 vite confrontate con i dati italiani (ISTAT, Eurostat…): età alla morte, uscita di casa, lavoro, figli, cause di morte
-python tools/lint_testi.py      # parole da grandi negli eventi che capitano da piccoli (telefono, caffè, birra, collega…): deve dare 0 segnalazioni
+python tools/lint_testi.py      # testi: parole da grandi da piccoli, segnaposto non risolti, g()/gp() senza personaggio, importi senza P(), «l{lo}»: deve dare 0 segnalazioni
+python tools/eta_azioni.py      # cosa si vede a 1, 4, 9, 15 e 17 anni in ogni scheda → tools/eta_azioni_out.md (per decidere le età minime)
 python tools/test_italia.py     # regole italiane: gravidanza, separazione e affido, adozione, eredità della casa, pensione, NASpI e TFR, storia vera, IRPEF, unione civile
 python tools/test_lavori.py     # lavori e contratti: requisiti raggiungibili, mestieri come in Italia, concorsi, elezioni, contratti a termine, partita IVA, part-time, divario, congedi
 ```
 
-**Dopo ogni modifica:** `build.py` → controllo sintassi → `fuzz.py` → `lint_testi.py` (se tocchi testi) → `sim.py` (almeno 40 vite se tocchi formule o probabilità; `realismo.py` con 400+ vite se tocchi salute, morte, lavoro o famiglia: con meno vite la media dell'età alla morte oscilla di ±1,5 anni).
+**Dopo ogni modifica:** `build.py` → controllo sintassi → `fuzz.py` → `lint_testi.py` (se tocchi testi o prezzi) → `invarianti.py` (almeno 100 vite se tocchi persone, famiglia, coppia o soldi) → `archivio_salvataggi.py` (se tocchi lo stato o i salvataggi) → `sim.py` (almeno 40 vite se tocchi formule o probabilità; `realismo.py` con 400+ vite se tocchi salute, morte, lavoro o famiglia: con meno vite la media dell'età alla morte oscilla di ±1,5 anni).
 
 ---
 
@@ -69,6 +72,9 @@ VitaMia/
 ├─ tools/
 │  ├─ autopilota.js      pilota automatico guidato dal carattere (usato da test e Atlante)
 │  ├─ fuzz.py  sim.py  test_salva.py  test_eventi.py
+│  ├─ invarianti.js / .py  cose che non devono mai succedere, controllate ogni mese (usato anche da fuzz.py) + picchi delle crescite
+│  ├─ archivio_salvataggi.py + salvataggi/   partite di versioni vecchie da ricaricare («crea <etichetta> vecchia.html» per aggiungerne)
+│  ├─ eta_azioni.py      bottoni visibili a ogni età → tools/eta_azioni_out.md
 │  ├─ frames_intro.py    fotogrammi dell'intro a istanti precisi → grafica/intro_frames_<tema>.png
 │  ├─ esporta_grafica.py PNG di logo e icona + video dell'intro (webm, chiaro e scuro) in grafica/
 │  ├─ shot_crea.py       foto di ogni scheda della creazione, del timbro e della presentazione → grafica/crea_<tema>.png
@@ -170,7 +176,7 @@ Definizione: `ev({id, min, max, w, once, rip, cond, chi, pc, link, auto, prig, t
 ## Convenzioni importanti (errori già fatti: non ripeterli)
 - **Genere:** `g('o','a')` e `gp(p,…)` leggono `S`, che al caricamento è `null`. **Mai** usarli dentro testi costanti di eventi (dà sempre il maschile): usa i segnaposto `{o}` / `{po}` oppure costruisci il testo dentro una funzione.
 - Non scrivere `l{lo}` (diventa «vederllo»): scrivi `veder{lo}`.
-- **Prezzi:** ogni importo in euro passa da `P(x)` (inflazione, dal livello vero dell'anno di nascita). Se il prezzo dipende dall'oggetto, mettilo accanto all'oggetto (vedi `ACQUISTI`, `IMPREVISTI`): mai un importo casuale slegato dal testo. Nelle scelte degli eventi `costo` può essere una funzione (`costo:()=>P(3000)`, letta da `costoScelta`): usala per i costi nuovi.
+- **Prezzi:** ogni importo in euro passa da `P(x)` (inflazione, dal livello vero dell'anno di nascita). Se il prezzo dipende dall'oggetto, mettilo accanto all'oggetto (vedi `ACQUISTI`, `IMPREVISTI`): mai un importo casuale slegato dal testo. Gli importi scritti a mano sono **ai prezzi del 2026** e vengono convertiti da soli in due casi: `m:` negli effetti degli eventi (`eff()` applica `P()`; una funzione `m:()=>…` deve ritornare già l'importo vero) e i «N €» con lo spazio normale nei testi mostrati (`prezzi()` in fogli, esiti, diario e descrizioni delle attività; `eur()` usa lo spazio non separabile, quindi non converte due volte). Tutto il resto va scritto con `P()`: `costo:()=>P(3000)` nelle scelte (un `costo:3000` numerico **non** passa da `P`), `soldi(-P(400))`, `eur(P(8000))`, `S.soldi>=P(1000)`. Le attività (`ATTIVITA`, con `sez:`) e le tabelle in `b_*.js` passano da `P()` quando si pagano. `lint_testi.py` segnala gli importi dimenticati. Nei quiz con i conti scrivi «euro», non «€».
 - **Il passato è vero:** fino al 2026 non inventare fatti storici o economici nel mondo del gioco; un fatto vero va in `STORIA` (c7_italia.js) con anno e mese. Le tecnologie seguono l'anno (`S.anno`): niente smartphone ai bambini prima del 2010.
 - **Lavoro perso:** usa `licenzia(testo)` (NASpI, TFR, stress) o `licenzia(testo,true)` se lo lascia il giocatore; mai `S.lavoro=null` senza `pagaTFR()`.
 - **Leggi italiane:** coppie dello stesso sesso → unione civile; adozione solo da coniugi sposati da 3 anni; social dai 14 anni; scooter 50 con il patentino AM dai 14, il 125 con la patente.
@@ -181,7 +187,8 @@ Definizione: `ev({id, min, max, w, once, rip, cond, chi, pc, link, auto, prig, t
 - **Valori interi e passi piccoli:** `clamp()` arrotonda. Per cali/aumenti sotto 1 punto sui rapporti usa `relD(p,d)` (passo casuale con la media giusta, `passo(d)`); per il carattere `cambiaPers`. Con `clamp(x-.4)` il calo non avviene mai (era il bug dei rapporti «fermi al 100%»).
 - **Testi adatti all'età e alla situazione:** il giocatore può avere 0 anni. Niente telefono/meme sotto i 12, niente caffè sotto i 16, niente «passa a trovarti» con chi vive con te (`convive(p)`). Le frasi di chi ti cerca sono in `CERCA` + `cercaTesto(p)`; gli argomenti di dialogo (`TEMI`) hanno `min`/`max` (età tua) e `pmin` (età dell'altro); sotto i 3 anni con la famiglia c'è solo «Fatti coccolare».
 - **Le cose dolorose pesano:** oltre a `mod('felicita',…)` (che rientra), usa `pesa(stress,tensione)` per lutti, animali, amicizie e relazioni chiuse.
-- **Amici e candidati:** `candidato()` è per gli incontri romantici (sesso secondo l'attrazione); per gli amici usa `candidatoAmico()`/`sessoAmico()` (2 su 3 dello stesso sesso).
+- **Amici e candidati:** `candidato()` è per gli incontri romantici (sesso secondo l'attrazione; età da `etaAmore()`: da minorenni coetanei, ±2 anni, da adulti dai 18 in su); per gli amici usa `candidatoAmico()`/`sessoAmico()` (2 su 3 dello stesso sesso).
+- **Età credibili:** chi nasce durante il gioco (`nuovaPersona` con età 0) compie gli anni nel mese in cui nasce; i fratelli alla nascita sono distanziati di almeno 15 mesi; i cugini hanno almeno 20 anni meno dello zio; i suoceri di un partner anziano possono non esserci. `invarianti.py` controlla queste regole.
 - **Traslochi del giocatore:** dopo aver cambiato `S.citta` chiama `dopoTrasloco(vecchiaCitta)` (chi vive nella nuova città smette di essere «lontano», chi resta nella vecchia lo diventa).
 - **Crescite composte:** ogni cosa che si moltiplica ogni mese deve avere un tetto (vedi follower: `tettoFollower()`, massimo `CAP_FOLLOWER` = 40 milioni; prima arrivavano a milioni di miliardi e con le collaborazioni rendevano soldi infiniti).
 - Le funzioni dei sistemi sono pensate per il mese: se aggiungi qualcosa di annuale, mettilo in `inizioAnno()` o in `compleanno()`.
@@ -229,6 +236,7 @@ Se una modifica sposta molto questi numeri, è probabile un errore. Il pilota au
 ## Salvataggi (g_salva.js)
 - In locale: `localStorage` (`save()` a ogni mese).
 - Pulsante «Salva»: **file** `.my` (si caricano anche i vecchi `.vitamia`) o **codice** da copiare (`VITAMIA1Z:` + JSON gzip in base64), e caricamento da file/codice.
+- **«Segnala un problema»** (nel foglio «Salva»): copia negli appunti la versione (`VERSIONE`, impronta dei sorgenti scritta da `build.py`), la situazione del personaggio, il diario degli ultimi 3 mesi e il codice della partita, da incollare in chat. Con il codice si ricarica esattamente la partita (e la si può aggiungere a `tools/salvataggi/`).
 - **Online**: funziona solo quando il gioco gira come *artifact* su claude.ai, tramite `window.claude.use('db')` + `use('user')` + `use('downloads')`. Fuori da claude.ai `window.claude` non esiste e il codice lo ignora. Chi apre il link condiviso senza permessi di scrittura non può salvare online: per lui restano file e codice.
 
 ## Repository

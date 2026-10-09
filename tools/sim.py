@@ -13,7 +13,7 @@ JS=r'''
  const errs=[];const out=[];const evc={};const bisA=[];
  const realRender=render;window.render=()=>{};window.save=()=>{};window.toast=()=>{};
  const t0=performance.now();
- const risolvi=()=>{let g=0;while(sheetOpen&&g<40){g++;const id=(document.querySelector('#shT').textContent||'').slice(0,30);evc[id]=(evc[id]||0)+1;if(!AP.scegli()){errs.push('sheet vuoto: '+id);sheetOpen=false;break}}};
+ const risolvi=()=>{let g=0;while(sheetOpen&&g<40){g++;const id=(document.querySelector('#shT').textContent||'').slice(0,30);if(document.querySelector('#shA button.opt'))evc[id]=(evc[id]||0)+1;/* solo la domanda: l'esito ha lo stesso titolo */if(!AP.scegli()){errs.push('sheet vuoto: '+id);sheetOpen=false;break}}};
  for(let v=0;v<N;v++){
   try{
    const x=pick(['M','F']);const cc=comuneCaso();
