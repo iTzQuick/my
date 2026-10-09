@@ -1,0 +1,704 @@
+<title>Atlante di my</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<style>
+/* Layout: archivio tecnico del gioco — testata con i numeri chiave, barra di schede fissa, poi pannelli con grafici e schede-dati espandibili */
+:root{
+  --bg:#ECEFE8; --surface:#FCFCFB; --surface2:#E3E7DD; --ink:#16202A; --muted:#5A6570; --faint:#7C8690; --line:#D1D7CB; --grid:#E2E6DD;
+  --accent:#2244D6; --accent-ink:#FFFFFF; --accent-soft:rgba(34,68,214,.09);
+  --good:#1D8049; --good-soft:rgba(29,128,73,.10); --bad:#C23B25; --bad-soft:rgba(194,59,37,.09); --warn:#9A6700;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4;
+  --f-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --f-body:"Instrument Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"DM Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151B; --surface:#19212A; --surface2:#232D38; --ink:#E9EEF3; --muted:#9AA6B2; --faint:#7D8994; --line:#2C3743; --grid:#25303B;
+  --accent:#7D98FF; --accent-ink:#0D1424; --accent-soft:rgba(125,152,255,.13);
+  --good:#4CC584; --good-soft:rgba(76,197,132,.13); --bad:#F2765F; --bad-soft:rgba(242,118,95,.12); --warn:#E0B341;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#10151B; --surface:#19212A; --surface2:#232D38; --ink:#E9EEF3; --muted:#9AA6B2; --faint:#7D8994; --line:#2C3743; --grid:#25303B;
+  --accent:#7D98FF; --accent-ink:#0D1424; --accent-soft:rgba(125,152,255,.13);
+  --good:#4CC584; --good-soft:rgba(76,197,132,.13); --bad:#F2765F; --bad-soft:rgba(242,118,95,.12); --warn:#E0B341;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;margin:0}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+.hd{display:flex;flex-direction:column;gap:6px;padding-bottom:18px}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(34px,6vw,54px);line-height:1;letter-spacing:-.02em;margin:2px 0 4px;text-wrap:balance}
+h1 em{font-style:normal;color:var(--accent)}
+.lede{max-width:64ch;color:var(--muted);margin:0}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+@media (max-width:700px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.tile b{display:block;font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile span{font-size:13px;color:var(--muted)}
+.tabs-wrap{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding-inline:16px;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding-block:8px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:0;background:transparent;padding:7px 12px;border-radius:999px;font-weight:500;font-size:14px;color:var(--muted);white-space:nowrap}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.pane{padding-top:22px;display:flex;flex-direction:column;gap:22px}
+h2{font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1.15;margin:0;text-wrap:balance}
+h3{font-family:var(--f-display);font-weight:700;font-size:18px;line-height:1.2;margin:0 0 4px;text-wrap:balance}
+.intro{max-width:72ch;color:var(--muted);margin:4px 0 0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.card .sub{font-size:13px;color:var(--muted);margin:0}
+.chart{position:relative;width:100%;min-height:260px}
+.chart.tall{min-height:320px}
+.note{font-size:13px;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+.dati summary{font-size:12.5px;color:var(--accent);cursor:pointer;width:max-content}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--f-mono);font-weight:500;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--surface2);position:sticky;top:0;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl-wrap.small table{font-size:13px}
+.findings{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.find{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:10px;padding:12px 14px}
+.find b{display:block;margin-bottom:2px}
+.find p{margin:0;font-size:13.5px;color:var(--muted)}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:8px;counter-reset:s}
+.steps li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px 10px 44px;position:relative;font-size:13.5px}
+.steps li::before{content:counter(s);position:absolute;left:12px;top:10px;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-family:var(--f-mono);font-size:12px;display:grid;place-items:center}
+.steps b{display:block;font-size:14px}
+/* Database eventi */
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.search{flex:1 1 260px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:13px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.count{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.evlist{display:flex;flex-direction:column;gap:8px}
+details.ev{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+details.ev>summary{list-style:none;cursor:pointer;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:start}
+details.ev>summary::-webkit-details-marker{display:none}
+details.ev[open]>summary{border-bottom:1px solid var(--line)}
+.ev-t{font-weight:600;font-size:15.5px;min-width:0}
+.ev-age{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right;white-space:nowrap}
+.ev-meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:var(--surface2);color:var(--muted)}
+.tag.a{background:var(--accent-soft);color:var(--accent)}
+.tag.b{background:var(--bad-soft);color:var(--bad)}
+.tag.w{border:1px solid var(--line);background:transparent}
+.ev-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:10px}
+.ev-x{margin:0;font-style:italic;max-width:70ch}
+.ev-cond{font-size:13px;color:var(--muted)}
+.ch{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.ch-h{padding:9px 12px;background:var(--surface2);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
+.ch-h b{font-weight:600}
+.ch-h span{font-size:12.5px;color:var(--muted)}
+.ch-b{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+.out{padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.out+.out{border-left:1px solid var(--line)}
+.out-h{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.out-h.ok{color:var(--good)} .out-h.ko{color:var(--bad)} .out-h.ne{color:var(--muted)}
+.out q{font-size:13.5px;quotes:"«" "»";color:var(--ink)}
+.effs{display:flex;flex-wrap:wrap;gap:4px}
+.ef{font-size:12px;padding:2px 7px;border-radius:6px;font-variant-numeric:tabular-nums;background:var(--good-soft);color:var(--good)}
+.ef.neg{background:var(--bad-soft);color:var(--bad)}
+td .pos{color:var(--good);font-weight:600} td .neg{color:var(--bad);font-weight:600}
+.ef.x{background:var(--accent-soft);color:var(--accent)}
+.ef.cr{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+.prob{font-size:12.5px;color:var(--muted)}
+.prob .mono{color:var(--ink)}
+a.lnk{color:var(--accent);text-decoration:none;font-size:12.5px}
+a.lnk:hover{text-decoration:underline}
+.more{align-self:center}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 14px;font-weight:500}
+.lvls{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:12.5px}
+.lvls i{font-style:normal;color:var(--faint)}
+.formula{font-family:var(--f-mono);font-size:13px;background:var(--surface2);border-radius:8px;padding:8px 10px;overflow-x:auto;white-space:pre-wrap}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:600px){.out+.out{border-left:0;border-top:1px solid var(--line)}.tile b{font-size:24px}}
+</style>
+
+<div class="wrap">
+  <header class="hd">
+    <span class="eyebrow">my · archivio completo del gioco</span>
+    <h1>Atlante di <em>my</em></h1>
+    <p class="lede">Tutto quello che c'è dentro il gioco: il carattere, il tempo mese per mese, le persone con la loro vita, ogni evento con le sue domande, risposte, probabilità e conseguenze, i lavori, gli studi, i beni, le regole di calcolo. I grafici della scheda Simulazione vengono da <b id="nVite"></b> vite giocate in automatico.</p>
+    <div class="tiles" id="tiles"></div>
+  </header>
+  <div class="tabs-wrap"><nav class="tabs" role="tablist" id="tabs"></nav></div>
+  <main id="main"></main>
+</div>
+
+<script type="application/json" id="DATI">__DATI__</script>
+<script type="application/json" id="DER">__DER__</script>
+<script>
+const D=JSON.parse(document.getElementById('DATI').textContent);
+const X=JSON.parse(document.getElementById('DER').textContent);
+const $=s=>document.querySelector(s);
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=new Intl.NumberFormat('it-IT');
+const eur=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Math.round(n));
+const eurK=n=>Math.abs(n)>=1e6?(n/1e6).toLocaleString('it-IT',{maximumFractionDigits:1})+' mln €':Math.abs(n)>=1e3?Math.round(n/1e3).toLocaleString('it-IT')+'k €':Math.round(n)+' €';
+const pct=p=>p==null?'—':Math.round(p*100)+'%';
+const tbl=(head,rows,cls)=>`<div class="tbl-wrap ${cls||''}"><table><thead><tr>${head.map(h=>`<th class="${h.n?'n':''}">${esc(h.t??h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td class="${head[i]&&head[i].n?'n':''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+const RUOLI={Madre:'madre',Padre:'padre',Fratello:'fratello/sorella',Nonno:'nonno/a',Amico:'amico/a',Partner:'partner',Coniuge:'coniuge',Figlio:'figlio/a',Nipote:'nipote',Ex:'ex'};
+const SEZ_NOME=s=>s.replace(' (link)','').replace('In carcere','Carcere');
+const titoloEv={};D.ev.forEach(e=>titoloEv[e.id]=e.t);
+
+/* ---------- Grafici ---------- */
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const GR=[];let chartsOk=typeof Chart!=='undefined';
+function grafico(id,cfg){GR.push({id,cfg,inst:null})}
+function base(extra){
+  const ink=css('--muted'),grid=css('--grid');
+  if(chartsOk){Chart.defaults.font.family=css('--f-body')||'sans-serif';Chart.defaults.font.size=12;Chart.defaults.color=ink}
+  const o={responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'nearest',intersect:false},
+    plugins:{legend:{display:false,labels:{boxWidth:10,boxHeight:10,usePointStyle:true,pointStyle:'rectRounded',color:css('--ink')}},
+      tooltip:{backgroundColor:css('--ink'),titleColor:css('--bg'),bodyColor:css('--bg'),borderWidth:0,padding:10,cornerRadius:8,displayColors:true,boxPadding:4}},
+    scales:{x:{grid:{color:grid,drawTicks:false},border:{color:grid},ticks:{color:ink,padding:6}},y:{grid:{color:grid,drawTicks:false},border:{display:false},ticks:{color:ink,padding:6}}}};
+  return deep(o,extra||{});
+}
+function deep(a,b){for(const k in b){if(b[k]&&typeof b[k]==='object'&&!Array.isArray(b[k])&&a[k]&&typeof a[k]==='object')deep(a[k],b[k]);else a[k]=b[k]}return a}
+const ogni10={autoSkip:false,maxRotation:0,callback:function(v){const l=this.getLabelForValue(v);return Number(l)%10===0?l:''}};
+function disegna(root){
+  if(!chartsOk)return;
+  for(const g of GR){const el=document.getElementById(g.id);if(!el||(root&&!root.contains(el))||!el.offsetParent)continue;
+    if(g.inst)g.inst.destroy();g.inst=new Chart(el,g.cfg())}
+}
+function canvas(id,cls){return chartsOk?`<div class="chart ${cls||''}"><canvas id="${id}" role="img"></canvas></div>`:`<p class="note">I grafici non si sono caricati. I numeri sono comunque nelle tabelle.</p>`}
+const S=i=>css('--s'+i);
+const alpha=(hex,a)=>{const h=hex.replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
+const barre=(color)=>({backgroundColor:color,borderRadius:4,borderSkipped:'start',maxBarThickness:24,categoryPercentage:.8,barPercentage:.9});
+const linea=(color,label,data)=>({label,data,borderColor:color,backgroundColor:color,borderWidth:2,pointRadius:0,pointHoverRadius:5,pointHoverBorderWidth:2,pointHoverBorderColor:css('--surface'),tension:.25});
+function datiTab(labels,series,fmt){fmt=fmt||(v=>v);return `<details class="dati"><summary>Mostra i numeri</summary>${tbl([{t:''},...series.map(s=>({t:s[0],n:1}))],labels.map((l,i)=>[esc(l),...series.map(s=>esc(fmt(s[1][i])))]),'small')}</details>`}
+
+/* ---------- Schede ---------- */
+const TABS=[['panoramica','Panoramica'],['carattere','Carattere'],['tempo','Tempo e bisogni'],['eventi','Eventi'],['lavori','Lavori'],['studi','Studi'],['beni','Beni e soldi'],['mondo','Mondo e tasse'],['persone','Persone'],['salute','Salute e giustizia'],['crimine','Crimine, social e fama'],['attivita','Attività'],['simulazione','Simulazione'],['regole','Regole e formule']];
+const tot={scelte:D.ev.reduce((s,e)=>s+e.scelte.length,0),esiti:D.ev.reduce((s,e)=>s+e.scelte.reduce((a,c)=>a+(c.p?2:1),0),0)};
+$('#nVite').textContent=nf.format(X.n);
+$('#tiles').innerHTML=[[D.ev.length,'eventi'],[tot.scelte,'risposte possibili'],[tot.esiti,'esiti diversi'],[D.lavori.length,'lavori'],[D.lavori.reduce((s,j)=>s+j.livelli.length,0),'gradi di carriera'],[D.facolta.length+D.superiori.length+D.its.length+D.corsi.length,'percorsi di studio e corsi'],[D.b5.length,'tratti di carattere'],[D.attR.length,'attività della settimana'],[D.aspir.length,'aspirazioni di vita'],[D.nComuni,'comuni italiani'],[D.att.length+D.crimini.length+D.missioni.length,'attività, colpi e missioni']].map(([v,l])=>`<div class="tile"><b>${nf.format(v)}</b><span>${l}</span></div>`).join('');
+$('#tabs').innerHTML=TABS.map(([k,l])=>`<button class="tab" role="tab" data-t="${k}" aria-selected="false">${l}</button>`).join('');
+$('#main').innerHTML=TABS.map(([k])=>`<section class="pane" id="p-${k}" role="tabpanel" hidden></section>`).join('');
+const fatte={};
+function apri(k,scroll){
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.t===k));
+  document.querySelectorAll('.pane').forEach(p=>p.hidden=p.id!=='p-'+k);
+  const p=$('#p-'+k);if(!fatte[k]){RENDER[k](p);fatte[k]=1}
+  disegna(p);
+  try{localStorage.setItem('atlante_tab',k)}catch(e){}
+  if(scroll)window.scrollTo({top:$('.tabs-wrap').offsetTop,behavior:'auto'});
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>apri(t.dataset.t,true));
+
+const RENDER={};
+
+/* ----- Panoramica ----- */
+RENDER.panoramica=p=>{
+  const sez={};D.ev.forEach(e=>{const s=SEZ_NOME(e.sez);sez[s]=(sez[s]||0)+1});
+  const sezL=Object.entries(sez).sort((a,b)=>b[1]-a[1]);
+  const top=Object.entries(X.freq).filter(([k])=>titoloEv[k]).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  p.innerHTML=`
+  <div><h2>Come funziona un mese</h2><p class="intro">Ogni volta che premi «+1 mese» il gioco esegue questi passaggi, sempre in quest'ordine. «Avanti veloce» ripete il mese fino a 12 volte e si ferma al primo evento.</p></div>
+  <ol class="steps">
+    <li><b>Calendario</b>Il mese avanza. A gennaio cambia il mondo: inflazione, Borsa, crisi e boom, valore delle case, stipendi, azienda e clan.</li>
+    <li><b>Compleanno</b>Nel tuo mese di nascita compi gli anni: il carattere matura, a 4 anni si forma l'attaccamento, a 18 scegli le aspirazioni, più avanti arriva la proposta di pensione.</li>
+    <li><b>Carcere</b>Se sei in prigione, ogni 12 mesi scala un anno di pena.</li>
+    <li><b>Persone</b>Ognuno vive il suo mese: lavoro, amori, figli, malattie, traslochi, richieste di aiuto. I rapporti calano se non vi vedete.</li>
+    <li><b>Animali</b>Invecchiano; da anziani possono andarsene.</li>
+    <li><b>Scuola</b>A settembre si comincia, a giugno pagelle, esami, diplomi e lauree.</li>
+    <li><b>Feste e stagioni</b>Buoni propositi, San Valentino, ferie d'agosto, Natale, tredicesima.</li>
+    <li><b>Lavoro</b>Rendimento, promozioni, licenziamenti, contributi.</li>
+    <li><b>La tua settimana</b>Le ore che hai deciso cambiano forma, voti, abilità, follower, soldi extra, spese e rapporti.</li>
+    <li><b>Bisogni</b>Si aggiornano socialità, energia, stress e umore.</li>
+    <li><b>Bilancio del mese</b>Stipendio (doppio a dicembre), affitto, spese, rate, imprevisti (7% al mese).</li>
+    <li><b>Salute</b>La salute si avvicina al suo obiettivo; nuove malattie (più frequenti d'inverno) o guarigioni.</li>
+    <li><b>Conseguenze</b>Arrivano gli effetti rimandati delle scelte passate.</li>
+    <li><b>Morte</b>Il rischio dell'anno diviso sui 12 mesi.</li>
+    <li><b>Eventi</b>8,5% di un evento casuale, 4,5% di uno con una persona, più gli eventi che nascono dal tuo stato, gli incontri e gli impulsi del carattere.</li>
+  </ol>
+  <div><h2>Cosa dicono i numeri</h2><p class="intro">Osservazioni dalla simulazione di ${nf.format(X.n)} vite giocate da un pilota automatico che sceglie in base al carattere. Sono punti da valutare se vuoi ritoccare il bilanciamento.</p></div>
+  <div class="findings">
+    <div class="find"><b>Il carattere conta come nella realtà</b><p>Chi ha Emotività alta vive tra 25 e 60 anni con felicità media ${virg(X.carattere.N.alto.fel)} e stress ${virg(X.carattere.N.alto.st)}; chi l'ha bassa ${virg(X.carattere.N.basso.fel)} e ${virg(X.carattere.N.basso.st)}. Coscienziosità ed Estroversione aiutano, come dice la ricerca.</p></div>
+    <div class="find"><b>Una vita piena di cose</b><p>In media ${nf.format(X.eventiVita)} eventi con scelte per vita, contando anche le schermate di esito. Lo stress medio da adulti è ${virg(X.medie.st)}, la socialità ${virg(X.medie.soc)}, l'energia ${virg(X.medie.en)}.</p></div>
+    <div class="find"><b>Risparmiare costa fatica</b><p>Il patrimonio mediano a fine vita vale ${eurK(X.patReale.p50)} in euro di oggi. Il 10% più povero muore in rosso, il 10% più ricco ha più di ${eurK(X.patReale.p90)}.</p></div>
+    <div class="find"><b>Aspettativa di vita realistica</b><p>Età media alla morte ${virg(X.etaMorte.media)} anni, mediana ${virg(X.etaMorte.mediana)}. Fumo, alcol, stress, poco sonno e malattie non curate la abbassano.</p></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Quanti eventi possono capitarti a ogni età</h3><p class="sub">Eventi disponibili per età, prima di controllare le condizioni (soldi, lavoro, persone…).</p>${canvas('gEta')}${datiTab(X.perEta.eta.filter(a=>a%5===0).map(String),[['Casuali',X.perEta.casuali.filter((_,i)=>i%5===0)],['Con persone',X.perEta.persone.filter((_,i)=>i%5===0)]])}</div>
+    <div class="card"><h3>Eventi per sezione</h3><p class="sub">Quanti eventi ci sono in ogni gruppo del gioco.</p>${canvas('gSez')}</div>
+  </div>
+  <div class="card"><h3>Gli eventi che capitano più spesso</h3><p class="sub">Volte in media per vita, misurate sulle vite simulate.</p>${canvas('gTop','tall')}</div>`;
+  grafico('gEta',()=>({type:'line',data:{labels:X.perEta.eta,datasets:[linea(S(1),'Eventi casuali',X.perEta.casuali),linea(S(2),'Eventi con persone',X.perEta.persone)]},options:base({plugins:{legend:{display:true,position:'top',align:'start'},tooltip:{callbacks:{title:i=>i[0].label+' anni'}}},scales:{x:{title:{display:true,text:'Età'},ticks:ogni10},y:{beginAtZero:true,title:{display:true,text:'Eventi disponibili'}}}})}));
+  grafico('gSez',()=>({type:'bar',data:{labels:sezL.map(s=>s[0]),datasets:[{label:'Eventi',data:sezL.map(s=>s[1]),...barre(S(1))}]},options:base({indexAxis:'y',scales:{x:{beginAtZero:true},y:{grid:{display:false}}}})}));
+  grafico('gTop',()=>({type:'bar',data:{labels:top.map(t=>titoloEv[t[0]]),datasets:[{label:'Volte per vita',data:top.map(t=>t[1]),...barre(S(1))}]},options:base({indexAxis:'y',scales:{x:{beginAtZero:true,title:{display:true,text:'Volte in media per vita'}},y:{grid:{display:false}}},plugins:{tooltip:{callbacks:{label:c=>` ${String(c.raw).replace('.',',')} volte per vita`}}}})}));
+};
+
+/* ----- Carattere ----- */
+const BN={O:'Apertura mentale',C:'Coscienziosità',E:'Estroversione',A:'Amicalità',N:'Emotività'};
+const virg=x=>x==null?'—':String(x).replace('.',',');
+RENDER.carattere=p=>{
+  const CA=X.carattere,B=D.b5;
+  const EFF={
+    O:'Più ore di hobby rendono di più (×0,8 + Apertura ÷ 500) e danno più umore. Sceglie più spesso aspirazioni come viaggi e studio. Interessi più artistici e investigativi. Impulsi curiosi: nuove passioni, musei, lingue.',
+    C:'Costanza: delle ore di sport e studio che pianifichi ne fai il 62% + Coscienziosità ÷ 260 (dal 62% al 100%). Spese per lo svago ×(1,2 − C ÷ 250). Rendimento al lavoro ±0,7 al mese. Abbandona meno i buoni propositi. Meno acquisti d\'impulso e meno rischio di dipendenze.',
+    E:'Bisogno di compagnia: 4 + Estroversione × 0,13 ore sociali a settimana (da 4 a 17). Gli introversi si stancano oltre quella soglia. Umore +6 al massimo. Più incontri (×0,6 + E ÷ 100) e più successo agli appuntamenti.',
+    A:'Meno conflitti in coppia e con amici e parenti. Le scelte generose sono «da te». Pesa sull\'affinità con gli altri e sull\'aspirazione «Aiutare gli altri».',
+    N:'Lo stress da carico pesa di più (×1 + 0,6 × Emotività) e parte più alto (+10). Umore −14 al massimo. Più notti d\'ansia e risposte brusche sotto pressione. Peggiora il rischio di dipendenze e lo stile di attaccamento.'};
+  const metr=[['fel','Felicità media (25–60 anni)'],['st','Stress medio (25–60 anni)'],['soc','Socialità media (25–60 anni)'],['eta','Età alla morte'],['pat','Patrimonio finale mediano']];
+  const at=X.attacc,AN=D.attacc,asp=X.aspir;
+  const QUANDO={famiglia:'Partner convivente o coniuge, e almeno un figlio',carriera:'Terzo livello di carriera, o un\'azienda con almeno 2 sedi',ricchezza:'Patrimonio di 500.000 € (in euro di oggi)',fama:'Fama almeno 40',viaggi:'Almeno 6 viaggi che contano',sapere:'Laurea magistrale',altri:'Karma almeno 85',casa:'Vivere in una casa di proprietà',serenita:'60 mesi con stress sotto 35 e felicità almeno 62'};
+  const CHI={famiglia:'Amicalità e Coscienziosità alte',carriera:'Coscienziosità ed Estroversione alte',ricchezza:'Amicalità bassa',fama:'Estroversione e Apertura alte',viaggi:'Apertura alta',sapere:'Apertura e Coscienziosità alte',altri:'Amicalità alta',casa:'Coscienziosità alta, Apertura bassa',serenita:'Emotività alta'};
+  const RIA={R:'Pratico: lavori manuali, tecnici, all\'aperto',I:'Investigativo: ricerca, scienza, analisi',A:'Artistico: creatività, comunicazione',S:'Sociale: aiutare, insegnare, curare',E:'Intraprendente: vendere, guidare, convincere',C:'Convenzionale: ordine, numeri, procedure'};
+  p.innerHTML=`<div><h2>Carattere</h2><p class="intro">Ogni persona del gioco, tu compreso, ha cinque tratti di personalità da 0 a 100: è il modello dei Big Five usato in psicologia. Alla nascita ogni tratto vale 50 + 45% × (media dei genitori − 50) + caso (deviazione 15), quindi assomigli ai tuoi in parte. Nelle formule il tratto diventa un numero da −1 a +1: (valore − 50) ÷ 50.</p></div>
+  <div class="card"><h3>I cinque tratti</h3><p class="sub">Etichette: «nella media» tra 39 e 61. Sotto 22 o sopra 78 l'aggettivo è più forte.</p>${tbl([{t:'Tratto'},{t:'Basso'},{t:'Alto'},{t:'Cosa cambia nel gioco'}],B.map(b=>[`<b>${esc(b.n)}</b>`,`${esc(b.lo[0][0])}, ${esc(b.lo[1][0].toLowerCase())}<div class="note">${esc(b.dlo)}</div>`,`${esc(b.hi[0][0])}, ${esc(b.hi[1][0].toLowerCase())}<div class="note">${esc(b.dhi)}</div>`,esc(EFF[b.k])]),'small')}</div>
+  <div class="card"><h3>Quanto pesa il carattere sulla vita</h3><p class="sub">Le ${nf.format(X.n)} vite simulate divise per livello del tratto alla nascita: basso (sotto 40), medio, alto (sopra 60).</p>
+    <div class="ctrl"><label class="note" for="metC">Mostra</label><select id="metC" class="chip">${metr.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select></div>${canvas('gCar')}
+    ${tbl([{t:'Tratto'},{t:'Felicità',n:1},{t:'Stress',n:1},{t:'Socialità',n:1},{t:'Età alla morte',n:1},{t:'Patrimonio',n:1}],'OCEAN'.split('').map(k=>[esc(BN[k]),...['fel','st','soc','eta','pat'].map(m=>{const r=CA[k].r[m];const buono=m==='st'?r<0:r>0;return `<span class="${Math.abs(r)>=.2?(buono?'pos':'neg'):''}">${r>0?'+':''}${virg(r.toFixed(2))}</span>`})]),'small')}
+    <p class="note">Correlazione tra tratto e risultato: da −1 a +1. Sopra 0,2 (in valore assoluto) il legame è chiaro: in verde quando aiuta, in rosso quando pesa. Come nella ricerca vera, l'Emotività è il tratto che pesa di più sulla felicità, seguita da Coscienziosità ed Estroversione.</p></div>
+  <div class="grid2">
+    <div class="card"><h3>Come cambia il carattere</h3><p class="sub">A ogni compleanno, più un po' di caso (deviazione 0,8).</p>${tbl(['Età','Cambiamento all\'anno'],[['12–17','Emotività da −1 a +2, Coscienziosità da −2 a +1'],['18–40','Coscienziosità +0,3…1,3, Amicalità +0,3, Emotività −0,4'],['41–65','Amicalità +0,2, Emotività −0,2'],['Oltre 70','Apertura −0,4, Estroversione −0,3']].map(r=>r.map(esc)),'small')}
+    <h3 style="margin-top:8px">Esperienze che lasciano il segno</h3>${tbl(['Esperienza','Effetto sul carattere'],Object.entries(D.segna).map(([k,v])=>[esc({lutto:'Lutto di una persona vicina',carcere:'Carcere',divorzio:'Divorzio o abbandono',licenziato:'Licenziamento o bocciatura',laurea:'Laurea',promozione:'Promozione',matrimonio:'Matrimonio',figlio:'Nascita di un figlio',terapia:'Terapia',viaggio:'Un viaggio che conta',volontariato:'Volontariato',burnout:'Burnout ignorato',solitudine:'Solitudine accettata'}[k]||k),esc(Object.entries(v).map(([t,d])=>`${BN[t]} ${d>0?'+':''}${virg(d)}`).join(', '))]),'small')}</div>
+    <div class="card"><h3>Scelte «da te» e «non è da te»</h3><p class="sub">Ogni risposta viene letta: certe parole indicano un tratto. Il punteggio è la somma di (segno × tratto) diviso la radice del numero di parole trovate. Le risposte rischiose contano come un mezzo punto di Estroversione alta, Coscienziosità bassa ed Emotività bassa.</p>
+    ${tbl(['Punteggio','Etichetta','Effetto'],[['0,22 o più','da te','Felicità +1 · probabilità di riuscita +10% × punteggio'],['−0,22 o meno','non è da te','Stress + 10 × punteggio · energia −4 · probabilità −10% × punteggio']].map(r=>r.map(esc)),'small')}
+    <h3 style="margin-top:8px">Le parole chiave</h3>${tbl(['Tratto','Indica','Parole (anche come inizio di parola)'],D.incl.map(i=>[esc(BN[i.k]),i.sg>0?'alto':'basso',esc(i.parole.join(', '))]),'small')}</div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Stile di attaccamento</h3><p class="sub">Si forma a 4 anni dal calore dei genitori (media del rapporto), dai conflitti in famiglia (separazione, famiglia difficile, un genitore assente), dall'Emotività, dall'Estroversione e dall'Amicalità. La terapia lo può rendere sicuro (25%).</p>
+    ${tbl([{t:'Stile'},{t:'Cosa vuol dire'},{t:'Vite',n:1},{t:'Felicità',n:1},{t:'Divorzi',n:1}],Object.entries(AN).map(([k,a])=>[`<b>${esc(a.n)}</b>`,esc(a.d),at[k]?virg(at[k].pct)+'%':'—',at[k]?virg(at[k].fel):'—',at[k]?virg(at[k].div)+'%':'—']),'small')}
+    <div class="formula">Ansia = (Emotività − 50) × 0,6 + (78 − calore) × 0,5 + conflitti × 12 + caso
+Evitamento = (50 − Estroversione) × 0,35 + (78 − calore) × 0,4 + (50 − Amicalità) × 0,25 + conflitti × 6 + caso
+Sicuro: entrambi sotto 11 · Ansioso: solo l'ansia · Evitante: solo l'evitamento · Timoroso: tutti e due</div>
+    <p class="note">In coppia: ansioso +1,2 di conflitto al mese e umore −3 da single dopo i 22 anni; evitante −0,6 di impegno al mese; timoroso −0,4 di impegno e +1 di conflitto.</p></div>
+    <div class="card"><h3>Interessi (codice di Holland)</h3><p class="sub">Sei tipi di interesse calcolati da carattere, abilità e Intelletto. Le tre lettere più alte formano il tuo codice.</p>${tbl(['Tipo','Cosa piace'],Object.entries(RIA).map(([k,d])=>[`<b>${k}</b> ${esc(D.riasec[k])}`,esc(d.split(': ')[1])]),'small')}
+    <div class="formula">Pratico = 28 + Sport × 0,3 + Cucina × 0,25 + (50 − Apertura) × 0,15
+Investigativo = 24 + Intelletto × 0,3 + Apertura × 0,2 + Tecnologia × 0,25
+Artistico = 22 + Apertura × 0,3 + Arte × 0,3 + Musica × 0,3
+Sociale = 24 + Amicalità × 0,32 + Estroversione × 0,18
+Intraprendente = 24 + Estroversione × 0,3 + (100 − Amicalità) × 0,12 + Coscienziosità × 0,1
+Convenzionale = 26 + Coscienziosità × 0,36 + (100 − Apertura) × 0,15 + Tecnologia × 0,05
+
+Affinità con un lavoro = 100 − 14 × posizione della sua prima lettera − 6 × posizione della seconda
+Soddisfazione = affinità × 0,55 + min(25, netto ÷ 1.000) + (rendimento − 50) × 0,2 + livello × 3</div>
+    <p class="note">Ogni lavoro ha il suo codice (scheda Lavori). Sotto 38 di soddisfazione può arrivare l'evento «Il lavoro ti pesa». La soddisfazione entra nell'umore e nello stress.</p></div>
+  </div>
+  <div class="card"><h3>Aspirazioni</h3><p class="sub">A 18 anni scegli le due cose che contano di più. Le opzioni in linea con il carattere sono «da te». Ogni aspirazione realizzata dà felicità +12 sul momento e +4 all'umore per sempre; dopo i 45 anni ognuna mancata toglie 2.</p>
+  ${tbl([{t:'Aspirazione'},{t:'Si realizza quando'},{t:'La sceglie chi ha'},{t:'Scelta',n:1},{t:'Realizzata',n:1}],D.aspir.map(a=>[`<b>${esc(a.n)}</b>`,esc(QUANDO[a.id]||''),esc(CHI[a.id]||''),asp[a.id]?virg(asp[a.id].scelta)+'%':'—',asp[a.id]?virg(asp[a.id].ok)+'%':'—']),'small')}
+  <p class="note">«Scelta»: percentuale delle vite simulate che l'ha messa tra le due. «Realizzata»: quante di quelle ci sono riuscite.</p></div>`;
+  let met='fel';
+  grafico('gCar',()=>{const lab=metr.find(m=>m[0]===met)[1];const fmt=met==='pat'?eurK:(v=>virg(v));
+    return {type:'bar',data:{labels:'OCEAN'.split('').map(k=>BN[k]),datasets:[['basso','Basso',S(2)],['medio','Medio',S(4)],['alto','Alto',S(1)]].map(([g,l,c])=>({label:l,data:'OCEAN'.split('').map(k=>CA[k][g][met]),...barre(c)}))},
+    options:base({plugins:{legend:{display:true,position:'top',align:'start'},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw)}`}}},scales:{x:{grid:{display:false}},y:{beginAtZero:met==='pat',min:met==='pat'?undefined:Math.max(0,Math.floor(Math.min(...'OCEAN'.split('').flatMap(k=>['basso','medio','alto'].map(g=>CA[k][g][met])))/5)*5-5),title:{display:true,text:lab},ticks:{callback:v=>met==='pat'?eurK(v):v}}}})}});
+  $('#metC').onchange=e=>{met=e.target.value;disegna(p)};
+};
+
+/* ----- Tempo e bisogni ----- */
+RENDER.tempo=p=>{
+  const T=X.traj,ogni=a=>a%10===0;
+  const EFF={
+    sport:'Forma fisica verso 22 + 8,5 × ore effettive (al massimo 94), −0,55 per ogni anno oltre i 45. Sport +0,09 per ora (metà dopo i 30). Stress −1,1 per ora (al massimo −10). Da 3 ore: palestra 35 € al mese (20 € da minorenne).',
+    amici:'Fino a 5 amici, prima i preferiti ★: rapporto + min(7, ore a testa × 1,1) × (0,7 + affinità ÷ 170). Da 16 anni 2,5 € l\'ora.',
+    famiglia:'Genitori, fratelli e nonni: rapporto + min(5, ore a testa × 0,7). Vivendo con loro +2,5 ore automatiche. Da 6 ore ogni tanto anche zii e cugini.',
+    partner:'Intimità + min(6, ore × 0,3) − 1 al mese; la passione tende a 28 + 3,2 × ore. Convivendo +5 ore automatiche. Quando nasce una relazione il gioco ne mette 4.',
+    figli:'Rapporto + min(5, ore a figlio × 0,35); sotto 3 ore −2 al mese. Da 4 ore a figlio la sua media scolastica sale.',
+    hobby:'Abilità dell\'attività + 0,11 × ore × (0,8 + Apertura ÷ 500). Da 2 ore: umore +2 (fino a +4 con Apertura alta). 38 € al mese da adulto.',
+    studio:'Se studi: media += (ore effettive − ore attese) × 0,12 + (Intelletto − 50) ÷ 120. Ore attese: elementari 4, medie 6, superiori 9, università 14. Intelletto +1 con probabilità ore × 1,4% (al massimo 30%, metà dopo i 30). Studiando zero ore la media cala di 1,2 al mese.',
+    uscite:'Socialità, incontri con amici e possibili partner. 9 € l\'ora da adulto, 4 € da ragazzo. Da 5 ore: 5% + 2% × Estroversione − 2% × Coscienziosità al mese di una «bevuta» (rischio alcol).',
+    schermi:'Svago gratis, ogni tanto Tecnologia +1. Sopra 14 ore la media scolastica scende.',
+    social:'Follower × (1 + ore × 0,4% × (0,5 + qualità)) + ore × 2…8 al mese.',
+    extra:'Con un lavoro: straordinari pagati il 125% della paga oraria, rendimento +0,2 per ora. Senza: lavoretti a 7,50 € l\'ora. Conta nel carico di lavoro.',
+    volont:'Karma +0,12 per ora, metà delle ore conta come socialità, persone nuove.'};
+  const EM=[['Burnout','Stress almeno 82 per 3 mesi di fila, mentre lavori o studi','Al massimo ogni 18 mesi'],['Ti senti solo','Socialità sotto 25 per 4 mesi (da 13 anni)','Ogni 12 mesi'],['Il conto è in rosso','Conto negativo e mese in perdita per 3 mesi','Ogni 12 mesi'],['Il medico è chiaro','Da 30 anni con forma sotto 30: 2% al mese','Ogni 24 mesi'],['Niente console','9–16 anni, schermi da 14 ore, media sotto 48, a casa con i genitori: 15%','Ogni 12 mesi'],['Il lavoro ti pesa','Soddisfazione sotto 38: 4% al mese','Ogni 18 mesi'],['Un progetto importante','Rendimento almeno 70: 1,2% + 0,8% × Coscienziosità','Ogni 24 mesi'],['La diagnosi','A ogni malattia grave, cronica o gravissima','Sempre'],['Una persona nuova, Scatta qualcosa','Ogni mese: min(12%, ore nei luoghi giusti × 0,3% × (0,6 + Estroversione ÷ 100)). Luoghi: uscite ×1,2, hobby, volontariato ×1,3, sport da 3 ore ×0,6, amici ×0,4, lavoro 3, scuola 4. Da single e da 16 anni: 45% che sia romantico nei luoghi di svago, 25% altrove','Più rari con oltre 14 tra amici e conoscenti']];
+  const IMP=[['Rispondi male a qualcuno','Stress sopra 68: 6% + 5% × Emotività − 2% × Amicalità','Rapporto −4…10, la persona se lo ricorda'],['Una notte d\'ansia','Stress sopra 75 ed Emotività alta: 5%','Più tensione'],['Acquisto d\'impulso','Da 16 anni con almeno 300 €: 3,5% − 3% × Coscienziosità','40–500 €'],['Chiami qualcuno','Socialità sotto 35 ed Estroversione alta: 8%','Rapporto +4…8, socialità +8'],['Una nuova curiosità','Apertura alta: 2%','Felicità +2'],['Studio rimandato','Coscienziosità bassa, mentre studi: 4%','Media −3'],['Lavoro in anticipo','Coscienziosità alta, con un lavoro: 3%','Rendimento +3']];
+  const CAL=[['Gennaio','Il mondo cambia: inflazione, Borsa, crisi, stipendi rivalutati, valore delle case, azienda e clan. Bilancio dell\'anno nel diario. 35%: i buoni propositi (da 14 anni)'],['Febbraio','San Valentino se hai un partner'],['Dicembre–febbraio','Influenze e malanni ×1,8'],['Giugno','Fine dell\'anno scolastico: pagella, esami, diplomi e lauree'],['Giugno–agosto','Malanni ×0,7'],['Agosto','Le ferie: 50% da adulto. Da bambino l\'estate dai nonni, al mare o al centro estivo'],['Settembre','Si torna a scuola o si inizia un nuovo ciclo'],['Dicembre','Tredicesima. Natale: 30% di evento con scelte'],['Il tuo compleanno','Un anno in più, il carattere matura, a 4 anni si forma l\'attaccamento, a 18 le aspirazioni, a volte una festa per gli anni tondi']];
+  p.innerHTML=`<div><h2>Tempo e bisogni</h2><p class="intro">Il gioco avanza di un mese alla volta. Dai 6 anni decidi come usare le ore libere di ogni settimana nella scheda Tempo: quelle ore cambiano forma, voti, rapporti, soldi, e quindi energia, stress, socialità e umore. Quello che pianifichi resta valido finché non lo cambi.</p></div>
+  <div class="grid2">
+    <div class="card"><h3>Le ore fisse della settimana</h3><p class="sub">Su 168 ore. Quello che resta sono le ore libere.</p>${tbl(['Voce','Ore a settimana'],[['Sonno','Lo scegli tu, da 5 a 10 ore a notte (predefinito: 11 sotto i 6 anni, 10 fino a 12, 8,5 fino a 17, poi 7,5)'],['Scuola','Infanzia 25 · elementari 28 · medie e superiori 30 · serale 14 · università 18 · ITS 24 · master 22 · dottorato 38 · specializzazione 42'],['Lavoro','40 a tempo pieno (+6 per medico, manager, chef, avvocato, calciatore; +3 dal terzo livello) · 18 part-time'],['La tua azienda','35, oppure 12 se hai anche un lavoro'],['Spostamenti','4 con un veicolo, 6 senza'],['Casa, spesa e faccende','8 da solo, 6 convivendo (non con i genitori)'],['Figli','Sotto 3 anni 22 (12 convivendo) · 3–5 anni 14 (8) · 6–13 anni 7 (4)'],['Assistenza a un genitore','12 se scegli di occupartene tu']].map(r=>r.map(esc)),'small')}</div>
+    <div class="card"><h3>Il calendario</h3>${tbl(['Quando','Cosa succede'],CAL.map(r=>r.map(esc)),'small')}</div>
+  </div>
+  <div class="card"><h3>Come usare il tempo libero</h3><p class="sub">Ore a settimana. Il riposo è quello che resta: ricarica l'energia e abbassa lo stress.</p>${tbl([{t:'Attività'},{t:'Da',n:1},{t:'Cosa fa'}],D.attR.map(a=>[`<b>${esc(a.n)}</b><div class="note">${esc(a.d)}</div>`,a.min+' anni',esc(EFF[a.id]||'')]),'small')}</div>
+  <div class="card"><h3>I bisogni con l'età</h3><p class="sub">Media delle vite simulate ancora in corso, a ogni compleanno.</p>${canvas('gBis')}${datiTab(T.eta.filter(ogni).map(String),[['Energia',T.en.filter((_,i)=>ogni(T.eta[i]))],['Stress',T.st.filter((_,i)=>ogni(T.eta[i]))],['Socialità',T.soc.filter((_,i)=>ogni(T.eta[i]))],['Forma',T.forma.filter((_,i)=>ogni(T.eta[i]))]])}</div>
+  <div class="rules">
+    <div class="card"><h3>Socialità</h3><div class="formula">Ore sociali = amici + famiglia + partner + figli + uscite × 0,8 + volontariato × 0,5
+  (+5 a casa con i genitori, +7 convivendo, +2,5 al lavoro, +4 a scuola)
+Bisogno = 4 + Estroversione × 0,13
+Obiettivo = min(1,2; ore ÷ bisogno) × 55 + (qualità dei rapporti − 60) × 0,3 + 5 con un partner
+Ogni mese si avvicina del 50% all'obiettivo</div><p class="note" style="margin:0">Qualità = media dei 5 rapporti migliori.</p></div>
+    <div class="card"><h3>Energia</h3><div class="formula">Obiettivo = 58 + (ore di sonno − 7,5) × 9 + min(16; riposo × 0,4)
+  − max(0; carico − 30) × 0,6 + (forma − 50) × 0,15 − (stress − 35) × 0,2
+  − malattie − fatica sociale degli introversi − max(0; età − 65) × 0,5
+Ogni mese si avvicina del 60%</div><p class="note" style="margin:0">Carico = scuola + lavoro + azienda + studio × 0,8 + lavoro extra + cura dei figli × 0,7 + assistenza. Le attività del mese costano energia.</p></div>
+    <div class="card"><h3>Stress</h3><div class="formula">Obiettivo = 22 + max(0; carico − 20) × 0,7 × (1 + 0,6 × Emotività) + 10 × Emotività
+  + debiti (fino a 18) + insoddisfazione al lavoro + 8 da disoccupato + tensioni + malattie + 6 se assisti qualcuno
+  − sport (fino a 10) − riposo × 0,25 (fino a 10) − hobby (fino a 6) − 3 con socialità sopra 60
+  + (6,5 − sonno) × 9 se dormi meno di 6,5 ore
+Da bambini × 0,7 · ogni mese si avvicina del 45%</div><p class="note" style="margin:0">Le tensioni nascono da litigi e scelte «non da te», e svaniscono in pochi mesi.</p></div>
+    <div class="card"><h3>Umore</h3><div class="formula">Obiettivo = 50 + 6 × Estroversione − 14 × Emotività
+  + (socialità − 55) × 0,22 + (energia − 55) × 0,1 − max(0; stress − 30) × 0,42 + (salute − 75) × 0,14
+  + (soddisfazione al lavoro − 50) × 0,12 − 7 da disoccupato + voti × 0,06
+  − 6 in rosso + 3 con oltre 150.000 € − 4 a 30 anni con i genitori + 2 in casa propria
+  + (rapporto col partner − 50) × 0,12 + 3 con figli affettuosi + 2 con animali + hobby
+  − dipendenze − malattie gravi − 14 in carcere ± aspirazioni
+La Felicità si avvicina del 22% al mese: gli eventi la spostano, poi torna</div></div>
+    <div class="card"><h3>Forma fisica</h3><div class="formula">Obiettivo = 22 + min(72; ore di sport effettive × 8,5) − max(0; età − 45) × 0,55 − 8 se fumi − 6 se bevi
+Ogni mese si avvicina del 12%</div><p class="note" style="margin:0">Pesa sulla salute (+0,18 per punto sopra 50) e sull'energia. Con forma sopra 65 l'aspetto sale piano.</p></div>
+  </div>
+  <div class="card"><h3>Eventi che nascono da come vivi</h3><p class="sub">Non sono estratti a caso: arrivano quando lo stato del personaggio li fa scattare.</p>${tbl(['Evento','Quando arriva','Frequenza massima'],EM.map(r=>r.map(esc)),'small')}</div>
+  <div class="card"><h3>Gli impulsi del carattere</h3><p class="sub">Cose che il personaggio fa da solo, senza chiedertelo. Al massimo una al mese, dai 12 anni.</p>${tbl(['Impulso','Quando e con che probabilità al mese','Effetto'],IMP.map(r=>r.map(esc)),'small')}</div>`;
+  grafico('gBis',()=>({type:'line',data:{labels:T.eta,datasets:[linea(S(3),'Energia',T.en),linea(S(2),'Stress',T.st),linea(S(5),'Socialità',T.soc),linea(S(1),'Forma',T.forma)]},options:base({plugins:{legend:{display:true,position:'top',align:'start'},tooltip:{mode:'index',callbacks:{title:i=>i[0].label+' anni'}}},scales:{x:{ticks:ogni10,title:{display:true,text:'Età'}},y:{min:0,max:100}}})}));
+};
+
+/* ----- Eventi ----- */
+function effHTML(o){
+  if(!o)return '';
+  let h='';
+  if(o.testi&&o.testi.length)h+=o.testi.map(t=>`<q>${esc(t)}</q>`).join('');
+  const ch=[...(o.eff||[]).map(e=>`<span class="ef${e.neg?' neg':''}">${esc(e.k)} ${esc(e.soldi?(e.v.replace(/(\d)(?=(\d{3})+(?!\d))/g,'$1.')+' €'):e.v)}</span>`),...(o.extra||[]).map(x=>`<span class="ef x">${esc(x)}</span>`)];
+  if(o.pr)ch.push(`<span class="ef cr">Processo: ${esc(o.pr)}</span>`);
+  if(ch.length)h+=`<div class="effs">${ch.join('')}</div>`;
+  if(o.fut)h+=`<a class="lnk" href="#ev-${o.fut.id}" data-ev="${o.fut.id}">Dopo ${o.fut.anni} ${o.fut.anni===1?'anno':'anni'} → «${esc(titoloEv[o.fut.id]||o.fut.id)}»</a>`;
+  if(!h)h='<span class="note">Nessun effetto sulle statistiche.</span>';
+  return h;
+}
+function sceltaHTML(c){
+  const info=[];if(c.costo)info.push(`Costa ${eur(c.costo)}`);if(c.sub&&!/^\d/.test(c.sub)&&!c.sub.includes('€'))info.push(esc(c.sub));else if(c.sub&&!c.costo)info.push(esc(c.sub));if(c.cond)info.push('Solo se: '+esc(c.cond));
+  let b;
+  if(c.p){const P=c.p;const range=P.min!==P.max?` (da ${pct(P.min)} a ${pct(P.max)})`:'';
+    b=`<div class="out"><div class="out-h ok">Se va bene · ${pct(P.media)}</div>${effHTML(c.si)}</div><div class="out"><div class="out-h ko">Se va male · ${pct(P.media==null?null:1-P.media)}</div>${effHTML(c.no)}</div>`;
+    info.push(`<span class="prob">Probabilità: <span class="mono">${esc(P.txt)}</span>${P.min!==P.max?` → ${pct(P.media)} con valori medi${range}`:''}</span>`);
+  }else b=`<div class="out"><div class="out-h ne">Esito</div>${effHTML(c.esito)}</div>`;
+  return `<div class="ch"><div class="ch-h"><b>${esc(c.l)}</b>${info.map(i=>`<span>${i}</span>`).join('')}</div><div class="ch-b">${b}</div></div>`;
+}
+function tipoEv(e){
+  if(e.prig)return ['In carcere','b'];
+  if(e.chi)return ['Con '+e.chi.map(r=>RUOLI[r]||r).join(' o '),'a'];
+  if(e.auto)return ['Conseguenza automatica','w'];
+  if(e.link)return ['Si apre da una scelta o da una tappa','w'];
+  return ['Casuale',''];
+}
+function cardEv(e){
+  const [tl,tc]=tipoEv(e);
+  const eta=e.min!=null?`${e.min}–${e.max} anni`:'';
+  const tags=[`<span class="tag ${tc}">${esc(tl)}</span>`,`<span class="tag">${esc(SEZ_NOME(e.sez))}</span>`];
+  if(e.once)tags.push('<span class="tag">Una volta nella vita</span>');
+  else if(e.min!=null)tags.push(`<span class="tag">Torna dopo ${e.rip} anni</span>`);
+  if(e.w!==1)tags.push(`<span class="tag">Peso ×${String(e.w).replace('.',',')}</span>`);
+  const fq=X.freq[e.id];if(fq)tags.push(`<span class="tag">≈ ${String(fq).replace('.',',')} volte per vita</span>`);
+  if(e.scelte.some(c=>(c.si&&c.si.pr)||(c.no&&c.no.pr)||(c.esito&&c.esito.pr)))tags.push('<span class="tag b">Può portare in tribunale</span>');
+  const conds=[];if(e.cond)conds.push('Solo se: '+esc(e.cond));if(e.pc)conds.push('La persona: '+esc(e.pc));
+  return `<details class="ev" id="ev-${e.id}"><summary><span class="ev-t">${esc(e.t)}</span><span class="ev-age">${eta}</span><span class="ev-meta">${tags.join('')}</span></summary>
+  <div class="ev-body"><p class="ev-x">${esc(e.x)}</p>${conds.length?`<div class="ev-cond">${conds.join(' · ')}</div>`:''}${e.dinamica?'<div class="note">Le risposte di questo evento cambiano in base alla situazione: qui sotto c\'è un esempio.</div>':''}
+  ${e.scelte.map(sceltaHTML).join('')}<span class="mono" style="color:var(--faint)">id: ${e.id}</span></div></details>`;
+}
+RENDER.eventi=p=>{
+  const sezioni=[...new Set(D.ev.map(e=>SEZ_NOME(e.sez)))];
+  const testo=D.ev.map(e=>JSON.stringify(e).toLowerCase());
+  p.innerHTML=`<div><h2>Database degli eventi</h2><p class="intro">Ogni evento con la domanda, tutte le risposte, le probabilità di riuscita e gli effetti. Le percentuali «con valori medi» sono calcolate con statistiche a 50, abilità a 30 e rapporto al 50%. «‹nome›» è la persona coinvolta, «o/a» cambia in base al sesso.</p></div>
+  <div class="ctrl"><input class="search" id="q" type="search" placeholder="Cerca: matrimonio, carcere, felicità, Medicina…" aria-label="Cerca negli eventi"><span class="count" id="cnt"></span><button class="btn" id="tutti">Apri tutti</button></div>
+  <div class="chips" id="fsez"><button class="chip" data-s="" aria-pressed="true">Tutte le sezioni</button>${sezioni.map(s=>`<button class="chip" data-s="${esc(s)}" aria-pressed="false">${esc(s)}</button>`).join('')}</div>
+  <div class="chips" id="fx"><button class="chip" data-f="fut" aria-pressed="false">Con conseguenze rimandate</button><button class="chip" data-f="pr" aria-pressed="false">Che portano in tribunale</button><button class="chip" data-f="p" aria-pressed="false">Con probabilità</button><button class="chip" data-f="m" aria-pressed="false">Che costano soldi</button></div>
+  <div class="evlist" id="evl"></div><button class="btn more" id="altri" hidden>Mostra altri</button>`;
+  let sel='',flt=new Set(),limite=40,aperti=false;
+  const ha=(e,f)=>e.scelte.some(c=>[c.si,c.no,c.esito].some(o=>o&&(f==='fut'?o.fut:f==='pr'?o.pr:false))||(f==='p'&&c.p)||(f==='m'&&c.costo));
+  function filtra(){const q=$('#q').value.trim().toLowerCase();return D.ev.filter((e,i)=>(!sel||SEZ_NOME(e.sez)===sel)&&(!q||testo[i].includes(q))&&[...flt].every(f=>ha(e,f)))}
+  function mostra(){const L=filtra();$('#cnt').textContent=`${L.length} eventi`;$('#evl').innerHTML=L.slice(0,limite).map(cardEv).join('')||'<p class="note">Nessun evento corrisponde alla ricerca.</p>';
+    $('#altri').hidden=L.length<=limite;if(aperti)document.querySelectorAll('#evl details').forEach(d=>d.open=true)}
+  $('#q').oninput=()=>{limite=40;mostra()};
+  $('#fsez').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;sel=b.dataset.s;limite=40;$('#fsez').querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b));mostra()};
+  $('#fx').onclick=e=>{const b=e.target.closest('.chip');if(!b)return;const f=b.dataset.f;flt.has(f)?flt.delete(f):flt.add(f);b.setAttribute('aria-pressed',flt.has(f));limite=40;mostra()};
+  $('#altri').onclick=()=>{limite+=60;mostra()};
+  $('#tutti').onclick=()=>{aperti=!aperti;$('#tutti').textContent=aperti?'Chiudi tutti':'Apri tutti';document.querySelectorAll('#evl details').forEach(d=>d.open=aperti)};
+  p.addEventListener('click',e=>{const a=e.target.closest('[data-ev]');if(!a)return;e.preventDefault();vaiEvento(a.dataset.ev)});
+  mostra();
+};
+function vaiEvento(id){
+  apri('eventi');$('#q').value='';$('#q').dispatchEvent(new Event('input'));
+  const sel=$('#fsez .chip[data-s=""]');if(sel)sel.click();
+  let d=document.getElementById('ev-'+id);
+  if(!d){$('#q').value=id;$('#q').dispatchEvent(new Event('input'));d=document.getElementById('ev-'+id)}
+  if(d){d.open=true;d.scrollIntoView({block:'start'});window.scrollBy(0,-60)}
+}
+
+/* ----- Lavori ----- */
+RENDER.lavori=p=>{
+  const J=D.lavori.map(j=>({...j,ini:j.livelli[0].ral,max:j.livelli[j.livelli.length-1].ral}));
+  const byMax=[...J].sort((a,b)=>b.max-a.max);
+  p.innerHTML=`<div><h2>Lavori e carriere</h2><p class="intro">${J.length} lavori, ciascuno con i suoi gradi di carriera. Lo stipendio è la RAL, il lordo annuo; il netto mensile è su 13 mensilità. Per salire di grado servono rendimento almeno al 70%, due anni nello stesso ruolo e, in alcuni casi, un requisito in più. Ogni lavoro ha un codice di interessi: più è vicino al tuo, più ti dà soddisfazione (scheda Carattere).</p></div>
+  <div class="card"><h3>Da dove si parte e dove si può arrivare</h3><p class="sub">Ogni barra va dallo stipendio iniziale a quello dell'ultimo grado. Scala logaritmica: ogni tacca vale dieci volte la precedente.</p>${canvas('gJob')}</div>
+  <div class="ctrl"><label class="note" for="ordJ">Ordina per</label><select id="ordJ" class="chip"><option value="ini">Stipendio iniziale</option><option value="max">Stipendio massimo</option><option value="n">Nome</option></select></div>
+  <div id="tJ"></div>
+  <div class="grid2">
+    <div class="card"><h3>Il colloquio</h3><p class="sub">Tre domande: due generali e una del settore. Ogni risposta vale da −2 a +2 punti; ogni punto aggiunge il 6% alla probabilità di essere assunt${'o'}. Alcune risposte sono un azzardo: «Il 30% in più» riesce al 35% e alza lo stipendio del 10%.</p>${tbl(['Domanda','Risposte (punti)'],D.domGen.map(q=>[esc(q.q),q.a.map(a=>`${esc(a[0])} <b>${a[1]>0?'+':''}${a[1]}</b>`).join('<br>')]),'small')}</div>
+    <div class="card"><h3>Domande del settore</h3>${tbl(['Settore','Domanda','Risposta migliore'],Object.entries(D.domSet).flatMap(([k,qs])=>qs.map(q=>[esc(k),esc(q.q),esc(q.a.slice().sort((a,b)=>b[1]-a[1])[0][0])])),'small')}
+    <h3 style="margin-top:8px">I concorsi pubblici</h3><p class="sub">Tre domande di cultura generale prese da ${D.quiz.length}. Esempi:</p>${tbl(['Domanda','Risposta giusta'],D.quiz.slice(0,8).map(q=>[esc(q[0]),esc(q[1])]),'small')}</div>
+  </div>`;
+  const tipo=j=>[j.pt?'Part-time':'',j.conc?'Concorso pubblico':'',j.var?'Guadagno variabile':'',j.nascosto?'Solo dopo un provino':''].filter(Boolean).join(' · ')||'Candidatura';
+  const draw=()=>{const k=$('#ordJ').value;const L=[...J].sort((a,b)=>k==='n'?a.livelli[0].m.localeCompare(b.livelli[0].m):b[k]-a[k]);
+    $('#tJ').innerHTML=tbl([{t:'Lavoro'},{t:'Carriera'},{t:'RAL iniziale',n:1},{t:'Netto/mese',n:1},{t:'RAL massima',n:1},{t:'Accesso'},{t:'Interessi'},{t:'Ore',n:1},{t:'Requisiti'}],
+      L.map(j=>[`<b>${esc(j.livelli[0].m)}</b>`,`<div class="lvls">${j.livelli.map((l,i)=>`${i?'<i>→</i>':''}<span>${esc(l.m)} <span class="note">${eurK(l.ral)}</span></span>`).join('')}</div>`,eur(j.ini),eur(j.livelli[0].netto),eur(j.max),tipo(j),`<b>${esc(j.riasec)}</b><div class="note">${esc(j.riasec.split('').map(c=>D.riasec[c]).join(', ').toLowerCase())}</div>`,j.ore,esc(j.req)+(j.promo.length?`<div class="note">${j.promo.map(esc).join('<br>')}</div>`:'')]))};
+  $('#ordJ').onchange=draw;draw();
+  const el=()=>document.getElementById('gJob');
+  grafico('gJob',()=>{el().parentElement.style.height=(byMax.length*22+60)+'px';return {type:'bar',data:{labels:byMax.map(j=>j.livelli[0].m),datasets:[{label:'Stipendio',data:byMax.map(j=>[j.ini,j.max===j.ini?j.ini*1.04:j.max]),...barre(S(1)),borderSkipped:false}]},
+    options:base({indexAxis:'y',scales:{x:{type:'logarithmic',min:2000,max:3000000,grid:{color:c=>[2000,5000,10000,20000,50000,100000,200000,500000,1000000,2000000].includes(c.tick&&c.tick.value)?css('--grid'):'transparent'},ticks:{autoSkip:false,maxRotation:0,callback:v=>[2000,10000,50000,200000,1000000].includes(v)?eurK(v):''}},y:{grid:{display:false},ticks:{autoSkip:false,font:{size:11}}}},
+      plugins:{tooltip:{callbacks:{label:c=>{const j=byMax[c.dataIndex];return ` da ${eur(j.ini)} a ${eur(j.max)} lordi l'anno`}}}}})}});
+};
+
+/* ----- Studi ----- */
+RENDER.studi=p=>{
+  p.innerHTML=`<div><h2>Studi</h2><p class="intro">Il percorso: scuola dell'infanzia a 3 anni, elementari a 6, medie a 11, esame di terza media a 14, poi la scelta delle superiori (5 anni). Dopo il diploma: università, ITS, lavoro, servizio civile o anno sabbatico. La media cambia ogni mese con le ore di studio della settimana (scheda Tempo e bisogni) e a giugno con l'Intelletto e scende con la difficoltà dell'indirizzo.</p></div>
+  <div class="card"><h3>Quanto conta l'Intelletto</h3><p class="sub">Probabilità di superare alcune prove in base all'Intelletto (da 0 a 100). Il colloquio è calcolato con Aspetto a 50 e senza esperienza.</p>${canvas('gProb')}${datiTab(X.prob.int.map(String),X.prob.serie,v=>v+'%')}</div>
+  <div class="grid2">
+    <div class="card"><h3>Superiori</h3><p class="sub">La difficoltà abbassa la media a ogni fine anno; l'indirizzo allena un'abilità.</p>${tbl([{t:'Indirizzo'},{t:'Materie'},{t:'Difficoltà',n:1},{t:'Abilità'}],D.superiori.map(s=>[esc(s.n),esc(s.desc),Math.round(s.d*100)+'%',s.sk?esc({sport:'Sport',musica:'Musica',arte:'Arte',cucina:'Cucina',tech:'Tecnologia',lingue:'Lingue'}[s.sk]):'—']),'small')}</div>
+    <div class="card"><h3>Università</h3><p class="sub">Tasse: 200 € famiglia modesta, 1.800 € media, 3.200 € benestante. Le pagano i genitori se vivi e la famiglia non è modesta, fino a 28 anni. Fuori sede: 6.500 € l'anno in più.</p>${tbl([{t:'Facoltà'},{t:'Anni',n:1},{t:'Tipo'},{t:'Test'},{t:'Difficoltà',n:1}],D.facolta.map(f=>[esc(f.n),f.anni,f.cu?'Ciclo unico':'Triennale + magistrale',f.test?`Sì (soglia ${f.test})`:'No',Math.round((f.d||.5)*100)+'%']),'small')}</div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Dopo la laurea</h3>${tbl(['Percorso','Durata','Come si entra','Cosa dà'],[
+      ['Laurea magistrale','2 anni','Avere la triennale nella stessa materia','Titolo magistrale, sblocca molte professioni'],
+      ['Master','1 anno','8.000 €','Requisito per i ruoli da manager'],
+      ['Dottorato','3 anni','75% con laurea ≥105/110, 40% con ≥100, 10% sotto','Borsa di 16.000 € l\'anno, poi ricercatore'],
+      ['Specializzazione medica','4 anni','Abilitazione da medico e concorso (35% + Intelletto ÷ 250)','Contratto di 23.000 € l\'anno, poi medico specialista'],
+      ['ITS','2 anni','Diploma','Una certificazione professionale'],
+      ['Diploma serale','3 anni','Avere almeno 18 anni e nessun diploma','Diploma tecnico economico']].map(r=>r.map(esc)),'small')}</div>
+    <div class="card"><h3>Esami di Stato</h3><p class="sub">Costano 400 €. Probabilità = base + (Intelletto − 50) ÷ 200.</p>${tbl([{t:'Professione'},{t:'Laurea richiesta'},{t:'Intelletto 50',n:1},{t:'Intelletto 80',n:1}],D.abilitazioni.map(a=>[esc(a.n),esc(a.lau+(a.n==='Avvocato'?' + 1 anno da praticante':'')),Math.round(a.p*100)+'%',Math.round(Math.min(1,a.p+.15)*100)+'%']),'small')}
+    <h3 style="margin-top:8px">ITS e specializzazioni</h3>${tbl(['Percorso','Ottieni'],[...D.its.map(i=>[esc(i.n),esc(i.cert)]),...D.spec.map(s=>[esc('Specializzazione in '+s),'Medico specialista'])],'small')}</div>
+  </div>
+  <div class="card"><h3>Corsi e certificazioni</h3><p class="sub">Uno ogni 6 mesi per tipo. Le abilità crescono anche se l'esame finale non va.</p>${tbl([{t:'Corso'},{t:'Costo',n:1},{t:'Età',n:1},{t:'Ottieni'},{t:'Abilità'},{t:'Riuscita'}],D.corsi.map(c=>[esc(c.n),eur(c.costo),c.min+'+',esc(c.cert||'—'),esc(c.sk||'—'),c.p.min===c.p.max?pct(c.p.media):`${pct(c.p.media)} <span class="note">(${pct(c.p.min)}–${pct(c.p.max)})</span>`]),'small')}</div>
+  <div class="card"><h3>Attività pomeridiane</h3><p class="sub">Si scelgono a 6 anni e si possono cambiare. Allenano l'abilità con le ore di hobby della settimana: +0,11 per ora effettiva al mese. Da adulto costano 38 € al mese. Calcio con Sport ≥70 tra 15 e 21 anni: 50% a ogni compleanno di provino da professionista. Musica con Musica ≥65 tra 16 e 35 anni: 35% di talent show.</p>${tbl(['Attività','Abilità'],D.hobby.map(h=>[esc(h.n),esc(h.sk)]),'small')}</div>`;
+  grafico('gProb',()=>({type:'line',data:{labels:X.prob.int,datasets:X.prob.serie.map((s,i)=>linea(S(i+1),s[0],s[1]))},options:base({plugins:{legend:{display:true,position:'top',align:'start'},tooltip:{mode:'index',callbacks:{title:i=>'Intelletto '+i[0].label,label:c=>` ${c.dataset.label}: ${c.raw}%`}}},scales:{x:{title:{display:true,text:'Intelletto'},ticks:ogni10},y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}})}));
+};
+
+/* ----- Beni ----- */
+RENDER.beni=p=>{
+  const C=[...D.citta].sort((a,b)=>b.mq-a.mq);
+  p.innerHTML=`<div><h2>Case, auto e soldi</h2><p class="intro">Prezzi e affitti dipendono dalla città. Il prezzo di vendita cambia anche con le condizioni della casa e con un margine casuale del ±10%. Da 18 anni puoi vivere in affitto o comprare.</p></div>
+  <div class="card"><h3>Prezzo delle case al metro quadro</h3><p class="sub">In blu le città italiane, in arancione quelle estere (serve Lingue ≥ 40 o l'inglese B2 per trasferirti).</p>${canvas('gCitta','tall')}</div>
+  <div class="card"><h3>Affitti e prezzi per città</h3><p class="sub">Affitto annuo (il gioco lo paga ogni mese, diviso per 12). Prezzo delle case con condizioni all'80%. A questi costi si aggiungono 8.400 € l'anno di spesa e bollette (−40% convivendo), 3.600 € di spese personali (1.500 se vivi con i genitori) e le spese della tua settimana: uscite 9 € l'ora, amici 2,5 € l'ora, palestra 35 € al mese, hobby 38 € al mese.</p>${tbl([{t:'Città'},{t:'€/m²',n:1},...D.citta[0].affitti.map(a=>({t:a.t,n:1})),{t:'Bilocale',n:1},{t:'Trilocale',n:1},{t:'Villetta',n:1},{t:'Attico',n:1}],C.map(c=>[esc(c.n)+(c.estero?' <span class="note">estero</span>':''),nf.format(c.mq),...c.affitti.map(a=>eur(a.anno)),...['Bilocale','Trilocale','Villetta con giardino','Attico con terrazzo'].map(t=>eur(c.case.find(x=>x.t===t).prezzo))]),'small')}</div>
+  <div class="grid2">
+    <div class="card"><h3>Comprare casa</h3>${tbl(['Voce','Regola'],[['Spese notarili','5% del prezzo'],['Mutuo','25 anni al 3,5%. Anticipo 20% + spese'],['La banca dice sì se','Hai un lavoro non part-time e la rata è al massimo il 35% del netto annuo'],['La banca può dire no','Fedina sporca (40%) o sovraindebitamento negli ultimi 7 anni'],['Ogni anno','Valore −4%…+6%, condizioni −1…−4 punti'],['Ristrutturare','12% del valore: condizioni al 100% e valore +8%'],['Affittarla','Incassi il 4,5% del valore all\'anno; 8% di rischio inquilino che non paga'],['Venderla','Valore × (70% + 30% × condizioni) meno il mutuo residuo'],['Felicità','+1 all\'anno se ci vivi, +2 se è una villetta o un attico, −2 se le condizioni sono sotto il 30%']].map(r=>r.map(esc)),'small')}</div>
+    <div class="card"><h3>Veicoli</h3><p class="sub">Senza patente B puoi comprare solo lo scooter (da 16 anni). Ogni gennaio il valore scende del 14% e le condizioni di 3–9 punti. A rate: 5 anni al 7%, anticipo 20%.</p>${tbl([{t:'Veicolo'},{t:'Prezzo',n:1},{t:'Costo annuo',n:1}],D.auto.map(a=>[esc(a.n),eur(a.p),eur(a.costo)]),'small')}</div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Investimenti</h3><p class="note" style="margin:0">Borsa con nove titoli, prestiti e debiti sono nella scheda Mondo e tasse.</p></div>
+    <div class="card"><h3>Aziende</h3><p class="sub">Clienti = richiesta base × sedi × prezzi × pubblicità × (0,5 + reputazione) × economia × abilità × fama, fino al massimo che il personale riesce a servire (tu conti per 1, o 0,5 se hai anche un lavoro). Tasse del 27% sugli utili.</p>${tbl([{t:'Azienda'},{t:'Costo',n:1},{t:'Clienti per sede',n:1},{t:'Spesa media',n:1},{t:'Margine',n:1},{t:'Affitto sede',n:1},{t:'Per dipendente',n:1},{t:'Abilità'}],D.imprese.map(a=>[esc(a.n),eur(a.costo),nf.format(a.domanda)+' '+esc(a.cliente),eur(a.scontrino),Math.round(a.margine*100)+'%',eur(a.affitto),nf.format(a.cap)+' '+esc(a.cliente),esc(a.sk)]),'small')}
+    <p class="note">Leve: prezzi (bassi ×0,8 incasso e ×1,3 clienti; alti ×1,25 e ×0,75), qualità (0%, 4% o 9% degli incassi; reputazione −3, +3, +8 l'anno), pubblicità (0, 5.000, 20.000, 50.000 €: clienti ×1, ×1,12, ×1,3, ×1,5), compenso per te, dipendenti (costano 1,35 volte la RAL), sedi. Se la cassa scende sotto −60% del capitale, rischi il fallimento.</p></div>
+  </div>
+  <div class="card"><h3>Vacanze</h3>${tbl([{t:'Meta'},{t:'Costo',n:1},{t:'Felicità',n:1}],D.mete.map(m=>[esc(m.n),eur(m.c),'+'+m.f]),'small')}</div>`;
+  grafico('gCitta',()=>{document.getElementById('gCitta').parentElement.style.height=(C.length*22+50)+'px';return {type:'bar',data:{labels:C.map(c=>c.n),datasets:[{label:'€/m²',data:C.map(c=>c.mq),...barre(C.map(c=>c.estero?S(2):S(1)))}]},options:base({indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{callback:v=>nf.format(v)+' €'}},y:{grid:{display:false},ticks:{autoSkip:false}}},plugins:{tooltip:{callbacks:{label:c=>` ${nf.format(c.raw)} € al m²`}}}})}});
+};
+
+/* ----- Persone ----- */
+RENDER.persone=p=>{
+  const VITA=[['Perde il lavoro','0,3% (+1,2% durante una crisi, +0,2% con Coscienziosità sotto 35)'],['Trova lavoro, se disoccupato','5% × (0,5 + Coscienziosità ÷ 100); metà durante una crisi, ×1,5 nel boom'],['Promozione','0,2% × Coscienziosità ÷ 50'],['Nuova relazione, se single e sotto 65 anni','1% × (0,5 + Estroversione ÷ 100)'],['Matrimonio','Dopo 20 mesi di coppia, tra 23 e 59 anni: 1,2%'],['Separazione','0,3% × (1 + (Emotività − 50) ÷ 60 − (Amicalità − 50) ÷ 80)'],['Un figlio','Sposati e sotto 44 anni: 0,9% (fino a 4 figli)'],['Trasferimento lontano','Amici, fratelli, cugini e figli tra 20 e 49 anni: 0,18%'],['Si ammala','0,15% + 0,03% per ogni anno oltre i 45'],['Guarisce','Lieve 50%, grave 12%, gravissima 3% al mese'],['Non più autosufficiente','Genitori e nonni da 78 anni: 0,4% + 0,08% per ogni anno in più'],['Ti cerca lui','Rapporto almeno 35: 1,2% + Estroversione × 0,04%'],['Muore','Stessa curva del giocatore, con salute 72 (55 se malato grave, 30 se gravissimo), dai 30 anni'],['Restituisce un prestito','4% + Coscienziosità × 0,12%']];
+  const RICH=[['Sta male','Un familiare o un amico vicino si ammala gravemente','Andarlo a trovare ogni settimana, una telefonata ogni tanto, non riuscire a vederlo'],['Non è più autosufficiente','Tua madre o tuo padre, dai 78 anni (se sei adulto)','Occupartene tu (12 ore a settimana), badante (~1.150 €/mese), RSA (~800 €/mese), lasciarlo ai fratelli'],['Ha perso il lavoro','Rapporto almeno 50, 30% quando succede','Consolarlo, aiutarlo a cercare (40% di trovargli un posto), avere da fare'],['Ti chiede un prestito','Disoccupato, rapporto almeno 50, Coscienziosità sotto 50: 1,5% al mese','Prestare tutto, metà, rifiutare (chi ha Amicalità bassa se la lega al dito)'],['Si sposa','Rapporto almeno 55 o famiglia stretta','Andare con un bel regalo (250 €), con uno modesto (80 €), inventare una scusa'],['Si è lasciato','Rapporto almeno 55, 40% quando succede','Una serata insieme, ospitarlo per qualche settimana, un messaggio'],['Se ne va','Rapporto almeno 60, quando si trasferisce','Cena d\'addio, promessa di andarlo a trovare, restarci male'],['Ha bisogno di parlare','Rapporto almeno 45 e umore sotto 30: 4% al mese','Chiamarlo subito, rimandare a domani, fingere di dormire'],['Scintille','Amici e parenti con rapporto tra 30 e 70, più facile se entrambi avete Amicalità bassa','Lasciar correre, chiarire, rispondere male (può nascere un nemico)'],['Ti invita','Amici con rapporto almeno 55: 1% × (0,6 + Estroversione ÷ 100)','Accettare (50 €, a volte conosci qualcuno), declinare'],['Che fine hai fatto?','Un amico che non vedi da 6 mesi: 8% al mese','Fissare una cena, rispondere vago, ignorare'],['Compleanno','Partner, figli e migliore amico 30%, altri vicini 10%','Festa a sorpresa (150 €), regalo pensato (60 €), messaggio, dimenticarsene']];
+  p.innerHTML=`<div><h2>Persone e relazioni</h2><p class="intro">Ogni persona ha un carattere (gli stessi cinque tratti del giocatore), un lavoro, una situazione sentimentale, figli, salute e umore, e vive la sua vita mese per mese anche senza di te. Si ricorda le cose importanti che le hai fatto, nel bene e nel male. Alla nascita hai madre e padre, da 0 a 3 fratelli più grandi (40% nessuno, 40% uno, 15% due, 5% tre), i nonni (80–85% ciascuno), da 0 a 3 zii per lato con i loro figli. La famiglia può essere modesta (30%), media (55%) o benestante (15%).</p></div>
+  <div class="grid2">
+    <div class="card"><h3>La vita degli altri, ogni mese</h3><p class="sub">Probabilità al mese per ogni persona adulta. Se la persona ti è vicina, lo leggi nel diario.</p>${tbl(['Cosa succede','Probabilità'],VITA.map(r=>r.map(esc)),'small')}<p class="note">«Vicina» vuol dire famiglia stretta, migliore amico o rapporto almeno 55.</p></div>
+    <div class="card"><h3>Come cambiano i rapporti</h3>${tbl(['Regola','Valore'],[
+      ['Amici','−0,6 al mese se vi vedete, −1,6 se non vi vedete da 2 mesi (×1,3 se vivono lontano). Sotto 8 l\'amicizia finisce'],
+      ['Famiglia stretta','−0,6 al mese dopo 3 mesi senza vedersi. Vivendo con i genitori li vedi ogni giorno'],
+      ['Zii, cugini, suoceri, cognati','−0,4 al mese dopo 6 mesi'],['Conoscenti','−1,5 al mese: se non li approfondisci spariscono'],
+      ['Tempo insieme','Le ore della settimana per amici, famiglia, partner e figli alzano i rapporti (scheda Tempo e bisogni)'],
+      ['Genitori','Si separano con probabilità 0,11% al mese × (1 + (55 − intesa) ÷ 30). L\'intesa dipende dal loro carattere. Se uno muore, l\'altro resta vedovo; da separati possono trovare un nuovo compagno'],
+      ['Lutto','Felicità −14…−30 in base al legame; con le persone care segna anche il carattere'],
+      ['Eredità dai genitori','Quando muore l\'ultimo: 2–15 mila (modesta), 25–110 mila (media), 180–700 mila (benestante), divisa tra fratelli'],
+      ['Divorzio','Perdi il 40% del conto + 3.000 € di avvocati; i figli minorenni −10 di rapporto'],
+      ['Figli a carico','7.500 € l\'anno ciascuno fino a 25 anni (metà se convivi), più le ore di cura']].map(r=>r.map(esc)),'small')}
+      <div class="formula">Affinità = 62 − |ΔApertura| × 0,25 − |ΔCoscienziosità| × 0,15 − |ΔEstroversione| × 0,1
+  + (sua Amicalità − 50) × 0,22 + (tua Amicalità − 50) × 0,1
+  − (sua Emotività − 50) × 0,15 − (tua Emotività − 50) × 0,1</div></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>La coppia: intimità, passione, impegno</h3><p class="sub">Il modello triangolare dell'amore. Ogni mese:</p>
+    <div class="formula">Intimità += min(6; ore insieme × 0,3) − 1 + (affinità − 50) × 0,03
+Passione += (28 + min(40; ore × 3,2) − passione) × 0,06 − anni insieme × 0,04 ± 0,3 (energia)
+Impegno += 0,5 convivendo (0,2 altrimenti) + 0,3 da sposati − 0,6 se evitante − 0,4 se timoroso
+Conflitto = (100 − sua Amicalità) × 0,03 + (100 − tua Amicalità) × 0,025 + (sua Emotività − 50) × 0,03
+  + (stress − 40) × 0,04 + 1,5 se in rosso + 1,2 se ansioso + 1 se timoroso − (affinità − 50) × 0,05
+Rapporto: si avvicina del 30% a intimità × 0,45 + passione × 0,25 + impegno × 0,3 − conflitto × 2,2</div>
+    ${tbl(['Cosa succede','Quando'],[['Litigio','Conflitto sopra 4,5: 12% al mese'],['«Si sente trascurato»','Meno di 3 ore insieme a settimana: 8% al mese'],['Ti propone di convivere','Dopo 18 mesi, rapporto ≥ 65 e impegno ≥ 60: 3% al mese'],['Ti chiede di sposarlo','Convivendo da 2 anni, rapporto ≥ 70 e impegno ≥ 70: 2,5% al mese'],['Ti lascia','Rapporto sotto 18: 25% al mese'],['Chiede il divorzio','Coniuge con rapporto sotto 12: 5% al mese']].map(r=>r.map(esc)),'small')}</div>
+    <div class="card"><h3>Le richieste</h3><p class="sub">Eventi che arrivano dalla vita degli altri. Al massimo uno ogni due mesi.</p>${tbl(['Evento','Quando','Cosa puoi fare'],RICH.map(r=>r.map(esc)),'small')}</div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Cosa puoi fare con ciascuno</h3><p class="sub">Dalla scheda Persone, una volta al mese per azione. Ogni azione costa un po' di energia (5 di base).</p>${tbl(['Persona','Azioni'],[
+      ['Tutti','Passare del tempo (+5…11), conversazione (+2…6), regalo 60 € (+6…12), litigare (−8…18)'],
+      ['Amici','Vederlo spesso (★: riceve per primo le tue ore con gli amici), uscire (30 €), vacanza insieme (1.000 €), chiedere un prestito, proporre di diventare migliori amici (rapporto ≥85, 75%), chiudere l\'amicizia'],
+      ['Conoscenti','Proporre di vedervi (30% + affinità ÷ 200 + 12% × Estroversione: diventa amico), chiedere di uscire se sei single, lasciar perdere'],
+      ['Genitori e nonni','Chiedere soldi (rapporto ÷ 150), dopo i 75 anni prendertene cura'],
+      ['Partner','Appuntamento (80 €), weekend (600 €), convivere, chiedere di sposarsi, avere un figlio (50%), adottare (8.000 €, 60%), lasciare'],
+      ['Coniuge','Come il partner, più terapia di coppia (1.000 €) e divorzio'],
+      ['Figli e nipoti','Favola, compiti, paghetta, chiedere aiuto economico da anziano'],
+      ['Ex','Scrivere un messaggio (25% di tornare insieme se sei single), dimenticare']].map(r=>r.map(esc)),'small')}
+      <p class="note">La scheda di ogni persona mostra carattere, affinità con te, lavoro, situazione sentimentale, salute, da quanto non vi vedete, i soldi che ti deve e gli ultimi ricordi che ha di te.</p></div>
+    <div class="card"><h3>Trovare l'amore</h3><p class="sub">Da 18 anni dalla scheda Persone, oppure per caso: gli incontri nascono nei luoghi che frequenti (scheda Tempo e bisogni).</p>${tbl(['Modo','Dettagli'],[['App di incontri','Tre profili tra cui scegliere, una volta al mese'],['Locale','40 €, una persona a caso'],['Tramite un amico','Serve almeno un amico'],['Incontri','Uscite, hobby, volontariato, sport, lavoro, scuola'],['Conoscenti','Chi hai conosciuto può diventare qualcosa di più']].map(r=>r.map(esc)),'small')}
+    <div class="formula">Sì all'appuntamento = 30% + (tuo Aspetto − suo Aspetto) ÷ 150 + Felicità ÷ 400 + Karma ÷ 500
+  + Fama ÷ 300 + (affinità − 50) ÷ 200 + 6% × Estroversione + bonus del luogo
+(minimo 6%, massimo 88%)</div>
+    <h3 style="margin-top:8px">Matrimonio</h3>${tbl([{t:'Tipo'},{t:'Costo',n:1},{t:'Felicità',n:1}],[['Solo in Comune con due testimoni',0,4],['Fuga d\'amore a Las Vegas',1500,8],['Rito civile semplice',3000,6],['Matrimonio in chiesa con 150 invitati',25000,12],['Matrimonio da sogno in una villa sul lago',60000,18]].map(r=>[esc(r[0]),r[1]?eur(r[1]):'Gratis','+'+r[2]]),'small')}</div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Le conversazioni</h3><p class="sub">«Parla con…» apre una lista di argomenti, uno al mese per persona. Il carattere di una persona si riassume anche in un tratto (generoso, geloso, timido…) ricavato dai cinque tratti. Se il tratto apprezza l'argomento: rapporto +5…10. Se lo detesta: −4…10. Altrimenti decide il caso (55% + rapporto ÷ 300).</p>${tbl(['Argomento','Piace a','Non piace a'],D.temi.map(t=>[esc(t.l)+(t.solo?`<div class="note">Solo con ${esc(t.solo.join(', ').toLowerCase())}</div>`:''),esc(t.ok.join(', ')||'—'),esc(t.ko.join(', ')||'—')]),'small')}</div>
+    <div class="card"><h3>Nemici</h3><p class="sub">Al posto del rapporto hanno il rancore (0–100%), che cala di 0–5 punti l'anno. Sotto il 10% ti dimenticano.</p>${tbl(['Come nasce','Cosa puoi fare'],[['Litigi che degenerano con amici o parenti','Fare pace: 20% + Karma ÷ 300 − rancore ÷ 400'],['Bulli a scuola, rivali al lavoro, vicini','Provocare: rancore +15, Felicità +3'],['Shitstorm, soci che ti tradiscono, il clan','Ignorare: rancore −5…12'],['Divorzi (30% degli ex)','Denunciare per stalking da 60% di rancore: 40%']].map(r=>r.map(esc)),'small')}<p class="note">I nemici spargono voci, rigano l'auto, ti sabotano al lavoro e sui social. A volte chiedono di fare pace.</p></div>
+  </div>
+  <div class="card"><h3>Continuare come figlio</h3><p class="sub">Alla morte puoi riprendere la storia come uno dei figli vivi, con il suo carattere. Eredita il patrimonio netto meno il 4% di tasse, diviso tra i figli. Il coniuge diventa suo genitore, gli altri figli i suoi fratelli, i tuoi genitori i suoi nonni. Intelletto e Aspetto partono da quelli del genitore ±25.</p></div>`;
+};
+
+/* ----- Salute e giustizia ----- */
+RENDER.salute=p=>{
+  const eta=[];for(let a=20;a<=105;a+=5)eta.push(a);
+  const mp=(a,s)=>Math.min(.95,.00034*Math.exp(.095*Math.max(0,a-30))+Math.max(0,45-s)/400);
+  const ser=[[90,'Salute 90'],[50,'Salute 50'],[20,'Salute 20']].map(([s,l])=>[l,eta.map(a=>+(mp(a,s)*100).toFixed(2))]);
+  const M=D.malattie;
+  p.innerHTML=`<div><h2>Salute, dipendenze e giustizia</h2></div>
+  <div class="card"><h3>Probabilità di morire in un anno</h3><p class="sub">Dipende dall'età e, sotto 45, dalla Salute. Ogni malattia gravissima aggiunge 7 punti, l'alcolismo 1. Il gioco divide il rischio sui 12 mesi.</p>${canvas('gMorte')}<div class="formula">Rischio annuo = 0,034% × e^(0,095 × (età − 30)) + max(0, 45 − Salute) ÷ 400
+Rischio del mese = 1 − (1 − rischio annuo)^(1/12)</div>${datiTab(eta.map(String),ser,v=>String(v).replace('.',',')+'%')}</div>
+  <div class="grid2">
+    <div class="card"><h3>Malattie</h3>${tbl([{t:'Gravità'},{t:'Malattie'},{t:'Peso sulla salute',n:1},{t:'Guarisce da sola',n:1}],[[1,'Lieve',3,'55% al mese'],[2,'Grave',7,'9% al mese'],[3,'Cronica',9,'Mai (la terapia toglie 6 punti di peso)'],[4,'Gravissima',22,'No']].map(([g,n,d,h])=>[n,esc(M[g].join(', ')),'−'+d,h]),'small')}
+    <div class="formula">Obiettivo di Salute = 97 − 0,42 × anni oltre i 35 − 0,55 × anni oltre i 65 − 0,8 × anni oltre gli 80
+  + (forma − 50) × 0,18 − max(0, stress − 60) × 0,25 − 5 per ogni ora di sonno sotto 6,5
+  − 8 se fumi − 10 se bevi − peso delle malattie
+Ogni mese la Salute si avvicina del 9% all'obiettivo</div>
+    <div class="note">Nuova diagnosi: ogni mese 1/12 di (5% + 0,4% per ogni anno oltre i 40, +4% se fumi, +4% se bevi, +5% con salute sotto 40, +3% con stress sopra 75); ×1,8 da dicembre a febbraio, ×0,7 in estate. Ogni malattia grave, cronica o gravissima apre l'evento «La diagnosi»: Servizio sanitario gratuito (gravi 75%, gravissime 42% + Salute ÷ 500), clinica privata (2.500 o 9.000 €: 92% o 62% + Salute ÷ 500), terapia continuativa per le croniche, oppure rimandare. Sei mesi di fila con Felicità sotto 22 portano alla depressione.</div></div>
+    <div class="card"><h3>Cure</h3>${tbl([{t:'Dove'},{t:'Costo',n:1},{t:'Lievi',n:1},{t:'Gravi',n:1},{t:'Gravissime',n:1}],[['Medico di base',0,'100%','30%','0%'],['Visita specialistica',60,'100%','60%','15%'],['Clinica privata',2500,'100%','90%','40%']].map(r=>[r[0],r[1]?eur(r[1]):'Gratis',r[2],r[3],r[4]]),'small')}
+    <div class="note">Tutte e tre avviano la terapia per le malattie croniche per l'anno in corso. Lo psicologo (900 € per sei mesi) dà +6…12 di felicità, cura la depressione al 50%, calma l'Emotività e al 25% rende sicuro lo stile di attaccamento.</div></div>
+  </div>
+  <div class="card"><h3>Dipendenze</h3>${tbl(['Dipendenza','Come arriva','Effetto','Come se ne esce'],[
+    ['Fumo','Accettando una sigaretta (13–20 anni)','Salute −8 all\'obiettivo, forma −8, 1.600 € l\'anno; dopo i 40 anni 0,1% al mese di tumore','«Smetti di fumare» 150 €, riesce al 40%'],
+    ['Alcol','Ogni «bevuta» (scelte negli eventi, discoteca, uscite da 5 ore a settimana) dopo la sesta: 10% + 7% × Emotività − 7% × Coscienziosità (minimo 2%). Le bevute calano di 1 a ogni compleanno','Salute −10 all\'obiettivo, umore −5, 1.200 € l\'anno, rendimento giù; dopo i 40 anni 0,12% al mese di cirrosi','Percorso di recupero gratuito, 45%'],
+    ['Gioco d\'azzardo','Dopo 12 giocate, 25% ogni volta (calano di 2 l\'anno)','Umore −5, 1.000…8.000 € l\'anno','Percorso di recupero gratuito, 45%']].map(r=>r.map(esc)),'small')}</div>
+  <div class="grid2">
+    <div class="card"><h3>Reati</h3>${tbl([{t:'Reato'},{t:'Gravità',n:1},{t:'Patente'}],D.reati.map(r=>[esc(r.n),r.g,r.patente?'Ritirata':'—']),'small')}</div>
+    <div class="card"><h3>Il processo</h3>${tbl(['Scelta','Assoluzione'],[['Avvocato d\'ufficio (gratis)','25%'],['Avvocato privato (4.000 €)','55%'],['Patteggiare','0%, ma pena ridotta']].map(r=>r.map(esc)),'small')}
+    ${tbl(['Gravità','Condanna normale','Patteggiando'],[['1','Multa 700 €','Multa 300 €'],['2','8 mesi con la condizionale','Multa 1.500 € e lavori socialmente utili'],['3','1–3 anni di carcere','2 anni in meno (anche zero)'],['4','3–7 anni di carcere','2 anni in meno']].map(r=>r.map(esc)),'small')}
+    <div class="note">Ogni condanna sporca la fedina: niente concorsi pubblici, insegnamento, avvocatura o autista, colloqui più difficili (−20%). Da minorenne c'è solo la messa alla prova, senza fedina.</div></div>
+  </div>
+  <div class="card"><h3>In carcere</h3><p class="sub">Perdi il lavoro e la casa in affitto, devi lasciare gli studi, il partner ti lascia al 50%. Felicità −20 all'ingresso e −4 ogni anno, umore −14 finché resti dentro. Ogni azione si può fare una volta ogni 12 mesi (palestra ogni 2).</p>${tbl(['Attività','Effetto'],D.attC.map(a=>[esc(a.n),esc(a.d)]),'small')}</div>`;
+  grafico('gMorte',()=>({type:'line',data:{labels:eta,datasets:ser.map((s,i)=>linea(S(i+1),s[0],s[1]))},options:base({plugins:{legend:{display:true,position:'top',align:'start'},tooltip:{mode:'index',callbacks:{title:i=>i[0].label+' anni',label:c=>` ${c.dataset.label}: ${String(c.raw).replace('.',',')}%`}}},scales:{x:{title:{display:true,text:'Età'}},y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}})}));
+};
+
+/* ----- Attività ----- */
+RENDER.attivita=p=>{
+  const sez=[...new Set(D.att.map(a=>a.sez))];
+  p.innerHTML=`<div><h2>Attività</h2><p class="intro">Le cose da fare una volta sola, dalla scheda Tempo → Attività. Ognuna costa energia (le terme la ridanno) e poi va aspettato un po' prima di rifarla. Gratta e Vinci e scommesse senza limiti. Le attività di tutti i giorni (sport, amici, studio, volontariato, videogiochi) sono ore della settimana: vedi la scheda Tempo e bisogni.</p></div>`+
+  sez.map(s=>`<div class="card"><h3>${esc(s)}</h3>${tbl([{t:'Attività'},{t:'Costo',n:1},{t:'Energia',n:1},{t:'Rifarla dopo',n:1},{t:'Età',n:1},{t:'Cosa succede'}],D.att.filter(a=>a.sez===s).map(a=>[`<b>${esc(a.n)}</b><div class="note">${esc(a.d)}</div>`,a.costo?eur(a.costo):'Gratis',a.en>0?'−'+a.en:a.en<0?'+'+(-a.en):'0',a.ripeti?'Subito':a.cd+(a.cd===1?' mese':' mesi'),a.min+'+',`${a.testi.slice(0,4).map(t=>`«${esc(t)}»`).join('<br>')}${a.extra.length?`<div class="effs" style="margin-top:4px">${a.extra.map(x=>`<span class="ef x">${esc(x)}</span>`).join('')}</div>`:''}`]),'small')}</div>`).join('')+
+  `<div class="card"><h3>Giochi d'azzardo: le probabilità esatte</h3>${tbl(['Gioco','Probabilità'],[['Gratta e Vinci (5 €)','0,05% di 500.000 € · 1% di 500 € · 20% di 10 € · resto niente'],['Scommessa (20 €)','12% di vincere 80–600 €'],['Casinò (500 €)','35% di vincere 600–3.000 €'],['Lotto (evento, 10 €)','3% di 25.000 €']].map(r=>r.map(esc)),'small')}</div>`;
+};
+
+/* ----- Simulazione ----- */
+RENDER.simulazione=p=>{
+  const E=X.etaMorte;
+  p.innerHTML=`<div><h2>${nf.format(X.n)} vite simulate</h2><p class="intro">Il computer ha giocato ${nf.format(X.n)} vite complete, mese per mese. Negli eventi preferisce le risposte «da te» con un po' di caso. Organizza la settimana in base al carattere (lo sport con la Coscienziosità, gli amici con l'Estroversione, la famiglia con l'Amicalità, gli hobby con l'Apertura) e lascia sempre 14 ore di riposo. Cerca il lavoro che paga meglio tra quelli in linea con i suoi interessi, va dal medico, cerca l'amore, vuole da 1 a 3 figli e compra casa quando può.</p></div>
+  <div class="tiles"><div class="tile"><b>${String(E.media).replace('.',',')}</b><span>età media alla morte</span></div><div class="tile"><b>${virg(E.mediana)}</b><span>età mediana alla morte</span></div><div class="tile"><b>${eurK(X.patReale.p50)}</b><span>patrimonio mediano finale, in euro di oggi</span></div><div class="tile"><b>${eurK(X.patReale.p90)}</b><span>il 10% più ricco ha più di</span></div><div class="tile"><b>${nf.format(X.eventiVita)}</b><span>schermate di eventi per vita</span></div></div>
+  <div class="grid2">
+    <div class="card"><h3>A che età si muore</h3><p class="sub">Numero di vite per fascia d'età.</p>${canvas('gHist')}</div>
+    <div class="card"><h3>Quanti arrivano a ogni età</h3><p class="sub">Percentuale ancora in vita. Le curve teoriche tengono la salute fissa.</p>${canvas('gSurv')}${datiTab(X.sopravv.eta.filter(a=>a%10===0).map(String),[['Simulazione',X.sopravv.sim.filter((_,i)=>i%10===0)],['Salute 85',X.sopravv.s85.filter((_,i)=>i%10===0)],['Salute 40',X.sopravv.s40.filter((_,i)=>i%10===0)]],v=>String(v).replace('.',',')+'%')}</div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Come va la vita</h3><p class="sub">Percentuale di vite in cui succede almeno una volta.</p>${canvas('gEsiti','tall')}</div>
+    <div class="card"><h3>Cause di morte</h3><p class="sub">Su ${nf.format(X.n)} vite.</p>${canvas('gCause')}</div>
+  </div>
+  <div class="card"><h3>Le statistiche con l'età</h3><p class="sub">Media delle persone ancora vive a ogni età.</p>${canvas('gTraj')}${datiTab(X.traj.eta.filter(a=>a%10===0).map(String),[['Salute',X.traj.sal.filter((_,i)=>X.traj.eta[i]%10===0)],['Felicità',X.traj.fel.filter((_,i)=>X.traj.eta[i]%10===0)],['Intelletto',X.traj.int.filter((_,i)=>X.traj.eta[i]%10===0)],['Aspetto',X.traj.asp.filter((_,i)=>X.traj.eta[i]%10===0)]])}</div>
+  <div class="grid2">
+    <div class="card"><h3>Patrimonio con l'età</h3><p class="sub">In euro di oggi, tolta l'inflazione. Linea: valore mediano. Fascia: dal 10% più povero al 10% più ricco.</p>${canvas('gPat')}${datiTab(X.pat.eta.map(String),[['10% più povero',X.pat.p10],['Mediana',X.pat.p50],['10% più ricco',X.pat.p90]],eur)}</div>
+    <div class="card"><h3>Il lavoro più pagato raggiunto</h3><p class="sub">Percentuale delle vite, per lavoro di partenza. Il pilota automatico sceglie per stipendio e interessi: un giocatore vero si sparpaglia di più.</p>${canvas('gLav')}</div>
+  </div>`;
+  grafico('gHist',()=>({type:'bar',data:{labels:E.bins,datasets:[{label:'Vite',data:E.n,...barre(S(1)),categoryPercentage:1,barPercentage:.92}]},options:base({scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:12}},y:{beginAtZero:true}},plugins:{tooltip:{callbacks:{title:i=>i[0].label+' anni',label:c=>` ${c.raw} vite`}}}})}));
+  grafico('gSurv',()=>({type:'line',data:{labels:X.sopravv.eta,datasets:[linea(S(1),'Simulazione',X.sopravv.sim),linea(S(2),'Salute fissa 85',X.sopravv.s85),linea(S(3),'Salute fissa 40',X.sopravv.s40)]},options:base({plugins:{legend:{display:true,position:'top',align:'start'},tooltip:{mode:'index',callbacks:{title:i=>i[0].label+' anni',label:c=>` ${c.dataset.label}: ${String(c.raw).replace('.',',')}%`}}},scales:{x:{ticks:ogni10,title:{display:true,text:'Età'}},y:{min:0,max:100,ticks:{callback:v=>v+'%'}}}})}));
+  grafico('gEsiti',()=>({type:'bar',data:{labels:X.esiti.map(e=>e[0]),datasets:[{label:'%',data:X.esiti.map(e=>e[1]),...barre(S(1))}]},options:base({indexAxis:'y',scales:{x:{min:0,max:100,ticks:{callback:v=>v+'%'}},y:{grid:{display:false},ticks:{autoSkip:false}}},plugins:{tooltip:{callbacks:{label:c=>` ${String(c.raw).replace('.',',')}% delle vite`}}}})}));
+  grafico('gCause',()=>({type:'bar',data:{labels:X.cause.map(c=>c[0].replace(/^(per |a causa di |in |serenamente, )/,'')).map(cap),datasets:[{label:'Vite',data:X.cause.map(c=>c[1]),...barre(S(1))}]},options:base({indexAxis:'y',scales:{x:{beginAtZero:true},y:{grid:{display:false},ticks:{autoSkip:false}}},plugins:{tooltip:{callbacks:{label:c=>` ${c.raw} vite (${Math.round(c.raw/X.n*100)}%)`}}}})}));
+  grafico('gTraj',()=>({type:'line',data:{labels:X.traj.eta,datasets:[linea(S(3),'Salute',X.traj.sal),linea(S(4),'Felicità',X.traj.fel),linea(S(1),'Intelletto',X.traj.int),linea(S(5),'Aspetto',X.traj.asp)]},options:base({plugins:{legend:{display:true,position:'top',align:'start'},tooltip:{mode:'index',callbacks:{title:i=>i[0].label+' anni'}}},scales:{x:{ticks:ogni10,title:{display:true,text:'Età'}},y:{min:0,max:100}}})}));
+  grafico('gPat',()=>({type:'line',data:{labels:X.pat.eta,datasets:[{...linea(S(1),'10% più povero',X.pat.p10),borderWidth:0,pointHoverRadius:0},{...linea(S(1),'10% più ricco',X.pat.p90),borderWidth:0,pointHoverRadius:0,fill:'-1',backgroundColor:alpha(S(1),.12)},linea(S(1),'Mediana',X.pat.p50)]},options:base({plugins:{tooltip:{mode:'index',callbacks:{title:i=>i[0].label+' anni',label:c=>` ${c.dataset.label}: ${eur(c.raw)}`}}},scales:{x:{title:{display:true,text:'Età'}},y:{ticks:{callback:v=>eurK(v)}}}})}));
+  grafico('gLav',()=>({type:'bar',data:{labels:X.lavori.map(l=>l[0]),datasets:[{label:'%',data:X.lavori.map(l=>l[1]),...barre(S(1))}]},options:base({indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{callback:v=>v+'%'}},y:{grid:{display:false},ticks:{autoSkip:false}}},plugins:{tooltip:{callbacks:{label:c=>` ${String(c.raw).replace('.',',')}% delle vite`}}}})}));
+};
+const cap=s=>s?s[0].toUpperCase()+s.slice(1):s;
+
+
+/* ----- Mondo e tasse ----- */
+RENDER.mondo=p=>{
+  const T=X.tasse;
+  const R=Object.entries(D.regMq).sort((a,b)=>b[1]-a[1]);
+  p.innerHTML=`<div><h2>Mondo, inflazione e tasse</h2><p class="intro">Il mondo cambia ogni gennaio, uguale per tutte le generazioni della stessa famiglia. I prezzi salgono, la Borsa oscilla e ogni tanto arrivano crisi, boom e pandemie.</p></div>
+  <div class="grid2">
+    <div class="card"><h3>Gli eventi del mondo</h3>${tbl(['Fenomeno','Probabilità annua','Durata','Effetti'],[
+      ['Crisi economica','4,5%','2–3 anni','Inflazione 4–8%, Borsa −22% l\'anno, case −5%, 12% di licenziamento nel privato, clienti delle aziende −25%'],
+      ['Boom economico','3,5% (se non c\'è crisi)','2–4 anni','Borsa +12%, case in crescita, clienti +15%, offerte di lavoro migliori'],
+      ['Pandemia','1,2%','2 anni','Lockdown, bar e palestre −45%, negozi online +40%, farmaceutici +25%, anziani a rischio polmonite (12%)'],
+      ['Bolla immobiliare','2%','3–5 anni','Case +6% l\'anno, poi crollo del 20%'],
+      ['Riforma pensioni','1,5%','Per sempre','Età della pensione +1, fino a 71'],
+      ['Mondiali vinti','15% ogni 4 anni','—','Felicità +5'],
+      ['Elezioni','Ogni 5 anni','—','Voti tra quattro partiti inventati'],
+      ['Terremoto','0,6% al Centro, Sud e Isole','—','Casa −20% di valore'],
+      ['Alluvione','0,6% ovunque','—','Danni a casa o auto']].map(r=>r.map(esc)),'small')}</div>
+    <div class="card"><h3>Inflazione</h3>${tbl(['Situazione','Inflazione annua'],[['Normale','1–3%'],['Crisi','4–8%'],['Boom','2–4%'],['Pandemia','+1%']].map(r=>r.map(esc)),'small')}<p class="note">Con l\'inflazione salgono affitti, spese, prezzi di case e auto, stipendi delle nuove offerte, pensioni e assegni. Lo stipendio di chi lavora già cresce dell\'80% dell\'inflazione più 0–2%: se non chiedi aumenti, perdi potere d\'acquisto.</p></div>
+  </div>
+  <div class="card"><h3>Dal lordo al netto</h3><p class="sub">Quanto resta in tasca per ogni RAL, con IRPEF, INPS e addizionali.</p>${canvas('gTasse')}${datiTab(T.filter((_,i)=>i%2===0).map(r=>eur(r[0])),[['Netto',T.filter((_,i)=>i%2===0).map(r=>r[1])],['INPS',T.filter((_,i)=>i%2===0).map(r=>r[2])],['IRPEF',T.filter((_,i)=>i%2===0).map(r=>r[3])],['Addizionali',T.filter((_,i)=>i%2===0).map(r=>r[4])]],eur)}</div>
+  <div class="grid2">
+    <div class="card"><h3>La Borsa</h3><p class="sub">Ogni gennaio: rendimento = tendenza + volatilità × caso, più gli effetti di crisi, boom e pandemie. Tasse del 26% sui guadagni e sui dividendi.</p>${tbl([{t:'Titolo'},{t:'Settore'},{t:'Tendenza',n:1},{t:'Volatilità',n:1},{t:'Dividendo',n:1}],D.titoli.map(t=>[esc(t.n),esc(t.set),(t.drift*100).toFixed(1).replace('.',',')+'%',Math.round(t.vol*100)+'%',t.div?(t.div*100).toFixed(1).replace('.',',')+'%':'—']),'small')}</div>
+    <div class="card"><h3>Prestiti e debiti</h3>${tbl(['Voce','Regola'],[['Prestito personale','5.000, 15.000 o 30.000 € in 5 anni all\'8,5%. La rata annua si paga ogni mese, divisa per 12'],['La banca dice sì se','Hai un lavoro non part-time e tutte le rate restano sotto il 35% del netto'],['Sovraindebitamento','Sotto −25.000 €: vendi tutto, chiedi aiuto alla famiglia o fai cancellare i debiti (7 anni senza prestiti)'],['Usuraio','Se sei in rosso: 10.000 € subito, 15.000 € da restituire l\'anno dopo']].map(r=>r.map(esc)),'small')}</div>
+  </div>
+  <div class="card"><h3>Prezzo delle case per regione</h3><p class="sub">Euro al metro quadro di partenza. Nei comuni piccoli costa fino al 40% in meno, nelle grandi città fino al 25% in più. Le città principali hanno prezzi propri. In tutto ${nf.format(D.nComuni)} comuni in ${D.nProvince} province.</p>${canvas('gReg','tall')}</div>`;
+  grafico('gTasse',()=>({type:'line',data:{labels:T.map(r=>r[0]),datasets:[{...linea(S(1),'Netto',T.map(r=>r[1])),fill:'origin',backgroundColor:alpha(S(1),.1)},linea(S(2),'RAL (lordo)',T.map(r=>r[0]))]},options:base({plugins:{legend:{display:true,position:'top',align:'start'},tooltip:{mode:'index',callbacks:{title:i=>'RAL '+eur(i[0].label),label:c=>` ${c.dataset.label}: ${eur(c.raw)}`,afterBody:i=>{const r=T[i[0].dataIndex];return [`Si paga il ${Math.round((1-r[1]/r[0])*100)}% tra tasse e contributi`]}}}},scales:{x:{ticks:{callback:function(v){const l=+this.getLabelForValue(v);return l%30000===0?eurK(l):''},autoSkip:false,maxRotation:0}},y:{beginAtZero:true,ticks:{callback:v=>eurK(v)}}}})}));
+  grafico('gReg',()=>{document.getElementById('gReg').parentElement.style.height=(R.length*24+50)+'px';return {type:'bar',data:{labels:R.map(r=>r[0]),datasets:[{label:'€/m²',data:R.map(r=>r[1]),...barre(S(1))}]},options:base({indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{callback:v=>nf.format(v)+' €'}},y:{grid:{display:false},ticks:{autoSkip:false}}},plugins:{tooltip:{callbacks:{label:c=>` ${nf.format(c.raw)} € al m²`}}}})}});
+};
+
+/* ----- Crimine, social e fama ----- */
+RENDER.crimine=p=>{
+  p.innerHTML=`<div><h2>Crimine, social e fama</h2><p class="intro">Strade alternative alla vita normale. Ogni colpo si può ripetere dopo 3 mesi, ogni missione dopo 4; ognuno costa 10 di energia.</p></div>
+  <div class="card"><h3>I colpi</h3><p class="sub">Riuscita = base + esperienza ÷ 150 + (Intelletto − 50) ÷ 400 (+ Tecnologia per le truffe online). Se fallisce: 70% di arresto e processo. Se riesce: 8% di indagine negli anni dopo.</p>${tbl([{t:'Colpo'},{t:'Età',n:1},{t:'Riuscita base',n:1},{t:'Bottino'},{t:'Reato'},{t:'Esperienza',n:1},{t:'Karma',n:1}],D.crimini.map(c=>[`<b>${esc(c.n)}</b><div class="note">${esc(c.d)}</div>`,c.min+'+',Math.round(c.p*100)+'%',c.b[1]?`${eur(c.b[0])}–${eur(c.b[1])}`:'—',esc(c.reato),'+'+c.exp,c.k]),'small')}</div>
+  <div class="grid2">
+    <div class="card"><h3>Il clan</h3><p class="sub">Si entra con esperienza criminale almeno 4 (60% a tentativo) o tramite un contatto. Si sale di grado dopo (grado + 1) × 3 missioni con lealtà almeno 60%, al 50%. La lealtà cala ogni anno; sotto 25% il capo sospetta di te.</p>
+    ${tbl([{t:'Grado'},{t:'Entrate in nero l\'anno (pagate ogni mese)',n:1}],D.gradi.map((g,i)=>[esc(g),eur([0,3000,9000,25000,70000][i])]),'small')}
+    <h3 style="margin-top:8px">Missioni</h3>${tbl([{t:'Missione'},{t:'Riuscita',n:1},{t:'Compenso'},{t:'Arresto se fallisce',n:1}],D.missioni.map(m=>[esc(m.n)+(m.grado?`<div class="note">Dal grado ${esc(D.gradi[m.grado].toLowerCase())}</div>`:''),Math.round(m.p*100)+'%',`${eur(m.b[0])}–${eur(m.b[1])}`,Math.round(m.arr*200)+'%']),'small')}
+    <p class="note">Per uscire: chiedere di andartene (45%, altrimenti Salute −25) o collaborare con la giustizia (protezione, trasferimento al Nord o al Sud, pena dimezzata, un nemico per sempre).</p></div>
+    <div class="card"><h3>Il carcere</h3>${tbl(['Azione','Effetto'],[['Buona condotta','+1 anno di condotta, 35% di sconto di un anno'],['Studia','Diploma dopo 3 anni, laurea in Lettere dopo altri 4'],['Corso di cucina','40% di attestato da cuoco'],['Banda','Protezione, ma favori rischiosi e −10% alla condizionale'],['Permesso premio','Dopo 1 anno e 2 di condotta: 55%'],['Libertà condizionale','Dopo metà pena e 2 di condotta: 25% + 8% per anno di condotta'],['Evasione','Tunnel 10% · guardia corrotta 35% (15.000 €) · furgone 15%. Se va male: +2 anni']].map(r=>r.map(esc)),'small')}<p class="note">All\'uscita una cooperativa sociale offre un lavoro.</p></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>Social</h3><p class="sub">Profilo da 13 anni. Ogni tipo di post si può ripetere dopo 2 mesi; in più ci sono le ore di social della settimana. Se in un anno non pubblichi niente, perdi l\'8% dei follower.</p>
+    ${tbl(['Post','Cosa conta'],D.post.map(x=>[esc(x.n),esc(x.d)]),'small')}
+    <div class="formula">Nuovi follower = (30 + 3% dei follower) × (0,4 + qualità × 1,6) × caso 50–150% × (1 + Fama ÷ 60)
+Virale: 4% + qualità × 5% → follower × 10–40
+Opinione forte: 35% di shitstorm (−10…25% follower, 30% nuovo nemico), altrimenti il doppio</div>
+    <p class="note">Da 5.000 follower arrivano sponsor: circa 4 centesimi a follower l\'anno. Comprare 5.000 follower costa 500 € (una volta ogni 6 mesi), con il 20% annuo di essere scoperti (−50%).</p></div>
+    <div class="card"><h3>Fama</h3><p class="sub">Da 0 a 100. Ogni anno cala del 10%, ma non scende sotto quella data da follower e carriera.</p>${tbl(['Fonte','Fama'],[['Follower','15 × log10(follower) − 40: 10.000 → 20 · 100.000 → 35 · 1 milione → 50'],['Attore','5 · 15 · 30 · 50 · 80 per grado'],['Musicista','2 · 10 · 30 · 70 per grado'],['Calciatore','10 · 20 · 45 · 75 per grado'],['Eventi','Reality, quiz, Superenalotto, premi, festival']].map(r=>r.map(esc)),'small')}
+    <p class="note">La fama aiuta in amore (+Fama ÷ 300), nei colloqui (+Fama ÷ 400) e nei clienti dell\'azienda (+Fama ÷ 200). Da 20 sbloccano ospitate TV, libro, linea di prodotti, beneficenza e addetto stampa. Da 30 arrivano paparazzi, scandali e fan ossessivi.</p></div>
+  </div>
+  <div class="card"><h3>Carriera da attore</h3><p class="sub">Si entra con un provino (da 16 anni): 10% + Arte ÷ 250 + Aspetto ÷ 300 + Fama ÷ 300.</p>${tbl([{t:'Grado'},{t:'Guadagno medio',n:1},{t:'Per salire'}],[['Comparsa',8000,'—'],['Attore di spot',24000,'—'],['Attore di fiction',56000,'Arte ≥ 45'],['Attore di cinema',160000,'Arte ≥ 65'],['Star internazionale',560000,'Arte ≥ 85']].map(r=>[esc(r[0]),eur(r[1]),esc(r[2])]),'small')}</div>`;
+};
+
+/* ----- Regole ----- */
+RENDER.regole=p=>{
+  const R=(t,f,n)=>`<div class="card"><h3>${t}</h3>${f?`<div class="formula">${esc(f)}</div>`:''}${n?`<p class="note" style="margin:0">${n}</p>`:''}</div>`;
+  p.innerHTML=`<div><h2>Regole e formule</h2><p class="intro">I calcoli esatti che il gioco usa. «r(a,b)» vuol dire un numero intero a caso tra a e b.</p></div><div class="rules">
+  ${R('Statistiche','Salute, Felicità, Intelletto, Aspetto, Karma: da 0 a 100\nNascita: Salute 65–100, Felicità 60–100, Intelletto 20–95, Aspetto 20–95, Karma 50\nBisogni: Energia, Stress, Socialità, Forma fisica da 0 a 100\nCarattere: cinque tratti da 0 a 100','Il Karma è nascosto: sale con le buone azioni e influisce su amore, elezioni e ricordo finale. Le formule dei bisogni sono nella scheda Tempo e bisogni.')}
+  ${R('Eventi del mese','8,5% → 1 evento casuale\n4,5% → 1 evento con una persona\nPiù: eventi dal tuo stato, richieste delle persone, incontri, calendario, impulsi\nIn carcere: 6% di un evento della prigione\nAl massimo 3 eventi in coda','Un evento casuale non si ripete per 6 anni, uno con persone per 4. Alcuni capitano una sola volta.')}
+  ${R('Tempo','1 turno = 1 mese · il compleanno arriva nel mese di nascita\nAnno scolastico: settembre–giugno · a gennaio il mondo cambia\nAzioni: di norma una volta al mese, alcune con attese più lunghe (colpi 3 mesi, missioni 4, corsi ed esami 6, vacanza 3, chirurgia 12, azioni in carcere 12)','Le conseguenze rimandate «dopo N anni» arrivano dopo N × 12 mesi, con un margine di ±4 mesi.')}
+  ${R('Invecchiamento','La Salute insegue un obiettivo che scende dopo i 35, i 65 e gli 80 anni (scheda Salute)\nA ogni compleanno: dopo 35 anni Aspetto −1 al 60% · dopo 72 Intelletto −0…1\nIl carattere matura: più Coscienziosità e Amicalità, meno Emotività','Forma fisica, sonno e stress spostano l\'obiettivo di Salute di molti punti.')}
+  ${R('Scuola','Ogni mese: media += (ore di studio effettive − ore attese) × 0,12 + (Intelletto − 50) ÷ 120\nA giugno: media += (Intelletto − 50) ÷ 16 − (difficoltà − 0,5) × 10 + r(−4,4) + 3 × Coscienziosità\n −4 con Felicità < 25 · −4 se lavori a tempo pieno · −4 se bevi\nBocciatura alle superiori: media < 28, al 50%\nMaturità = 60 + media × 0,4 ± 3 (su 100) · Laurea = 66 + media × 0,44 (su 110)','Il primo anno conta solo se sei iscritto da almeno 6 mesi a giugno. Sotto 35 di media alla fine: si ripete l\'ultimo anno o si va fuori corso.')}
+  ${R('Stipendio netto','INPS = 9,19% della RAL\nImponibile = RAL − INPS\nIRPEF = 23% fino a 28.000 · 35% fino a 50.000 · 43% oltre\n − detrazione da lavoro dipendente (1.955 € sotto 15.000, poi a scalare fino a zero a 50.000)\nAddizionali regionali e comunali = 2% dell\'imponibile\nNetto = RAL − INPS − IRPEF − addizionali','Ogni mese arriva netto ÷ 13; a dicembre il doppio (tredicesima). A gennaio lo stipendio cresce dell\'80% dell\'inflazione più 0–2%. Gli straordinari pagano il 125% della paga oraria.')}
+  ${R('Candidatura','Colloquio = 42% + (Intelletto − 50) ÷ 200 + (Aspetto − 50) ÷ 400 + Fama ÷ 400 + punti delle risposte × 6%\n + anni di contributi ÷ 40 (max 10) + 5% con esperienza estiva\n − 15% se la RAL supera 40.000 · − 20% con fedina sporca\n(min 4%, max 92%)\nConcorso = 6% + 24% per ogni risposta giusta su 3 + 5% con laurea + (Intelletto − 50) ÷ 500','Una candidatura al mese per ogni lavoro.')}
+  ${R('Rendimento e promozioni','Ogni mese: rendimento += (r(−7,5) − 4 con Felicità < 30 − 6 se bevi − 4 con Salute < 30) ÷ 3,5\n + 0,7 × Coscienziosità − 1 con energia < 30 − 1 con stress > 80 + (soddisfazione − 50) ÷ 90\nPromozione automatica: rendimento ≥ 70, 2 anni nel ruolo, ogni mese 1/12 di (30% + (rendimento − 70)%)\nPromozione richiesta: 1 anno nel ruolo, probabilità (rendimento − 45) ÷ 70, ogni 4 mesi\nLicenziamento: rendimento < 20, 4% al mese · crisi: 1,1% al mese nel privato','«Dai il massimo questo mese»: rendimento +2…5, stress +5, energia −14.')}
+  ${R('Pensione','Si può chiedere dall\'età di pensione (67 anni, sale con le riforme fino a 71), o da 60 con 42 anni di contributi\nPensione = netto annuo × min(80%, anni di contributi × 1,9%)','Il part-time vale mezzo anno di contributi. La proposta arriva al compleanno.')}
+  ${R('Bilancio del mese','Entrate: stipendio, pensione, borse di studio, paghetta, compenso dall\'azienda, collaborazioni social, dividendi netti, affitti incassati, entrate dal clan, assegno di inclusione, lavoro extra\nUscite: affitto, spesa e bollette 8.400 €, spese personali 3.600 € (1.500 dai genitori), contributo ai genitori 1.800 €, rate, manutenzione case, auto, figli 7.500 € l\'uno, animali 500 €, badante 13.800 €, RSA 9.600 €, tasse universitarie, sigarette 1.600 €, alcol 1.200 €, gioco, interessi 6% sul debito, svago della settimana\nImprevisti: 7% al mese, da 150 a 1.600 €','Gli importi annui sono divisi per 12 e salgono con l\'inflazione. Convivendo, affitto, spesa e figli costano meno. Più la Coscienziosità è bassa, più spendi nello svago (fino a +20%).')}
+  ${R('Mutuo','Rata annua = capitale × i ÷ (1 − (1 + i)^−anni)\ni = 3,5% · 25 anni · capitale = 80% del prezzo','Si paga ogni mese, divisa per 12. Esempio: casa da 150.000 € → circa 607 € al mese.')}
+  ${R('Morte','Rischio annuo = 0,034% × e^(0,095 × (età − 30)) + max(0, 45 − Salute) ÷ 400\n + 7% per ogni malattia gravissima + 1% se alcolista\nRischio del mese = 1 − (1 − rischio annuo)^(1/12)','Causa: malattia gravissima al 70% se presente; oltre 82 anni «nel sonno»; sotto 40 incidente o malore.')}
+  ${R('Eredità e generazioni','Patrimonio = conto + investimenti + case − mutui + veicoli − rate + attività\nAl figlio = patrimonio × 96% ÷ numero di figli vivi','Il figlio porta con sé il suo carattere. Classe della nuova famiglia: benestante oltre 300.000 €, media oltre 40.000 €.')}
+  </div>`;
+};
+
+/* ---------- Avvio ---------- */
+let t0='panoramica';try{const s=localStorage.getItem('atlante_tab');if(s&&RENDER[s])t0=s}catch(e){}
+if(location.hash&&RENDER[location.hash.slice(1)])t0=location.hash.slice(1);
+apri(t0);
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>disegna(document.querySelector('.pane:not([hidden])')),150)});
+const ridisegna=()=>disegna(document.querySelector('.pane:not([hidden])'));
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',ridisegna)}catch(e){}
+new MutationObserver(ridisegna).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+</script>

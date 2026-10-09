@@ -1,0 +1,11 @@
+# file generati dalle prove (si rifanno con i comandi di tools/)
+tools/*_out.json
+/*.png
+__pycache__/
+*.pyc
+# copia di dist/vitamia.html usata solo per il controllo della sintassi
+dist/all.js
+# cartelle temporanee
+tmp_*/
+.DS_Store
+Thumbs.db

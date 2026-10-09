@@ -1,0 +1,199 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>my · Flusso della vita</title>
+<style>
+:root{--blu:#1d6fd1;--blu2:#2f86e6;--ink:#1d2733;--muted:#5d6977;--amb:#f0a92b;--verde:#2e9a5a;--rosso:#d0453a}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif;color:var(--ink);
+  background:#cfd2d5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900'%3E%3Cpolygon points='0,0 520,0 260,450' fill='%23d9dbde'/%3E%3Cpolygon points='520,0 1040,0 780,450' fill='%23d5d7da'/%3E%3Cpolygon points='260,450 780,450 520,900' fill='%23dcdee1'/%3E%3Cpolygon points='1040,0 1600,0 1320,450' fill='%23dadcdf'/%3E%3Cpolygon points='780,450 1320,450 1040,900' fill='%23d3d6d9'/%3E%3Cpolygon points='1320,450 1600,450 1600,900 1560,900' fill='%23d7d9dc'/%3E%3C/svg%3E") 0 0/1600px 900px}
+#scena{position:fixed;inset:0;cursor:grab;touch-action:none}
+#scena.trascina{cursor:grabbing}
+svg{display:block}
+/* testi */
+.t1{font-size:12px;font-weight:700;fill:var(--ink)}
+.t2{font-size:10.5px;fill:var(--muted)}
+.t3{font-size:10.5px;fill:#8a6400;font-style:italic}
+.t4{font-size:11px;fill:#fff}
+.out .t4,.tp .t4{fill:var(--ink)}
+.t5{font-size:11px;fill:var(--amb)}
+.t6{font-size:10px;fill:var(--blu);font-weight:700}
+.gl{font-size:22px;font-weight:300;fill:#5f9fe0;letter-spacing:.06em}
+.bl{font-size:12px;font-weight:700;fill:var(--blu);letter-spacing:.08em}
+.ct{font-size:15px;font-weight:700;fill:#fff;letter-spacing:.04em}
+.cs{font-size:11px;fill:#d8e8fb}
+.sl{font-size:12px;fill:var(--blu);font-weight:600}
+.ft{font-size:16px;font-weight:700;fill:#fff;letter-spacing:.06em}
+/* nodi */
+.ev rect{fill:#fff;stroke:var(--blu);stroke-width:1.2}
+.ev.link rect{stroke-dasharray:5 3}
+.ev.auto rect{fill:#e9ecef;stroke:#8a96a3}
+.ev:hover rect,.ev.sel rect{stroke:var(--amb);stroke-width:2.5}
+.ingr{fill:var(--amb)}
+.ch rect{fill:var(--blu)}
+.ch:hover rect{fill:var(--blu2)}
+.ch.auto2 rect{fill:#7d8a97}
+.ch.incerto rect,.out.incerto rect{fill:#fff;stroke:#7d8a97;stroke-dasharray:4 3}
+.ch.incerto .t4{fill:var(--muted)}
+.out rect{fill:#fff;stroke:#c3cad1}
+.out .bar{stroke:none;fill:#9aa5b1}
+.out.g .bar{fill:var(--verde)}.out.b .bar{fill:var(--rosso)}
+.out:hover rect:first-child{stroke:var(--amb)}
+.tp rect{fill:#eef0f2;stroke:#b5bec7}
+.grp>rect{fill:rgba(255,255,255,.16);stroke:rgba(255,255,255,.55)}
+.grp .br{fill:none;stroke:#fff;stroke-width:2}
+.grp.tappe>rect{fill:rgba(255,255,255,.28)}
+.cap rect{fill:var(--blu)}
+.cap .foto{fill:#26313d}
+.cap:hover rect{fill:var(--blu2)}
+.fin rect{fill:#1c2733;stroke:var(--amb);stroke-width:1.5}
+.fin .t2{fill:#b9c4d0}.fin .t3{fill:var(--amb)}
+#linee path{fill:none;stroke:var(--blu);stroke-width:1.1;opacity:.55}
+.bus{stroke:var(--blu);stroke-width:2.2;fill:none;opacity:.8}
+.sp{stroke:var(--blu);stroke-width:3.5;fill:none}
+.loop{stroke:var(--blu);stroke-width:1.6;fill:none;stroke-dasharray:4 4}
+.arco{fill:none;stroke:rgba(29,111,209,.22);stroke-width:1.4;stroke-dasharray:6 4}
+.arco.dopo{stroke:rgba(240,169,43,.35)}
+.arco.on{stroke:var(--amb);stroke-width:3.5;stroke-dasharray:none;opacity:1}
+/* interfaccia */
+#titolo{position:fixed;left:28px;top:20px;pointer-events:none}
+#titolo .k{font-size:12px;letter-spacing:.08em;color:var(--muted)}
+#titolo .k b{color:var(--ink)}
+#titolo h1{margin:2px 0 4px;font-weight:300;font-size:42px;letter-spacing:.02em;border-top:1.5px solid var(--ink);padding-top:6px;min-width:420px}
+#titolo .s{font-size:11px;color:var(--blu);letter-spacing:.06em}
+#barra{position:fixed;right:18px;top:18px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:62vw}
+#barra button,#barra input{font:inherit;font-size:12px;border:1px solid #aab3bd;background:rgba(255,255,255,.85);border-radius:3px;padding:6px 10px;color:var(--ink)}
+#barra button:hover{border-color:var(--blu);color:var(--blu)}
+#barra input{width:220px}
+#legenda{position:fixed;left:18px;bottom:16px;background:rgba(255,255,255,.88);border:1px solid #b9c2cb;border-radius:3px;padding:10px 12px;font-size:11.5px;max-width:330px;line-height:1.55}
+#legenda b{font-size:11px;letter-spacing:.08em;color:var(--muted)}
+.lg{display:inline-block;width:22px;height:10px;margin-right:6px;vertical-align:-1px;border-radius:2px}
+#tip{position:fixed;pointer-events:none;background:#1c2733;color:#fff;font-size:12px;line-height:1.45;padding:9px 11px;border-radius:4px;max-width:420px;white-space:pre-wrap;display:none;z-index:9;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+#tip b{color:var(--amb)}
+#pannello{position:fixed;right:0;top:0;bottom:0;width:440px;background:rgba(250,251,252,.97);border-left:1px solid #b9c2cb;transform:translateX(100%);transition:transform .2s;overflow:auto;padding:18px 18px 40px;font-size:12.5px;z-index:8}
+#pannello.su{transform:none}
+#pannello h2{font-weight:300;font-size:24px;margin:4px 0 8px}
+#pannello h3{font-size:11px;letter-spacing:.1em;color:var(--muted);margin:16px 0 6px}
+#pannello .r{border-top:1px solid #e1e5e9;padding:6px 0;cursor:pointer}
+#pannello .r:hover{background:#eef4fc}
+#pannello code{display:block;font-size:10.5px;color:#56606b;background:#eef0f2;padding:4px 6px;border-radius:3px;margin-top:3px;white-space:pre-wrap;word-break:break-all}
+#pannello .x{float:right;border:0;background:none;font-size:20px;cursor:pointer;color:var(--muted)}
+.inc{color:#8a6400}
+.ch.az rect{fill:#2a78d2}.t7{font-size:10px;fill:#cfe2fb}.t8{font-size:10px;fill:#ffe39a;font-style:italic}
+#legenda{cursor:pointer}#legenda.chiusa{max-height:30px;overflow:hidden}
+#mappa{position:fixed;inset:0;background:rgba(207,210,213,.93);display:flex;flex-direction:column;justify-content:center;z-index:7;padding:150px 30px 40px;overflow:auto}
+#mappa.via{display:none}
+#mappa .fila{display:flex;gap:0;align-items:stretch;overflow-x:auto;padding:10px 4px 20px}
+.cc{flex:0 0 220px;margin-right:34px;position:relative;cursor:pointer}
+.cc:not(:last-child)::after{content:"";position:absolute;right:-34px;top:180px;width:34px;height:3px;background:var(--blu)}
+.cc .fo{height:150px;background:#26313d;clip-path:polygon(14% 0,100% 0,86% 100%,0 100%);display:flex;justify-content:center;align-items:flex-end;overflow:hidden}
+.cc .fo svg{width:120px;height:144px}
+.cc .tt{background:var(--blu);color:#fff;padding:8px 10px;font-weight:700;letter-spacing:.05em;font-size:14px}
+.cc .tt small{display:block;font-weight:400;font-size:11px;color:#d8e8fb;letter-spacing:0}
+.cc ul{margin:0;padding:8px 10px 10px 24px;background:rgba(255,255,255,.75);font-size:11.5px;line-height:1.4;min-height:120px}
+.cc:hover .tt{background:var(--blu2)}
+#mappa h2{font-weight:300;font-size:20px;margin:0 0 6px;color:var(--ink)}
+#mappa p{margin:0 0 10px;color:var(--muted);font-size:13px;max-width:900px}
+</style>
+<div id="scena"><svg id="svg" width="100%" height="100%"><defs id="defs"></defs><g id="cam">
+  <g id="archi"><!--ARCHI--></g>
+  <g id="linee"><!--LINEE--></g>
+  <g id="corpo"><!--CORPO--></g>
+  <g id="spina"><!--SPINA--></g>
+  <g id="ritratti"></g>
+</g></svg></div>
+<div id="titolo"><div class="k"><b id="kpi"></b></div><h1>my · FLUSSO DELLA VITA</h1><div class="s" id="sotto"></div></div>
+<div id="barra"><input id="cerca" type="search" placeholder="Cerca un evento (titolo o id)…"><button id="bTutto">Panoramica</button><button id="bSpina">Capitoli</button><span id="bCap"></span><button id="bMotore">Il motore</button></div>
+<div id="legenda"><b>LEGENDA</b><br>
+<span class="lg" style="background:#fff;border:1.2px solid var(--blu)"></span>evento casuale · <span class="lg" style="background:#fff;border:1.2px dashed var(--blu)"></span>evento collegato<br>
+<span class="lg" style="background:#e9ecef;border:1px solid #8a96a3"></span>evento automatico / passaggio del motore<br>
+<span class="lg" style="background:var(--blu)"></span>scelta del giocatore · <span class="lg" style="background:#7d8a97"></span>succede da sola<br>
+<span class="lg" style="background:var(--verde)"></span>esito buono <span class="lg" style="background:var(--rosso)"></span>cattivo <span class="lg" style="background:#9aa5b1"></span>neutro · <b style="color:var(--blu)">60%</b> probabilità<br>
+<span style="color:var(--amb)">⚑</span> scelta con condizione · <span style="color:var(--amb)">⏳</span> conseguenza dopo anni · <span style="color:var(--amb)">⚖</span> processo<br>
+<span style="color:var(--amb)">●</span> aperto anche da altro codice · <b style="color:var(--blu)">↩</b> ricongiunzione: si torna al mese<br>
+<span class="lg" style="border:1px dashed #7d8a97;background:#fff"></span><span class="inc">(?) incerto: deciso dal codice al momento</span><br>
+<span class="lg" style="background:#1c2733;border:1px solid var(--amb)"></span>finale</div>
+<div id="mappa"><h2>I capitoli della vita</h2><p>my non ha una trama fissa: ogni mese il tempo avanza, possono capitare eventi (scelti a caso tra quelli possibili per la tua età e le tue condizioni, oppure aperti da quello che è successo prima) e dopo ogni evento si torna al mese successivo. Scegli un capitolo per vederne tutti gli eventi, le scelte e gli esiti. Rotella per lo zoom, trascina per spostarti, clicca un evento per i dettagli.</p><div class="fila" id="fila"></div></div>
+<div id="tip"></div>
+<div id="pannello"><button class="x" id="chiudiP">×</button><div id="pc"></div></div>
+<script>
+const DATI=/*DATI*/;
+/* volto del personaggio (da src/c5_aspetto.js) */
+const pick=a=>a[Math.floor(Math.random()*a.length)],r=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),chance=p=>Math.random()<p;let S=null;
+/*VOLTO*/
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const st=DATI.stat;
+$('#kpi').textContent=`${st.ev} EVENTI · ${st.sc} SCELTE · ${st.ar} COLLEGAMENTI`;
+$('#sotto').textContent=`${st.link} eventi collegati · ${st.auto} automatici · ${st.din} con scelte generate al momento (?) · si torna sempre al mese successivo`;
+/* ritratti dei capitoli: lo stesso personaggio a età diverse */
+const LOOK={pelle:1,capelli:2,occhi:1,taglio:'mossi',barba:'no',maglia:0};
+const R=$('#ritratti'),defs=$('#defs');
+DATI.ritratti.forEach(([x,y,eta],i)=>{
+  defs.insertAdjacentHTML('beforeend',`<clipPath id="cp${i}"><polygon points="${x-10},${y-4} ${x+146},${y-4} ${x+118},${y+112} ${x-38},${y+112}"/></clipPath>`);
+  R.insertAdjacentHTML('beforeend',`<g clip-path="url(#cp${i})"><rect x="${x-40}" y="${y-4}" width="190" height="118" fill="#2c3846"/><svg x="${x+10}" y="${y}" width="96" height="116" viewBox="0 0 100 120">${volto(LOOK,eta,'F',{sfondo:false}).replace(/^<svg[^>]*>|<\/svg>$/g,'')}</svg></g>`);
+});
+/* camera */
+const cam=$('#cam'),sc=$('#scena');let tx=0,ty=0,z=1;
+const applica=()=>cam.setAttribute('transform',`translate(${tx} ${ty}) scale(${z})`);
+function guarda(x0,y0,w,h){const W=innerWidth,H=innerHeight;z=Math.min(W/w,H/h);tx=(W-w*z)/2-x0*z;ty=(H-h*z)/2-y0*z;applica()}
+const tutto=()=>guarda(0,0,DATI.W,DATI.H);
+const spina=()=>guarda(0,120,DATI.W,900);
+tutto();
+sc.addEventListener('wheel',e=>{e.preventDefault();const k=Math.exp(-e.deltaY*.0015);const nz=Math.max(.02,Math.min(4,z*k));tx=e.clientX-(e.clientX-tx)*nz/z;ty=e.clientY-(e.clientY-ty)*nz/z;z=nz;applica()},{passive:false});
+let dr=null;
+sc.addEventListener('pointerdown',e=>{dr={x:e.clientX,y:e.clientY,tx,ty,m:0};sc.classList.add('trascina')});
+addEventListener('pointermove',e=>{if(dr){dr.m+=Math.abs(e.movementX)+Math.abs(e.movementY);tx=dr.tx+e.clientX-dr.x;ty=dr.ty+e.clientY-dr.y;applica()}mostraTip(e)});
+addEventListener('pointerup',()=>{setTimeout(()=>dr=null,0);sc.classList.remove('trascina')});
+/* bottoni */
+const M=$('#mappa');
+$('#fila').innerHTML=DATI.capdati.map(c=>`<div class="cc" data-k="${c.k}"><div class="fo">${volto(LOOK,c.v,'F',{sfondo:false})}</div><div class="tt">${c.n.toUpperCase()}<small>${c.eta}${c.eta&&c.ev?' · ':''}${c.ev?c.ev+' eventi · '+c.sc+' scelte':''}${c.prima?`<br>+ ${c.prima} eventi iniziati prima, ancora possibili`:''}</small></div><ul>${c.tappe.slice(0,4).map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`).join('');
+document.querySelectorAll('.cc').forEach(b=>b.onclick=()=>{const c=DATI.cap.find(x=>x.k===b.dataset.k);M.classList.add('via');guarda(c.x-80,250,1300,1500)});
+$('#bTutto').onclick=()=>{M.classList.add('via');tutto()};$('#bSpina').onclick=()=>M.classList.toggle('via');
+$('#legenda').onclick=()=>$('#legenda').classList.toggle('chiusa');
+$('#bCap').innerHTML=DATI.cap.map(c=>`<button data-k="${c.k}">${c.n}</button>`).join('');
+document.querySelectorAll('#bCap button').forEach(b=>b.onclick=()=>{const c=DATI.cap.find(x=>x.k===b.dataset.k);M.classList.add('via');guarda(c.x-80,250,1300,1500)});
+/* tooltip */
+const tip=$('#tip');
+function mostraTip(e){
+  if(dr&&dr.m>3){tip.style.display='none';return}
+  const g=e.target.closest&&e.target.closest('[data-i]');
+  if(!g){tip.style.display='none';return}
+  const n=DATI.nodi[+g.dataset.i];
+  tip.innerHTML=`<b>${esc(n.titolo)}</b>\n${esc(n.testo)}`;tip.style.display='block';
+  const x=Math.min(innerWidth-440,e.clientX+16),y=Math.min(innerHeight-tip.offsetHeight-10,e.clientY+16);tip.style.left=x+'px';tip.style.top=y+'px';
+}
+/* evidenzia i collegamenti di un evento */
+let sel=null;
+function evidenzia(id){
+  document.querySelectorAll('.arco.on').forEach(a=>a.classList.remove('on'));document.querySelectorAll('.ev.sel').forEach(a=>a.classList.remove('sel'));
+  if(!id)return;
+  document.querySelectorAll(`.arco[data-da="${CSS.escape(id)}"],.arco[data-a="${CSS.escape(id)}"]`).forEach(a=>{a.classList.add('on');a.parentNode.appendChild(a)});
+  const g=document.querySelector(`.ev[data-ev="${CSS.escape(id)}"]`);if(g)g.classList.add('sel');
+}
+document.addEventListener('mouseover',e=>{const g=e.target.closest&&e.target.closest('.ev[data-ev]');if(g&&!sel)evidenzia(g.dataset.ev)});
+document.addEventListener('mouseout',e=>{const g=e.target.closest&&e.target.closest('.ev[data-ev]');if(g&&!sel)evidenzia(null)});
+function vaiA(id){M.classList.add('via');const g=document.querySelector(`.ev[data-ev="${CSS.escape(id)}"]`);if(!g)return;const b=g.getBBox();guarda(b.x-120,b.y-260,1100,700);sel=id;evidenzia(id);dettaglio(id)}
+sc.addEventListener('click',e=>{if(dr&&dr.m>3)return;const g=e.target.closest('[data-ev]');if(g){sel=g.dataset.ev;evidenzia(sel);dettaglio(sel)}else{sel=null;evidenzia(null)}});
+/* pannello di dettaglio */
+const P=$('#pannello'),PC=$('#pc');$('#chiudiP').onclick=()=>P.classList.remove('su');
+function dettaglio(id){
+  const n=DATI.nodi.find(x=>x.tipo==='evento'&&x.id===id);if(!n)return;
+  const da=DATI.archi.filter(a=>a.a===id),va=DATI.archi.filter(a=>a.da===id&&a.tipo==='ev');
+  PC.innerHTML=`<div class="t2" style="font-size:11px;letter-spacing:.1em;color:#5d6977">EVENTO · ${esc(id)}</div><h2>${esc(n.titolo)}</h2><div style="white-space:pre-wrap">${esc(n.testo)}</div>`
+   +`<h3>SCELTE ED ESITI</h3>`+DATI.nodi.filter(x=>x.id===id&&(x.tipo==='scelta'||x.tipo==='esito'||x.tipo==='incerto')).map(x=>`<div class="r" style="${x.tipo==='scelta'?'font-weight:700;color:#1d6fd1':'padding-left:14px'}">${esc(x.titolo)}</div>`).join('')
+   +(da.length?`<h3>COSA LO APRE</h3>`+da.map(a=>`<div class="r" data-va="${a.tipo==='ev'?esc(a.da):''}">${a.tipo==='ev'?'Evento':a.tipo==='att'?'Attività del giocatore':'Motore'}: <b>${esc(a.da)}</b> (${a.come==='dopo'?'conseguenza rimandata':a.come==='richiesta'?'richiesta di una persona':'apre'})<code>${esc(a.cod)}</code></div>`).join(''):'<h3>COSA LO APRE</h3><div>Estratto a caso ogni mese tra gli eventi possibili per età e condizioni.</div>')
+   +(va.length?`<h3>COSA PUÒ APRIRE</h3>`+va.map(a=>`<div class="r" data-va="${esc(a.a)}">→ <b>${esc(a.t)}</b> (${a.come==='dopo'?'dopo qualche anno':'subito'})<code>${esc(a.cod)}</code></div>`).join(''):'');
+  PC.querySelectorAll('[data-va]').forEach(r=>{if(r.dataset.va)r.onclick=()=>vaiA(r.dataset.va)});
+  P.classList.add('su');
+}
+/* il motore: chi apre gli eventi collegati */
+$('#bMotore').onclick=()=>{
+  PC.innerHTML=`<h2>Il motore</h2><div>Gli eventi collegati non arrivano a caso: li apre il motore quando succede qualcosa. Ogni riga riporta la condizione così com'è scritta nel codice <span class="inc">(non tradotta: da leggere con attenzione)</span>.</div>`
+   +DATI.motore.map(b=>`<h3>${esc(b.b.toUpperCase())}</h3>`+b.r.map(a=>`<div class="r" data-va="${esc(a.a)}"><b>${esc(a.t)}</b> ← ${a.tipo==='att'?'attività':'funzione'} <i>${esc(a.da)}</i> (${esc(a.file)})<code>${esc(a.cod)}</code></div>`).join('')).join('');
+  PC.querySelectorAll('[data-va]').forEach(r=>r.onclick=()=>vaiA(r.dataset.va));P.classList.add('su');
+};
+/* ricerca */
+$('#cerca').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=e.target.value.trim().toLowerCase();if(!q)return;
+  const n=DATI.nodi.find(x=>x.tipo==='evento'&&(x.id.toLowerCase()===q||x.titolo.toLowerCase().includes(q)))||DATI.nodi.find(x=>x.tipo==='evento'&&x.id.toLowerCase().includes(q));if(n)vaiA(n.id)});
+</script>
