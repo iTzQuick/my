@@ -24,6 +24,7 @@ const AZIENDE=[
   {id:'edile',n:'Impresa edile',costo:50000,sk:'tech',domanda:20,scontrino:25000,margine:.45,cap:4,affitto:8000,stip:28000,aprire:40000,cliente:'cantieri',mult:3},
   {id:'bar',n:'Bar',costo:60000,sk:'cucina',domanda:18000,scontrino:6,margine:.65,cap:9000,affitto:18000,stip:22000,aprire:50000,cliente:'clienti',mult:3},
   {id:'pizzeria',n:'Pizzeria',costo:90000,sk:'cucina',domanda:9000,scontrino:18,margine:.6,cap:5000,affitto:24000,stip:22000,aprire:70000,cliente:'coperti',mult:3},
+  {id:'negozio',n:'Negozio di quartiere',costo:30000,sk:'cucina',domanda:12000,scontrino:25,margine:.28,cap:8000,affitto:12000,stip:20000,aprire:25000,cliente:'clienti',mult:3},
   {id:'palestra',n:'Palestra',costo:90000,sk:'sport',domanda:500,scontrino:500,margine:.9,cap:250,affitto:30000,stip:22000,aprire:80000,cliente:'iscritti',mult:3}
 ];
 const PREZZI_AZ={basso:{n:'Bassi',k:.8,d:1.3},medio:{n:'Nella media',k:1,d:1},alto:{n:'Alti',k:1.25,d:.75}};
@@ -95,7 +96,7 @@ const DOMANDE_SET={
   scuola:[{q:'Uno studente disturba di continuo.',a:[['Gli parlo da solo e cerco di capire il motivo',2],['Lo mando dal preside',0],['Alzo la voce',-1]]}],
   creativo:[{q:'Mostraci un tuo lavoro.',a:[['Presenti il tuo portfolio migliore',2,'arte'],['Improvvisi qualcosa sul momento',0,'arte'],['Non ho niente da mostrare',-2]]}]
 };
-const SETTORE_JOB={tec:'tech',pro:'tech',ing:'tech',com:'vendita',cpt:'vendita',agi:'vendita',rec:'vendita',mkt:'vendita',cam:'ristorazione',bpt:'ristorazione',cuoco:'ristorazione',inf:'sanita',med:'sanita',oss:'sanita',far:'sanita',psi:'sanita',bio:'sanita',mag:'fisico',ope:'fisico',mur:'fisico',aut:'fisico',rider:'fisico',avv:'legale',comm:'legale',cons:'legale',imp:'legale',man:'legale',ins:'scuola',rip:'scuola',ric:'scuola',gra:'creativo',gio:'creativo',mus:'creativo',parr:'creativo',att:'creativo'};
+const SETTORE_JOB={colf:'fisico',badante:'sanita',bracc:'fisico',idra:'fisico',elet:'tech',mecc:'fisico',fale:'fisico',pane:'ristorazione',past:'ristorazione',macel:'vendita',camion:'fisico',cass:'vendita',puli:'fisico',callc:'vendita',segr:'legale',este:'creativo',edu:'scuola',maes:'scuola',post:'fisico',taxi:'fisico',guida:'vendita',anim:'creativo',bagn:'fisico',hostess:'vendita',pilota:'tech',vet:'sanita',dent:'sanita',fisio:'sanita',agcom:'vendita',ds:'tech',tec:'tech',pro:'tech',ing:'tech',com:'vendita',cpt:'vendita',agi:'vendita',rec:'vendita',mkt:'vendita',cam:'ristorazione',bpt:'ristorazione',cuoco:'ristorazione',inf:'sanita',med:'sanita',oss:'sanita',far:'sanita',psi:'sanita',bio:'sanita',mag:'fisico',ope:'fisico',mur:'fisico',aut:'fisico',rider:'fisico',avv:'legale',comm:'legale',cons:'legale',imp:'legale',man:'legale',ins:'scuola',rip:'scuola',ric:'scuola',gra:'creativo',gio:'creativo',mus:'creativo',parr:'creativo',att:'creativo'};
 /* Quiz di cultura generale per i concorsi pubblici: [domanda, risposta giusta, sbagliata, sbagliata] */
 const QUIZ=[
   ['In che anno è entrata in vigore la Costituzione italiana?','1948','1946','1950'],

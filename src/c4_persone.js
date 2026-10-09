@@ -27,9 +27,10 @@ function initNpc(p){
     p.intim=clamp(p.rapporto-8);p.pass=clamp(p.rapporto+12);p.imp=clamp(p.ruolo==='Coniuge'?p.rapporto+10:p.rapporto-25);
   }
 }
+/* Un lavoro per una persona del gioco: diffuso come in Italia (DIFFUSIONE), con la quota di donne di ogni mestiere (DONNE) */
 function lavoroPerNpc(p){
-  const L=LAVORI.filter(j=>!j.pt&&!j.nascosto&&!['calc','crea','mus','att'].includes(j.id));
-  const pesi=L.map(j=>[j.id,1+(j.req&&j.req.lau?(p.pers&&p.pers.C>55?1.2:.4):1.5)]);
+  const L=LAVORI.filter(j=>!j.pt&&!j.nascosto&&DIFFUSIONE[j.id]);
+  const pesi=L.map(j=>{const f=DONNE[j.id]!==undefined?DONNE[j.id]:.42;const ses=p.sesso==='F'?f/.42:(1-f)/.58;return [j.id,DIFFUSIONE[j.id]*ses*(j.req&&j.req.lau?(p.pers&&p.pers.C>55?1.4:.6):1)]});
   return pesata(pesi);
 }
 const lavoroNpc=p=>p.lavoro&&JOB[p.lavoro]?nomeJob(JOB[p.lavoro],0,p).toLowerCase():'';

@@ -67,7 +67,13 @@ const FACOLTA=[
   {n:'Matematica',anni:3,d:.75},
   {n:'Scienze motorie',anni:3,d:.45,sk:'sport'},
   {n:'Infermieristica',anni:3,d:.5,test:40},
-  {n:'Scienze politiche',anni:3,d:.5}
+  {n:'Scienze politiche',anni:3,d:.5},
+  {n:'Scienze della formazione primaria',anni:5,cu:1,d:.5,test:45},   // per insegnare all'infanzia e alla primaria
+  {n:'Scienze dell\'educazione',anni:3,d:.45},                        // per l'educatore di nido
+  {n:'Medicina veterinaria',anni:5,cu:1,d:.7,test:60},
+  {n:'Odontoiatria',anni:6,cu:1,d:.75,test:70},
+  {n:'Fisioterapia',anni:3,d:.55,test:55},
+  {n:'Statistica',anni:3,d:.65}
 ];
 const ITS=[
   {n:'ITS Digitale',cert:'Programmazione',sk:'tech'},
@@ -80,7 +86,9 @@ const ABILITAZIONI=[
   {n:'Medico',lau:'Medicina',p:.8,desc:'Abilitazione alla professione medica'},
   {n:'Psicologo',lau:'Psicologia',liv:4,p:.6,desc:'Esame di Stato da psicologo'},
   {n:'Commercialista',lau:'Economia',liv:4,p:.4,desc:'Esame da commercialista'},
-  {n:'Architetto',lau:'Architettura',liv:4,p:.6,desc:'Esame di Stato da architetto'}
+  {n:'Architetto',lau:'Architettura',liv:4,p:.6,desc:'Esame di Stato da architetto'},
+  {n:'Veterinario',lau:'Medicina veterinaria',p:.85,desc:'Esame di Stato da veterinario'},
+  {n:'Odontoiatra',lau:'Odontoiatria',p:.85,desc:'Esame di Stato da odontoiatra'}
 ];
 const CORSI=[
   {id:'b2',n:'Corso di inglese B2',costo:900,min:15,cert:'Inglese B2',sk:{lingue:18},p:()=>.5+S.intelligenza/250},
@@ -94,7 +102,14 @@ const CORSI=[
   {id:'coding',n:'Bootcamp di programmazione',costo:4500,min:18,cert:'Programmazione',sk:{tech:22},p:()=>.3+S.intelligenza/150},
   {id:'foto',n:'Corso di fotografia',costo:900,min:14,sk:{arte:14},p:1},
   {id:'musica',n:'Lezioni private di musica',costo:1000,min:6,sk:{musica:14},p:1},
-  {id:'teatro',n:'Corso di recitazione',costo:800,min:12,sk:{arte:10},p:1}
+  {id:'teatro',n:'Corso di recitazione',costo:800,min:12,sk:{arte:10},p:1},
+  {id:'cqc',n:'Patente C e CQC',costo:3500,min:21,cert:'Patente C + CQC',req:{patente:1},p:.8},
+  {id:'estetista',n:'Corso di estetista',costo:4000,min:16,cert:'Estetista',sk:{arte:6},p:.85},
+  {id:'bagnino',n:'Brevetto di bagnino',costo:400,min:16,cert:'Brevetto bagnino',sk:{sport:4},p:()=>S.abil.sport>30?.85:.5},
+  {id:'volo',n:'Corso di assistente di volo',costo:2500,min:18,cert:'Assistente di volo',req:{tit:2},p:.8},
+  {id:'atpl',n:'Scuola di volo (licenza ATPL)',costo:100000,min:18,cert:'Licenza ATPL',req:{tit:2,sal:70},p:()=>.45+S.intelligenza/250},
+  {id:'guida',n:'Esame di guida turistica',costo:300,min:18,cert:'Guida turistica',req:{tit:2},p:()=>.35+S.abil.lingue/200},
+  {id:'taxi',n:'Licenza taxi e ruolo dei conducenti',costo:120000,min:21,cert:'Licenza taxi',req:{patente:1},p:.95}
 ];
 const HOBBY=[
   {id:'calcio',n:'Calcio',sk:'sport',s:1},
@@ -156,9 +171,57 @@ const LAVORI=[
   {id:'man',liv:[['Manager'],['Direttore generale','Direttrice generale'],['Amministratore delegato','Amministratrice delegata']],stip:55000,m:[1,1.8,4],req:{tit:3,master:1,int:65}},
   {id:'mus',liv:[['Musicista di strada'],['Turnista'],['Cantautore','Cantautrice'],['Star della musica']],stip:6000,m:[1,4,10,60],var:1,req:{sk:['musica',55]},promo:{3:{sk:['musica',85]}}},
   {id:'crea',liv:[['Content creator'],['Influencer'],['Star del web']],stip:3000,m:[1,10,45],var:1,req:{eta:[14,99]}},
-  {id:'calc',liv:[['Calciatore di Serie C','Calciatrice di Serie C'],['Calciatore di Serie B','Calciatrice di Serie B'],['Calciatore di Serie A','Calciatrice di Serie A'],['Campione internazionale','Campionessa internazionale']],stip:40000,m:[1,3.5,20,60],nascosto:'scoutOk',req:{sk:['sport',70],eta:[16,34]},promo:{2:{sk:['sport',82]},3:{sk:['sport',92]}}}
+  {id:'calc',liv:[['Calciatore di Serie C','Calciatrice di Serie C'],['Calciatore di Serie B','Calciatrice di Serie B'],['Calciatore di Serie A','Calciatrice di Serie A'],['Campione internazionale','Campionessa internazionale']],stip:40000,m:[1,3.5,20,60],nascosto:'scoutOk',req:{sk:['sport',70],eta:[16,34]},promo:{2:{sk:['sport',82]},3:{sk:['sport',92]}}},
+  // ---- ottobre 2026: i lavori più diffusi che mancavano (ANALISI.md, punto 4.6). RAL indicative ai prezzi del 2026 ----
+  {id:'colf',liv:[['Collaboratore domestico','Colf'],['Governante']],stip:14500,m:[1,1.3],req:{}},
+  {id:'badante',liv:[['Badante'],['Assistente familiare esperto','Assistente familiare esperta']],stip:15000,m:[1,1.25],ore:50,req:{},promo:{1:{cert:'OSS'}}},
+  {id:'bracc',liv:[['Bracciante agricolo','Bracciante agricola'],['Operaio agricolo specializzato','Operaia agricola specializzata'],['Imprenditore agricolo','Imprenditrice agricola']],stip:16000,m:[1,1.3,1.9],ore:44,req:{sal:45}},
+  {id:'idra',liv:[['Apprendista idraulico','Apprendista idraulica'],['Idraulico','Idraulica'],['Idraulico in proprio','Idraulica in proprio']],stip:17000,m:[1,1.45,2.1],req:{}},
+  {id:'elet',liv:[['Apprendista elettricista'],['Elettricista'],['Elettricista in proprio']],stip:17500,m:[1,1.45,2.1],req:{}},
+  {id:'mecc',liv:[['Apprendista meccanico','Apprendista meccanica'],['Meccanico','Meccanica'],['Titolare di officina']],stip:17000,m:[1,1.4,2],req:{}},
+  {id:'fale',liv:[['Apprendista falegname'],['Falegname'],['Titolare di falegnameria']],stip:16500,m:[1,1.4,1.9],req:{}},
+  {id:'pane',liv:[['Panettiere','Panettiera'],['Capo fornaio','Capo fornaia'],['Titolare di panificio']],stip:19000,m:[1,1.3,1.75],ore:42,req:{}},
+  {id:'past',liv:[['Aiuto pasticcere','Aiuto pasticcera'],['Pasticcere','Pasticcera'],['Maestro pasticcere','Maestra pasticcera']],stip:18000,m:[1,1.4,2],req:{},promo:{2:{sk:['cucina',55]}}},
+  {id:'macel',liv:[['Macellaio','Macellaia'],['Capo banco'],['Titolare di macelleria']],stip:19000,m:[1,1.3,1.75],req:{}},
+  {id:'camion',liv:[['Autotrasportatore','Autotrasportatrice'],['Autista di tir internazionale'],['Padroncino','Padroncina']],stip:26000,m:[1,1.25,1.5],ore:48,req:{patente:1,cert:'Patente C + CQC',fed:1}},
+  {id:'cass',liv:[['Cassiere','Cassiera'],['Capo cassa']],stip:17000,m:[1,1.2],req:{}},
+  {id:'puli',liv:[['Addetto alle pulizie','Addetta alle pulizie'],['Caposquadra delle pulizie']],stip:15000,m:[1,1.2],req:{}},
+  {id:'callc',liv:[['Operatore di call center','Operatrice di call center'],['Team leader']],stip:15500,m:[1,1.35],req:{tit:2}},
+  {id:'segr',liv:[['Segretario','Segretaria'],['Assistente di direzione'],['Office manager']],stip:21000,m:[1,1.3,1.6],req:{tit:2}},
+  {id:'este',liv:[['Estetista'],['Estetista esperto','Estetista esperta'],['Responsabile di centro estetico']],stip:16500,m:[1,1.25,1.6],req:{cert:'Estetista'}},
+  {id:'edu',liv:[['Educatore di nido','Educatrice di nido'],['Coordinatore pedagogico','Coordinatrice pedagogica']],stip:20000,m:[1,1.35],req:{lau:['Scienze dell\'educazione','Scienze della formazione primaria']}},
+  {id:'maes',liv:[['Maestro supplente','Maestra supplente'],['Maestro di ruolo','Maestra di ruolo']],stip:23000,m:[1,1.3],req:{lau:['Scienze della formazione primaria'],fed:1}},
+  {id:'cara',liv:[['Carabiniere','Carabiniera'],['Brigadiere'],['Maresciallo']],stip:26000,m:[1,1.25,1.5],conc:1,req:{tit:2,fed:1,sal:60,eta:[17,26]}},
+  {id:'mil',liv:[['Volontario dell\'Esercito','Volontaria dell\'Esercito'],['Caporal maggiore'],['Sergente']],stip:19000,m:[1,1.3,1.6],conc:1,req:{tit:1,fed:1,sal:65,eta:[18,24]}},
+  {id:'gdf',liv:[['Finanziere','Finanziera'],['Brigadiere'],['Maresciallo']],stip:26000,m:[1,1.25,1.5],conc:1,req:{tit:2,fed:1,sal:55,eta:[18,26]}},
+  {id:'post',liv:[['Portalettere'],['Responsabile di centro di recapito']],stip:21000,m:[1,1.3],req:{tit:2,patente:1}},
+  {id:'taxi',liv:[['Tassista']],stip:28000,var:1,ore:50,req:{patente:1,cert:'Licenza taxi',fed:1}},
+  {id:'guida',liv:[['Guida turistica'],['Guida esperta']],stip:18000,m:[1,1.5],var:1,req:{cert:'Guida turistica'}},
+  {id:'anim',liv:[['Animatore turistico','Animatrice turistica'],['Capo animatore','Capo animatrice']],stip:13000,m:[1,1.4],ore:48,req:{eta:[18,35]}},
+  {id:'bagn',liv:[['Bagnino','Bagnina']],stip:7000,pt:1,req:{cert:'Brevetto bagnino',eta:[16,99]}},
+  {id:'hostess',liv:[['Assistente di volo'],['Capo cabina']],stip:24000,m:[1,1.35],req:{tit:2,cert:'Assistente di volo',eta:[18,45],or:[{cert:'Inglese B2'},{dip:'Liceo linguistico'},{lau:['Lingue']}]}},
+  {id:'pilota',liv:[['Primo ufficiale','Prima ufficiale'],['Comandante']],stip:55000,m:[1,2],req:{cert:'Licenza ATPL',sal:70}},
+  {id:'vet',liv:[['Veterinario','Veterinaria'],['Veterinario esperto','Veterinaria esperta'],['Titolare di clinica veterinaria']],stip:25000,m:[1,1.4,2],req:{lau:['Medicina veterinaria'],abil:'Veterinario'}},
+  {id:'dent',liv:[['Odontoiatra collaboratore','Odontoiatra collaboratrice'],['Dentista'],['Titolare di studio dentistico']],stip:35000,m:[1,1.6,2.6],req:{lau:['Odontoiatria'],abil:'Odontoiatra'}},
+  {id:'fisio',liv:[['Fisioterapista'],['Fisioterapista esperto','Fisioterapista esperta'],['Titolare di studio di fisioterapia']],stip:24000,m:[1,1.3,1.7],req:{lau:['Fisioterapia']}},
+  {id:'notaio',liv:[['Notaio'],['Notaio affermato','Notaio affermata']],stip:110000,m:[1,2],conc:1,cdiff:.2,req:{lau:['Giurisprudenza'],fed:1,int:65,eta:[24,50]}},
+  {id:'magis',liv:[['Magistrato in tirocinio','Magistrata in tirocinio'],['Giudice'],['Consigliere di Cassazione','Consigliera di Cassazione']],stip:38000,m:[1,1.9,3.6],conc:1,cdiff:.25,req:{lau:['Giurisprudenza'],fed:1,int:65,eta:[24,60]}},
+  {id:'agcom',liv:[['Agente di commercio'],['Agente senior'],['Capo area']],stip:22000,m:[1,1.5,2.2],var:1,req:{tit:2,patente:1}},
+  {id:'ds',liv:[['Data analyst'],['Data scientist'],['Responsabile dei dati']],stip:30000,m:[1,1.4,2],req:{lau:['Informatica','Matematica','Statistica','Ingegneria','Economia'],int:60}},
+  {id:'poli',liv:[['Assessore comunale','Assessora comunale'],['Sindaco','Sindaca'],['Consigliere regionale','Consigliera regionale'],['Parlamentare']],stip:24000,m:[1,1.8,4,5.2],elez:1,req:{eta:[25,99],fed:1}},
+  {id:'volley',liv:[['Pallavolista di Serie B'],['Pallavolista di Serie A2'],['Pallavolista di SuperLega'],['Pallavolista della Nazionale']],stip:15000,m:[1,2.2,6,12],var:1,req:{sk:['sport',72],eta:[16,30]},promo:{2:{sk:['sport',82]},3:{sk:['sport',92]}}},
+  {id:'cicl',liv:[['Ciclista dilettante'],['Ciclista professionista'],['Ciclista del World Tour'],['Vincitore del Giro d\'Italia','Vincitrice del Giro d\'Italia']],stip:9000,m:[1,3,15,60],var:1,req:{sk:['sport',74],sal:70,eta:[16,30]},promo:{2:{sk:['sport',84]},3:{sk:['sport',94]}}},
+  {id:'tennis',liv:[['Tennista del circuito minore'],['Tennista dei Challenger'],['Tennista tra i primi 100','Tennista tra le prime 100'],['Campione di uno Slam','Campionessa di uno Slam']],stip:10000,m:[1,4,30,250],var:1,req:{sk:['sport',75],eta:[16,28]},promo:{2:{sk:['sport',86]},3:{sk:['sport',95]}}}
 ];
 const JOB={};LAVORI.forEach(j=>JOB[j.id]=j);
+/* Quanto è diffuso ogni lavoro tra le persone del gioco (migliaia di occupati in Italia, valori indicativi) e quota di donne.
+   Servono a dare alle persone lavori realistici: tanti operai, impiegati, commessi e badanti, pochi notai. 0 = nessuna persona del gioco. */
+const DIFFUSIONE={ope:2000,imp:1500,com:1100,bracc:800,ins:800,puli:600,cam:600,mur:500,segr:350,comu:350,maes:300,camion:300,cuoco:300,inf:280,mag:400,badante:420,colf:400,oss:250,aut:250,
+  cass:250,med:240,avv:240,ing:250,pro:250,elet:220,idra:200,mecc:200,tec:200,agcom:200,man:200,cons:150,arc:150,parr:150,comm:120,cara:110,mil:100,callc:100,edu:100,este:100,pol:100,mkt:100,
+  far:90,fale:80,agi:80,pane:70,dent:60,past:60,gdf:60,psi:70,fisio:70,ric:60,rec:60,macel:50,post:50,rider:50,pt:50,gra:50,vvf:35,vet:30,ds:30,gio:30,anim:30,taxi:25,bio:20,guida:20,
+  magis:10,hostess:10,notaio:5,pilota:5};
+const DONNE={colf:.9,badante:.9,este:.95,edu:.97,maes:.95,segr:.8,cass:.75,puli:.7,callc:.65,oss:.8,inf:.77,ins:.8,parr:.75,psi:.8,hostess:.7,guida:.7,fisio:.6,vet:.55,magis:.55,ope:.25,mur:.02,
+  idra:.03,elet:.03,mecc:.05,fale:.05,camion:.03,aut:.1,mag:.2,bracc:.3,cara:.07,mil:.07,gdf:.1,vvf:.05,pilota:.05,agcom:.2,ing:.25,pro:.2,tec:.15,ds:.3};
 const IMPRESE=[
   {id:'shop',n:'Negozio online',costo:8000,sk:'tech'},
   {id:'agenzia',n:'Agenzia di comunicazione',costo:20000,sk:'arte'},

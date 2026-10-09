@@ -221,13 +221,13 @@ function renderScuola(V){
   const es=ABILITAZIONI.map(A=>[A,abilitazioneDisponibile(A)]).filter(([,x])=>x!==null);
   if(es.length&&!iscritto())h+=`<div class="sec">Esami di Stato</div><div class="list">${es.map(([A,x])=>`<div class="job"><div><div class="jn">${A.desc}</div><div class="${x?'jr':'jm'}">${x||'400 € · serve per esercitare la professione'}</div></div><button class="chip pri" data-es="${A.n}" ${x||fatto('esame_'+A.n)?'disabled':''}>${fatto('esame_'+A.n)?'Fatto':'Sostieni'}</button></div>`).join('')}</div>`;
   if(S.eta>=6){
-    h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const lock=S.eta<c.min;const f=fatto('corso_'+c.id);
-      return `<div class="job"><div><div class="jn">${c.n}</div><div class="jm">${eur(c.costo)}${c.cert?` · ${c.cert}`:''}${c.sk?` · +${ABIL[Object.keys(c.sk)[0]]}`:''}${lock?` · dai ${c.min} anni`:''}</div></div><button class="chip" data-corso="${c.id}" ${ho||lock||f?'disabled':''}>${ho?'Ottenuto':f?'Fatto':'Iscriviti'}</button></div>`}).join('')}</div>`;
+    h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const manca=c.req?mancanti(c.req):[];const lock=S.eta<c.min||manca.length>0;const f=fatto('corso_'+c.id);
+      return `<div class="job"><div><div class="jn">${c.n}</div><div class="jm">${eur(P(c.costo))}${c.cert?` · ${c.cert}`:''}${c.sk?` · +${ABIL[Object.keys(c.sk)[0]]}`:''}${S.eta<c.min?` · dai ${c.min} anni`:manca.length?` · serve: ${esc(manca.join(', '))}`:''}</div></div><button class="chip" data-corso="${c.id}" ${ho||lock||f?'disabled':''}>${ho?'Ottenuto':f?'Fatto':'Iscriviti'}</button></div>`}).join('')}</div>`;
   }
   const hb=HOBBY.find(x=>x.id===S.hobby);
   h+=`<div class="sec"><span>Abilità</span></div><div class="panel"><div class="skills">${Object.keys(ABIL).map(k=>`<div><div class="kv"><span>${ABIL[k]}</span><b>${S.abil[k]}</b></div>${bar(S.abil[k],'--accent')}</div>`).join('')}</div>`;
   if(S.eta>=5)h+=`<div class="kv"><span>Attività pomeridiana: <b style="font-weight:600">${hb?hb.n:'nessuna'}</b></span></div><div class="row-btns"><button class="chip" id="btnHobby">${hb?'Cambia attività':'Scegli un\'attività'}</button></div>`;
-  h+='<div class="meta">Le abilità aprono carriere speciali: calciatore, musicista, chef, grafico.</div></div>';
+  h+='<div class="meta">Le abilità aprono carriere speciali: calciatore, pallavolista, ciclista, tennista, musicista, chef, grafico.</div></div>';
   V.innerHTML=h;
   V.querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>azScuola(b.dataset.sc));
   V.querySelectorAll('[data-isc]').forEach(b=>b.onclick=()=>iscrizione(b.dataset.isc));
@@ -278,7 +278,7 @@ function renderLavoro(V){
     const righe=vis.map(j=>({j,m:requisitiJob(j)})).filter(x=>!soloDisponibili||!x.m.length);
     h+=`<div class="sec"><span>Offerte di lavoro</span><button class="chip" id="btnFiltro" style="padding:2px 10px;font-size:11px;font-family:var(--f-body);letter-spacing:0;text-transform:none">${soloDisponibili?'Mostra tutte':'Solo disponibili'}</button></div><div class="list">`;
     h+=righe.length?righe.map(({j,m})=>{const mio=L&&L.id===j.id,f=fatto('job_'+j.id);
-      return `<div class="job"><div><div class="jn">${esc(nomeJob(j,0))}</div><div class="jm">${eur(stipLiv(j,0))} RAL${S.eta>=14?` · affinità ${matchLavoro(j.id)}%`:''}${j.pt?' · part-time':''}${j.conc?' · concorso pubblico':''}${j.var?' · variabile':''} · carriera fino a ${esc(nomeJob(j,j.liv.length-1).toLowerCase())}</div>${m.length&&!mio?`<div class="jr">Serve: ${esc(m.slice(0,2).join(' · '))}</div>`:''}</div><button class="chip${!m.length&&!mio&&!f?' pri':''}" data-job="${j.id}" ${m.length||f||mio?'disabled':''}>${mio?'Il tuo':f?'Inviata':m.length?'Bloccato':j.conc?'Concorso':'Candidati'}</button></div>`}).join(''):'<div class="note" style="padding:12px 0">Nessuna offerta disponibile per ora. Studia o fai un corso per sbloccarne altre.</div>';
+      return `<div class="job"><div><div class="jn">${esc(nomeJob(j,0))}</div><div class="jm">${eur(stipLiv(j,0))} RAL${S.eta>=14?` · affinità ${matchLavoro(j.id)}%`:''}${j.pt?' · part-time':''}${j.conc?(j.cdiff?' · concorso molto difficile':' · concorso pubblico'):''}${j.elez?' · si entra con le elezioni':''}${j.var?' · variabile':''} · carriera fino a ${esc(nomeJob(j,j.liv.length-1).toLowerCase())}</div>${m.length&&!mio?`<div class="jr">Serve: ${esc(m.slice(0,2).join(' · '))}</div>`:''}</div><button class="chip${!m.length&&!mio&&!f?' pri':''}" data-job="${j.id}" ${m.length||f||mio?'disabled':''}>${mio?'Il tuo':f?'Inviata':m.length?'Bloccato':j.conc?'Concorso':'Candidati'}</button></div>`}).join(''):'<div class="note" style="padding:12px 0">Nessuna offerta disponibile per ora. Studia o fai un corso per sbloccarne altre.</div>';
     h+='</div>';
   }
   V.innerHTML=h;

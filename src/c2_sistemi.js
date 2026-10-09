@@ -310,10 +310,16 @@ function colloquio(j){
   };
   step();
 }
+/* Le cariche politiche si conquistano alle elezioni: contano notorietà, reputazione, estroversione e titolo di studio */
+function elezione(j){
+  const p=Math.max(.03,Math.min(.7,.12+S.fama/150+(S.karma-50)/200+pz('E')*.08+(S.istr.liv>=3?.05:0)+(S.eta>=40?.04:0)));
+  showSheet({k:'Elezioni comunali',t:'Ti candidi?',p:`Una campagna elettorale costa circa ${eur(P(5000))} tra manifesti, incontri e cene. Con la tua notorietà hai circa il ${Math.round(p*100)}% di possibilità di essere elett${g('o','a')}.`,chiudi:true,scelte:[
+    {l:'Candidati',costo:()=>P(5000),_incl:0,fx:()=>{if(chance(p)){assumi(j);mod('felicita',10);return [`Elett${g('o','a')}! Ora sei ${S.lavoro.nome.toLowerCase()}.`,'g']}mod('felicita',-6);pesa(5,2);return ['Pochi voti: questa volta non ce la fai.','b']}}]});
+}
 function concorso(j){
   const qs=shuffle(QUIZ).slice(0,3);let giuste=0,i=0;
   const finale=()=>{
-    const p=Math.max(.04,Math.min(.9,.06+giuste*.24+(S.istr.liv>=3?.05:0)+(S.intelligenza-50)/500));
+    const p=Math.max(.02,Math.min(.9,(.06+giuste*.24+(S.istr.liv>=3?.05:0)+(S.intelligenza-50)/500)*(j.cdiff||1)));   // notaio e magistrato: concorsi molto più difficili
     let res;
     if(chance(p)){assumi(j);mod('felicita',10);res=[`Hai risposto giusto a ${giuste} domande su 3 e vinci il concorso! Ora sei ${S.lavoro.nome.toLowerCase()}.`,'g']}
     else{mod('felicita',-3);res=[`Hai risposto giusto a ${giuste} domande su 3. Non basta: il posto va a qualcun altro.`,'b']}

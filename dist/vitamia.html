@@ -485,7 +485,13 @@ const FACOLTA=[
   {n:'Matematica',anni:3,d:.75},
   {n:'Scienze motorie',anni:3,d:.45,sk:'sport'},
   {n:'Infermieristica',anni:3,d:.5,test:40},
-  {n:'Scienze politiche',anni:3,d:.5}
+  {n:'Scienze politiche',anni:3,d:.5},
+  {n:'Scienze della formazione primaria',anni:5,cu:1,d:.5,test:45},   // per insegnare all'infanzia e alla primaria
+  {n:'Scienze dell\'educazione',anni:3,d:.45},                        // per l'educatore di nido
+  {n:'Medicina veterinaria',anni:5,cu:1,d:.7,test:60},
+  {n:'Odontoiatria',anni:6,cu:1,d:.75,test:70},
+  {n:'Fisioterapia',anni:3,d:.55,test:55},
+  {n:'Statistica',anni:3,d:.65}
 ];
 const ITS=[
   {n:'ITS Digitale',cert:'Programmazione',sk:'tech'},
@@ -498,7 +504,9 @@ const ABILITAZIONI=[
   {n:'Medico',lau:'Medicina',p:.8,desc:'Abilitazione alla professione medica'},
   {n:'Psicologo',lau:'Psicologia',liv:4,p:.6,desc:'Esame di Stato da psicologo'},
   {n:'Commercialista',lau:'Economia',liv:4,p:.4,desc:'Esame da commercialista'},
-  {n:'Architetto',lau:'Architettura',liv:4,p:.6,desc:'Esame di Stato da architetto'}
+  {n:'Architetto',lau:'Architettura',liv:4,p:.6,desc:'Esame di Stato da architetto'},
+  {n:'Veterinario',lau:'Medicina veterinaria',p:.85,desc:'Esame di Stato da veterinario'},
+  {n:'Odontoiatra',lau:'Odontoiatria',p:.85,desc:'Esame di Stato da odontoiatra'}
 ];
 const CORSI=[
   {id:'b2',n:'Corso di inglese B2',costo:900,min:15,cert:'Inglese B2',sk:{lingue:18},p:()=>.5+S.intelligenza/250},
@@ -512,7 +520,14 @@ const CORSI=[
   {id:'coding',n:'Bootcamp di programmazione',costo:4500,min:18,cert:'Programmazione',sk:{tech:22},p:()=>.3+S.intelligenza/150},
   {id:'foto',n:'Corso di fotografia',costo:900,min:14,sk:{arte:14},p:1},
   {id:'musica',n:'Lezioni private di musica',costo:1000,min:6,sk:{musica:14},p:1},
-  {id:'teatro',n:'Corso di recitazione',costo:800,min:12,sk:{arte:10},p:1}
+  {id:'teatro',n:'Corso di recitazione',costo:800,min:12,sk:{arte:10},p:1},
+  {id:'cqc',n:'Patente C e CQC',costo:3500,min:21,cert:'Patente C + CQC',req:{patente:1},p:.8},
+  {id:'estetista',n:'Corso di estetista',costo:4000,min:16,cert:'Estetista',sk:{arte:6},p:.85},
+  {id:'bagnino',n:'Brevetto di bagnino',costo:400,min:16,cert:'Brevetto bagnino',sk:{sport:4},p:()=>S.abil.sport>30?.85:.5},
+  {id:'volo',n:'Corso di assistente di volo',costo:2500,min:18,cert:'Assistente di volo',req:{tit:2},p:.8},
+  {id:'atpl',n:'Scuola di volo (licenza ATPL)',costo:100000,min:18,cert:'Licenza ATPL',req:{tit:2,sal:70},p:()=>.45+S.intelligenza/250},
+  {id:'guida',n:'Esame di guida turistica',costo:300,min:18,cert:'Guida turistica',req:{tit:2},p:()=>.35+S.abil.lingue/200},
+  {id:'taxi',n:'Licenza taxi e ruolo dei conducenti',costo:120000,min:21,cert:'Licenza taxi',req:{patente:1},p:.95}
 ];
 const HOBBY=[
   {id:'calcio',n:'Calcio',sk:'sport',s:1},
@@ -574,9 +589,57 @@ const LAVORI=[
   {id:'man',liv:[['Manager'],['Direttore generale','Direttrice generale'],['Amministratore delegato','Amministratrice delegata']],stip:55000,m:[1,1.8,4],req:{tit:3,master:1,int:65}},
   {id:'mus',liv:[['Musicista di strada'],['Turnista'],['Cantautore','Cantautrice'],['Star della musica']],stip:6000,m:[1,4,10,60],var:1,req:{sk:['musica',55]},promo:{3:{sk:['musica',85]}}},
   {id:'crea',liv:[['Content creator'],['Influencer'],['Star del web']],stip:3000,m:[1,10,45],var:1,req:{eta:[14,99]}},
-  {id:'calc',liv:[['Calciatore di Serie C','Calciatrice di Serie C'],['Calciatore di Serie B','Calciatrice di Serie B'],['Calciatore di Serie A','Calciatrice di Serie A'],['Campione internazionale','Campionessa internazionale']],stip:40000,m:[1,3.5,20,60],nascosto:'scoutOk',req:{sk:['sport',70],eta:[16,34]},promo:{2:{sk:['sport',82]},3:{sk:['sport',92]}}}
+  {id:'calc',liv:[['Calciatore di Serie C','Calciatrice di Serie C'],['Calciatore di Serie B','Calciatrice di Serie B'],['Calciatore di Serie A','Calciatrice di Serie A'],['Campione internazionale','Campionessa internazionale']],stip:40000,m:[1,3.5,20,60],nascosto:'scoutOk',req:{sk:['sport',70],eta:[16,34]},promo:{2:{sk:['sport',82]},3:{sk:['sport',92]}}},
+  // ---- ottobre 2026: i lavori più diffusi che mancavano (ANALISI.md, punto 4.6). RAL indicative ai prezzi del 2026 ----
+  {id:'colf',liv:[['Collaboratore domestico','Colf'],['Governante']],stip:14500,m:[1,1.3],req:{}},
+  {id:'badante',liv:[['Badante'],['Assistente familiare esperto','Assistente familiare esperta']],stip:15000,m:[1,1.25],ore:50,req:{},promo:{1:{cert:'OSS'}}},
+  {id:'bracc',liv:[['Bracciante agricolo','Bracciante agricola'],['Operaio agricolo specializzato','Operaia agricola specializzata'],['Imprenditore agricolo','Imprenditrice agricola']],stip:16000,m:[1,1.3,1.9],ore:44,req:{sal:45}},
+  {id:'idra',liv:[['Apprendista idraulico','Apprendista idraulica'],['Idraulico','Idraulica'],['Idraulico in proprio','Idraulica in proprio']],stip:17000,m:[1,1.45,2.1],req:{}},
+  {id:'elet',liv:[['Apprendista elettricista'],['Elettricista'],['Elettricista in proprio']],stip:17500,m:[1,1.45,2.1],req:{}},
+  {id:'mecc',liv:[['Apprendista meccanico','Apprendista meccanica'],['Meccanico','Meccanica'],['Titolare di officina']],stip:17000,m:[1,1.4,2],req:{}},
+  {id:'fale',liv:[['Apprendista falegname'],['Falegname'],['Titolare di falegnameria']],stip:16500,m:[1,1.4,1.9],req:{}},
+  {id:'pane',liv:[['Panettiere','Panettiera'],['Capo fornaio','Capo fornaia'],['Titolare di panificio']],stip:19000,m:[1,1.3,1.75],ore:42,req:{}},
+  {id:'past',liv:[['Aiuto pasticcere','Aiuto pasticcera'],['Pasticcere','Pasticcera'],['Maestro pasticcere','Maestra pasticcera']],stip:18000,m:[1,1.4,2],req:{},promo:{2:{sk:['cucina',55]}}},
+  {id:'macel',liv:[['Macellaio','Macellaia'],['Capo banco'],['Titolare di macelleria']],stip:19000,m:[1,1.3,1.75],req:{}},
+  {id:'camion',liv:[['Autotrasportatore','Autotrasportatrice'],['Autista di tir internazionale'],['Padroncino','Padroncina']],stip:26000,m:[1,1.25,1.5],ore:48,req:{patente:1,cert:'Patente C + CQC',fed:1}},
+  {id:'cass',liv:[['Cassiere','Cassiera'],['Capo cassa']],stip:17000,m:[1,1.2],req:{}},
+  {id:'puli',liv:[['Addetto alle pulizie','Addetta alle pulizie'],['Caposquadra delle pulizie']],stip:15000,m:[1,1.2],req:{}},
+  {id:'callc',liv:[['Operatore di call center','Operatrice di call center'],['Team leader']],stip:15500,m:[1,1.35],req:{tit:2}},
+  {id:'segr',liv:[['Segretario','Segretaria'],['Assistente di direzione'],['Office manager']],stip:21000,m:[1,1.3,1.6],req:{tit:2}},
+  {id:'este',liv:[['Estetista'],['Estetista esperto','Estetista esperta'],['Responsabile di centro estetico']],stip:16500,m:[1,1.25,1.6],req:{cert:'Estetista'}},
+  {id:'edu',liv:[['Educatore di nido','Educatrice di nido'],['Coordinatore pedagogico','Coordinatrice pedagogica']],stip:20000,m:[1,1.35],req:{lau:['Scienze dell\'educazione','Scienze della formazione primaria']}},
+  {id:'maes',liv:[['Maestro supplente','Maestra supplente'],['Maestro di ruolo','Maestra di ruolo']],stip:23000,m:[1,1.3],req:{lau:['Scienze della formazione primaria'],fed:1}},
+  {id:'cara',liv:[['Carabiniere','Carabiniera'],['Brigadiere'],['Maresciallo']],stip:26000,m:[1,1.25,1.5],conc:1,req:{tit:2,fed:1,sal:60,eta:[17,26]}},
+  {id:'mil',liv:[['Volontario dell\'Esercito','Volontaria dell\'Esercito'],['Caporal maggiore'],['Sergente']],stip:19000,m:[1,1.3,1.6],conc:1,req:{tit:1,fed:1,sal:65,eta:[18,24]}},
+  {id:'gdf',liv:[['Finanziere','Finanziera'],['Brigadiere'],['Maresciallo']],stip:26000,m:[1,1.25,1.5],conc:1,req:{tit:2,fed:1,sal:55,eta:[18,26]}},
+  {id:'post',liv:[['Portalettere'],['Responsabile di centro di recapito']],stip:21000,m:[1,1.3],req:{tit:2,patente:1}},
+  {id:'taxi',liv:[['Tassista']],stip:28000,var:1,ore:50,req:{patente:1,cert:'Licenza taxi',fed:1}},
+  {id:'guida',liv:[['Guida turistica'],['Guida esperta']],stip:18000,m:[1,1.5],var:1,req:{cert:'Guida turistica'}},
+  {id:'anim',liv:[['Animatore turistico','Animatrice turistica'],['Capo animatore','Capo animatrice']],stip:13000,m:[1,1.4],ore:48,req:{eta:[18,35]}},
+  {id:'bagn',liv:[['Bagnino','Bagnina']],stip:7000,pt:1,req:{cert:'Brevetto bagnino',eta:[16,99]}},
+  {id:'hostess',liv:[['Assistente di volo'],['Capo cabina']],stip:24000,m:[1,1.35],req:{tit:2,cert:'Assistente di volo',eta:[18,45],or:[{cert:'Inglese B2'},{dip:'Liceo linguistico'},{lau:['Lingue']}]}},
+  {id:'pilota',liv:[['Primo ufficiale','Prima ufficiale'],['Comandante']],stip:55000,m:[1,2],req:{cert:'Licenza ATPL',sal:70}},
+  {id:'vet',liv:[['Veterinario','Veterinaria'],['Veterinario esperto','Veterinaria esperta'],['Titolare di clinica veterinaria']],stip:25000,m:[1,1.4,2],req:{lau:['Medicina veterinaria'],abil:'Veterinario'}},
+  {id:'dent',liv:[['Odontoiatra collaboratore','Odontoiatra collaboratrice'],['Dentista'],['Titolare di studio dentistico']],stip:35000,m:[1,1.6,2.6],req:{lau:['Odontoiatria'],abil:'Odontoiatra'}},
+  {id:'fisio',liv:[['Fisioterapista'],['Fisioterapista esperto','Fisioterapista esperta'],['Titolare di studio di fisioterapia']],stip:24000,m:[1,1.3,1.7],req:{lau:['Fisioterapia']}},
+  {id:'notaio',liv:[['Notaio'],['Notaio affermato','Notaio affermata']],stip:110000,m:[1,2],conc:1,cdiff:.2,req:{lau:['Giurisprudenza'],fed:1,int:65,eta:[24,50]}},
+  {id:'magis',liv:[['Magistrato in tirocinio','Magistrata in tirocinio'],['Giudice'],['Consigliere di Cassazione','Consigliera di Cassazione']],stip:38000,m:[1,1.9,3.6],conc:1,cdiff:.25,req:{lau:['Giurisprudenza'],fed:1,int:65,eta:[24,60]}},
+  {id:'agcom',liv:[['Agente di commercio'],['Agente senior'],['Capo area']],stip:22000,m:[1,1.5,2.2],var:1,req:{tit:2,patente:1}},
+  {id:'ds',liv:[['Data analyst'],['Data scientist'],['Responsabile dei dati']],stip:30000,m:[1,1.4,2],req:{lau:['Informatica','Matematica','Statistica','Ingegneria','Economia'],int:60}},
+  {id:'poli',liv:[['Assessore comunale','Assessora comunale'],['Sindaco','Sindaca'],['Consigliere regionale','Consigliera regionale'],['Parlamentare']],stip:24000,m:[1,1.8,4,5.2],elez:1,req:{eta:[25,99],fed:1}},
+  {id:'volley',liv:[['Pallavolista di Serie B'],['Pallavolista di Serie A2'],['Pallavolista di SuperLega'],['Pallavolista della Nazionale']],stip:15000,m:[1,2.2,6,12],var:1,req:{sk:['sport',72],eta:[16,30]},promo:{2:{sk:['sport',82]},3:{sk:['sport',92]}}},
+  {id:'cicl',liv:[['Ciclista dilettante'],['Ciclista professionista'],['Ciclista del World Tour'],['Vincitore del Giro d\'Italia','Vincitrice del Giro d\'Italia']],stip:9000,m:[1,3,15,60],var:1,req:{sk:['sport',74],sal:70,eta:[16,30]},promo:{2:{sk:['sport',84]},3:{sk:['sport',94]}}},
+  {id:'tennis',liv:[['Tennista del circuito minore'],['Tennista dei Challenger'],['Tennista tra i primi 100','Tennista tra le prime 100'],['Campione di uno Slam','Campionessa di uno Slam']],stip:10000,m:[1,4,30,250],var:1,req:{sk:['sport',75],eta:[16,28]},promo:{2:{sk:['sport',86]},3:{sk:['sport',95]}}}
 ];
 const JOB={};LAVORI.forEach(j=>JOB[j.id]=j);
+/* Quanto è diffuso ogni lavoro tra le persone del gioco (migliaia di occupati in Italia, valori indicativi) e quota di donne.
+   Servono a dare alle persone lavori realistici: tanti operai, impiegati, commessi e badanti, pochi notai. 0 = nessuna persona del gioco. */
+const DIFFUSIONE={ope:2000,imp:1500,com:1100,bracc:800,ins:800,puli:600,cam:600,mur:500,segr:350,comu:350,maes:300,camion:300,cuoco:300,inf:280,mag:400,badante:420,colf:400,oss:250,aut:250,
+  cass:250,med:240,avv:240,ing:250,pro:250,elet:220,idra:200,mecc:200,tec:200,agcom:200,man:200,cons:150,arc:150,parr:150,comm:120,cara:110,mil:100,callc:100,edu:100,este:100,pol:100,mkt:100,
+  far:90,fale:80,agi:80,pane:70,dent:60,past:60,gdf:60,psi:70,fisio:70,ric:60,rec:60,macel:50,post:50,rider:50,pt:50,gra:50,vvf:35,vet:30,ds:30,gio:30,anim:30,taxi:25,bio:20,guida:20,
+  magis:10,hostess:10,notaio:5,pilota:5};
+const DONNE={colf:.9,badante:.9,este:.95,edu:.97,maes:.95,segr:.8,cass:.75,puli:.7,callc:.65,oss:.8,inf:.77,ins:.8,parr:.75,psi:.8,hostess:.7,guida:.7,fisio:.6,vet:.55,magis:.55,ope:.25,mur:.02,
+  idra:.03,elet:.03,mecc:.05,fale:.05,camion:.03,aut:.1,mag:.2,bracc:.3,cara:.07,mil:.07,gdf:.1,vvf:.05,pilota:.05,agcom:.2,ing:.25,pro:.2,tec:.15,ds:.3};
 const IMPRESE=[
   {id:'shop',n:'Negozio online',costo:8000,sk:'tech'},
   {id:'agenzia',n:'Agenzia di comunicazione',costo:20000,sk:'arte'},
@@ -720,6 +783,7 @@ const AZIENDE=[
   {id:'edile',n:'Impresa edile',costo:50000,sk:'tech',domanda:20,scontrino:25000,margine:.45,cap:4,affitto:8000,stip:28000,aprire:40000,cliente:'cantieri',mult:3},
   {id:'bar',n:'Bar',costo:60000,sk:'cucina',domanda:18000,scontrino:6,margine:.65,cap:9000,affitto:18000,stip:22000,aprire:50000,cliente:'clienti',mult:3},
   {id:'pizzeria',n:'Pizzeria',costo:90000,sk:'cucina',domanda:9000,scontrino:18,margine:.6,cap:5000,affitto:24000,stip:22000,aprire:70000,cliente:'coperti',mult:3},
+  {id:'negozio',n:'Negozio di quartiere',costo:30000,sk:'cucina',domanda:12000,scontrino:25,margine:.28,cap:8000,affitto:12000,stip:20000,aprire:25000,cliente:'clienti',mult:3},
   {id:'palestra',n:'Palestra',costo:90000,sk:'sport',domanda:500,scontrino:500,margine:.9,cap:250,affitto:30000,stip:22000,aprire:80000,cliente:'iscritti',mult:3}
 ];
 const PREZZI_AZ={basso:{n:'Bassi',k:.8,d:1.3},medio:{n:'Nella media',k:1,d:1},alto:{n:'Alti',k:1.25,d:.75}};
@@ -791,7 +855,7 @@ const DOMANDE_SET={
   scuola:[{q:'Uno studente disturba di continuo.',a:[['Gli parlo da solo e cerco di capire il motivo',2],['Lo mando dal preside',0],['Alzo la voce',-1]]}],
   creativo:[{q:'Mostraci un tuo lavoro.',a:[['Presenti il tuo portfolio migliore',2,'arte'],['Improvvisi qualcosa sul momento',0,'arte'],['Non ho niente da mostrare',-2]]}]
 };
-const SETTORE_JOB={tec:'tech',pro:'tech',ing:'tech',com:'vendita',cpt:'vendita',agi:'vendita',rec:'vendita',mkt:'vendita',cam:'ristorazione',bpt:'ristorazione',cuoco:'ristorazione',inf:'sanita',med:'sanita',oss:'sanita',far:'sanita',psi:'sanita',bio:'sanita',mag:'fisico',ope:'fisico',mur:'fisico',aut:'fisico',rider:'fisico',avv:'legale',comm:'legale',cons:'legale',imp:'legale',man:'legale',ins:'scuola',rip:'scuola',ric:'scuola',gra:'creativo',gio:'creativo',mus:'creativo',parr:'creativo',att:'creativo'};
+const SETTORE_JOB={colf:'fisico',badante:'sanita',bracc:'fisico',idra:'fisico',elet:'tech',mecc:'fisico',fale:'fisico',pane:'ristorazione',past:'ristorazione',macel:'vendita',camion:'fisico',cass:'vendita',puli:'fisico',callc:'vendita',segr:'legale',este:'creativo',edu:'scuola',maes:'scuola',post:'fisico',taxi:'fisico',guida:'vendita',anim:'creativo',bagn:'fisico',hostess:'vendita',pilota:'tech',vet:'sanita',dent:'sanita',fisio:'sanita',agcom:'vendita',ds:'tech',tec:'tech',pro:'tech',ing:'tech',com:'vendita',cpt:'vendita',agi:'vendita',rec:'vendita',mkt:'vendita',cam:'ristorazione',bpt:'ristorazione',cuoco:'ristorazione',inf:'sanita',med:'sanita',oss:'sanita',far:'sanita',psi:'sanita',bio:'sanita',mag:'fisico',ope:'fisico',mur:'fisico',aut:'fisico',rider:'fisico',avv:'legale',comm:'legale',cons:'legale',imp:'legale',man:'legale',ins:'scuola',rip:'scuola',ric:'scuola',gra:'creativo',gio:'creativo',mus:'creativo',parr:'creativo',att:'creativo'};
 /* Quiz di cultura generale per i concorsi pubblici: [domanda, risposta giusta, sbagliata, sbagliata] */
 const QUIZ=[
   ['In che anno è entrata in vigore la Costituzione italiana?','1948','1946','1950'],
@@ -1036,8 +1100,8 @@ function assumi(j){
 function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);avviaNaspi(L)}}
 function lavoroPerFiglio(p){
   if(p.studio&&p.studio.startsWith('laurea:')){const f=p.studio.slice(7);const ok=LAVORI.filter(j=>j.req&&j.req.lau&&j.req.lau.includes(f)&&!j.req.abil&&!j.req.liv);if(ok.length)return pick(ok).id;return 'imp'}
-  if(p.studio==='diploma')return pick(['imp','tec','com','agi','rec','cam','ope']);
-  return pick(['cam','com','mag','ope','rider','mur']);
+  if(p.studio==='diploma')return pick(['imp','tec','com','agi','rec','cam','ope','segr','cass','callc','post','agcom']);
+  return pick(['cam','com','mag','ope','rider','mur','puli','bracc','idra','elet','mecc','pane','colf','badante']);
 }
 
 /* ---------- Scelte ed effetti ---------- */
@@ -1340,8 +1404,9 @@ function meseLavoro(){
   const j=JOB[L.id];
   L.mesi=(L.mesi||0)+1;if(L.mesi%12===0){L.anni++;L.anniLiv++}
   S.contributi+=(j.pt?.5:1)/12;
+  if(j.elez){L.mandato=(L.mandato||0)+1;if(L.mandato>=60){L.mandato=0;if(chance(.5+L.perf/250+S.fama/400))log(`Alle elezioni vieni rielett${g('o','a')}: altri cinque anni.`,'g');else{licenzia(`Alle elezioni non vieni rielett${g('o','a')}: il mandato finisce.`,true);mod('felicita',-8);return}}}
   if(S.mondo.crisi&&!j.conc&&!j.var&&chance(.011)){licenzia('La crisi colpisce la tua azienda: sei tra i licenziati.');segnaVita('licenziato');return}
-  if(S.mondo.pandemia&&['cam','bpt','cuoco','parr','pt'].includes(L.id)&&chance(.02)){licenzia('Con la pandemia il locale chiude e perdi il lavoro.');segnaVita('licenziato');return}
+  if(S.mondo.pandemia&&['cam','bpt','cuoco','parr','pt','este','anim','guida','hostess','bagn'].includes(L.id)&&chance(.02)){licenzia('Con la pandemia il locale chiude e perdi il lavoro.');segnaVita('licenziato');return}
   if(!j.conc&&!j.var&&chance((j.pt?.008:.0035)*(S.eta<30?1.6:1)*(S.mondo.crisi?1.5:1))){licenzia(pick(['Il tuo contratto a termine scade e non viene rinnovato.','L\'azienda chiude e resti senza lavoro.','Riorganizzazione: il tuo posto viene tagliato.']));return}
   const sod=soddLavoro();
   L.perf=clamp(L.perf+(r(-7,5)+(S.felicita<30?-4:0)+(S.dip.alcol?-6:0)+(S.salute<30?-4:0))/3.5+pz('C')*.7+(S.bis.energia<30?-1:0)+(S.bis.stress>80?-1:0)+(sod-50)/90);
@@ -1880,10 +1945,16 @@ function colloquio(j){
   };
   step();
 }
+/* Le cariche politiche si conquistano alle elezioni: contano notorietà, reputazione, estroversione e titolo di studio */
+function elezione(j){
+  const p=Math.max(.03,Math.min(.7,.12+S.fama/150+(S.karma-50)/200+pz('E')*.08+(S.istr.liv>=3?.05:0)+(S.eta>=40?.04:0)));
+  showSheet({k:'Elezioni comunali',t:'Ti candidi?',p:`Una campagna elettorale costa circa ${eur(P(5000))} tra manifesti, incontri e cene. Con la tua notorietà hai circa il ${Math.round(p*100)}% di possibilità di essere elett${g('o','a')}.`,chiudi:true,scelte:[
+    {l:'Candidati',costo:()=>P(5000),_incl:0,fx:()=>{if(chance(p)){assumi(j);mod('felicita',10);return [`Elett${g('o','a')}! Ora sei ${S.lavoro.nome.toLowerCase()}.`,'g']}mod('felicita',-6);pesa(5,2);return ['Pochi voti: questa volta non ce la fai.','b']}}]});
+}
 function concorso(j){
   const qs=shuffle(QUIZ).slice(0,3);let giuste=0,i=0;
   const finale=()=>{
-    const p=Math.max(.04,Math.min(.9,.06+giuste*.24+(S.istr.liv>=3?.05:0)+(S.intelligenza-50)/500));
+    const p=Math.max(.02,Math.min(.9,(.06+giuste*.24+(S.istr.liv>=3?.05:0)+(S.intelligenza-50)/500)*(j.cdiff||1)));   // notaio e magistrato: concorsi molto più difficili
     let res;
     if(chance(p)){assumi(j);mod('felicita',10);res=[`Hai risposto giusto a ${giuste} domande su 3 e vinci il concorso! Ora sei ${S.lavoro.nome.toLowerCase()}.`,'g']}
     else{mod('felicita',-3);res=[`Hai risposto giusto a ${giuste} domande su 3. Non basta: il posto va a qualcun altro.`,'b']}
@@ -2019,7 +2090,7 @@ function formaAttaccamento(){
 
 /* ---------- Interessi (RIASEC di Holland) ---------- */
 const RIASEC={R:'Pratico',I:'Investigativo',A:'Artistico',S:'Sociale',E:'Intraprendente',C:'Convenzionale'};
-const JOB_RIASEC={vol:'RC',rip:'SI',bpt:'SE',cpt:'EC',rider:'RE',cam:'SE',com:'EC',mag:'RC',ope:'RC',mur:'RC',aut:'RC',oss:'SR',cuoco:'RA',parr:'AS',pt:'SR',imp:'CE',rec:'SC',tec:'IR',agi:'EC',gra:'AI',pol:'RS',vvf:'RS',comu:'CS',ins:'SA',inf:'SI',pro:'IC',gio:'AI',mkt:'EA',cons:'EC',comm:'CE',avv:'ES',psi:'SI',ing:'IR',arc:'AI',far:'IC',bio:'IR',med:'IS',ric:'IA',man:'ES',mus:'AE',crea:'AE',calc:'RE',att:'AE'};
+const JOB_RIASEC={colf:'RC',badante:'SR',bracc:'RC',idra:'RI',elet:'RI',mecc:'RI',fale:'RA',pane:'RC',past:'RA',macel:'RE',camion:'RC',cass:'CE',puli:'RC',callc:'CS',segr:'CS',este:'SA',edu:'SA',maes:'SA',cara:'RS',mil:'RE',gdf:'CE',post:'RC',taxi:'RE',guida:'SE',anim:'ES',bagn:'RS',hostess:'SE',pilota:'RI',vet:'IS',dent:'IR',fisio:'SR',notaio:'CE',magis:'IE',agcom:'EC',ds:'IC',poli:'ES',volley:'RS',cicl:'RE',tennis:'RE',vol:'RC',rip:'SI',bpt:'SE',cpt:'EC',rider:'RE',cam:'SE',com:'EC',mag:'RC',ope:'RC',mur:'RC',aut:'RC',oss:'SR',cuoco:'RA',parr:'AS',pt:'SR',imp:'CE',rec:'SC',tec:'IR',agi:'EC',gra:'AI',pol:'RS',vvf:'RS',comu:'CS',ins:'SA',inf:'SI',pro:'IC',gio:'AI',mkt:'EA',cons:'EC',comm:'CE',avv:'ES',psi:'SI',ing:'IR',arc:'AI',far:'IC',bio:'IR',med:'IS',ric:'IA',man:'ES',mus:'AE',crea:'AE',calc:'RE',att:'AE'};
 function interessi(X){
   X=X||S;const p=X.pers,a=X.abil;
   const s={R:28+a.sport*.3+a.cucina*.25+(50-p.O)*.15,I:24+X.intelligenza*.3+p.O*.2+a.tech*.25,A:22+p.O*.3+a.arte*.3+a.musica*.3,S:24+p.A*.32+p.E*.18,E:24+p.E*.3+(100-p.A)*.12+p.C*.1,C:26+p.C*.36+(100-p.O)*.15+a.tech*.05};
@@ -2075,7 +2146,7 @@ function oreScuola(){
 function oreLavoro(){
   const L=S.lavoro;if(!L)return 0;const j=JOB[L.id];
   if(j.pt)return 18;
-  return 40+(['med','man','cuoco','avv','spec','calc'].includes(L.id)?6:0)+(L.liv>=2&&!j.conc?3:0);
+  return (j.ore||40)+(['med','man','cuoco','avv','spec','calc','dent','vet','notaio','magis','poli'].includes(L.id)?6:0)+(L.liv>=2&&!j.conc?3:0);
 }
 function obblighi(){
   const o=[];const e=S.eta;
@@ -2238,6 +2309,7 @@ function umoreFrase(){
 /* ---------- Salute mensile ----------
    Malattie lievi (molto più spesso da bambini), acute, croniche che crescono con l'età, tumori per tipo con cure e remissione,
    demenza, depressione e ansia. I numeri veri sono in ANALISI.md (ISTAT, AIRC, ISS). */
+const MANUALI=['mur','ope','mag','aut','vvf','bracc','idra','elet','mecc','fale','camion','mil','cara'];
 const PESO_CRON={'Cardiopatia ischemica':6,'Ipertensione':2,'Artrosi':3,'Asma':3,'Emicrania cronica':3,'Diabete di tipo 2':5,'BPCO':7,'Demenza':8};
 const pesoMal=m=>m.g===3?(PESO_CRON[m.n]||6):({1:3,2:7,4:22}[m.g]||0);
 const fattoreSesso=s=>s==='F'?.62:.9;   // le donne vivono circa 4 anni in più (ISTAT 2025: 85,7 contro 81,7)
@@ -2328,7 +2400,7 @@ function causaMorte(){
   for(const m of S.malattie){const x=rischioMalattia(m);if(x)voci.push([m,x])}
   const v=pesata(voci);
   if(v!=='base')return v.tum||TUMORE[v.n]?causaTumore(v.n):(CAUSE[v.n]||'per una grave malattia');
-  const e=S.eta,manuale=S.lavoro&&['mur','ope','mag','aut','vvf'].includes(S.lavoro.id);
+  const e=S.eta,manuale=S.lavoro&&MANUALI.includes(S.lavoro.id);
   const L=e<30?[['in un incidente stradale',40],['in un incidente in montagna',8],['in un incidente in mare',6],['per un malore improvviso',20],['in un incidente sul lavoro',manuale?10:0]]
     :e<60?[['per un infarto',30],['per un ictus',15],['per un malore improvviso',15],['in un incidente stradale',12],['in un incidente sul lavoro',manuale?6:0],['per una polmonite',4]]
     :e<80?[['per un infarto',25],['per un ictus',22],['per una polmonite',7],['per un\'insufficienza respiratoria',S.dip.fumo?9:4],['per un malore improvviso',3],['per le conseguenze di una caduta',3],['per un\'infezione',8],['per un\'insufficienza renale',7],['per una malattia del fegato',4],['serenamente, nel sonno',4]]
@@ -2482,9 +2554,10 @@ function initNpc(p){
     p.intim=clamp(p.rapporto-8);p.pass=clamp(p.rapporto+12);p.imp=clamp(p.ruolo==='Coniuge'?p.rapporto+10:p.rapporto-25);
   }
 }
+/* Un lavoro per una persona del gioco: diffuso come in Italia (DIFFUSIONE), con la quota di donne di ogni mestiere (DONNE) */
 function lavoroPerNpc(p){
-  const L=LAVORI.filter(j=>!j.pt&&!j.nascosto&&!['calc','crea','mus','att'].includes(j.id));
-  const pesi=L.map(j=>[j.id,1+(j.req&&j.req.lau?(p.pers&&p.pers.C>55?1.2:.4):1.5)]);
+  const L=LAVORI.filter(j=>!j.pt&&!j.nascosto&&DIFFUSIONE[j.id]);
+  const pesi=L.map(j=>{const f=DONNE[j.id]!==undefined?DONNE[j.id]:.42;const ses=p.sesso==='F'?f/.42:(1-f)/.58;return [j.id,DIFFUSIONE[j.id]*ses*(j.req&&j.req.lau?(p.pers&&p.pers.C>55?1.4:.6):1)]});
   return pesata(pesi);
 }
 const lavoroNpc=p=>p.lavoro&&JOB[p.lavoro]?nomeJob(JOB[p.lavoro],0,p).toLowerCase():'';
@@ -5074,7 +5147,8 @@ function abilitazioneDisponibile(A){
 }
 function faiCorso(id){
   const c=CORSI.find(x=>x.id===id);
-  return azione(una('corso_'+id,c.costo,()=>{
+  const manca=c.req?mancanti(c.req):[];if(manca.length)return azione(()=>[`Per iscriverti serve: ${manca.join(', ')}.`,'x']);
+  return azione(una('corso_'+id,P(c.costo),()=>{
     const p=typeof c.p==='function'?c.p():c.p;
     if(c.sk)eff(c.sk);
     if(!chance(p))return [`Non superi l'esame finale di: ${c.n.toLowerCase()}. Hai comunque imparato qualcosa.`,'b'];
@@ -5094,6 +5168,7 @@ function candidati(id){
   if(fatto('job_'+id))return toast('Ti sei già candidat'+g('o','a')+' per questo lavoro questo mese.');
   if(requisitiJob(j).length)return toast('Non hai i requisiti.');
   segnaAz('job_'+id);
+  if(j.elez)return elezione(j);
   if(j.conc)return concorso(j);
   colloquio(j);
 }
@@ -6210,13 +6285,13 @@ function renderScuola(V){
   const es=ABILITAZIONI.map(A=>[A,abilitazioneDisponibile(A)]).filter(([,x])=>x!==null);
   if(es.length&&!iscritto())h+=`<div class="sec">Esami di Stato</div><div class="list">${es.map(([A,x])=>`<div class="job"><div><div class="jn">${A.desc}</div><div class="${x?'jr':'jm'}">${x||'400 € · serve per esercitare la professione'}</div></div><button class="chip pri" data-es="${A.n}" ${x||fatto('esame_'+A.n)?'disabled':''}>${fatto('esame_'+A.n)?'Fatto':'Sostieni'}</button></div>`).join('')}</div>`;
   if(S.eta>=6){
-    h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const lock=S.eta<c.min;const f=fatto('corso_'+c.id);
-      return `<div class="job"><div><div class="jn">${c.n}</div><div class="jm">${eur(c.costo)}${c.cert?` · ${c.cert}`:''}${c.sk?` · +${ABIL[Object.keys(c.sk)[0]]}`:''}${lock?` · dai ${c.min} anni`:''}</div></div><button class="chip" data-corso="${c.id}" ${ho||lock||f?'disabled':''}>${ho?'Ottenuto':f?'Fatto':'Iscriviti'}</button></div>`}).join('')}</div>`;
+    h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const manca=c.req?mancanti(c.req):[];const lock=S.eta<c.min||manca.length>0;const f=fatto('corso_'+c.id);
+      return `<div class="job"><div><div class="jn">${c.n}</div><div class="jm">${eur(P(c.costo))}${c.cert?` · ${c.cert}`:''}${c.sk?` · +${ABIL[Object.keys(c.sk)[0]]}`:''}${S.eta<c.min?` · dai ${c.min} anni`:manca.length?` · serve: ${esc(manca.join(', '))}`:''}</div></div><button class="chip" data-corso="${c.id}" ${ho||lock||f?'disabled':''}>${ho?'Ottenuto':f?'Fatto':'Iscriviti'}</button></div>`}).join('')}</div>`;
   }
   const hb=HOBBY.find(x=>x.id===S.hobby);
   h+=`<div class="sec"><span>Abilità</span></div><div class="panel"><div class="skills">${Object.keys(ABIL).map(k=>`<div><div class="kv"><span>${ABIL[k]}</span><b>${S.abil[k]}</b></div>${bar(S.abil[k],'--accent')}</div>`).join('')}</div>`;
   if(S.eta>=5)h+=`<div class="kv"><span>Attività pomeridiana: <b style="font-weight:600">${hb?hb.n:'nessuna'}</b></span></div><div class="row-btns"><button class="chip" id="btnHobby">${hb?'Cambia attività':'Scegli un\'attività'}</button></div>`;
-  h+='<div class="meta">Le abilità aprono carriere speciali: calciatore, musicista, chef, grafico.</div></div>';
+  h+='<div class="meta">Le abilità aprono carriere speciali: calciatore, pallavolista, ciclista, tennista, musicista, chef, grafico.</div></div>';
   V.innerHTML=h;
   V.querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>azScuola(b.dataset.sc));
   V.querySelectorAll('[data-isc]').forEach(b=>b.onclick=()=>iscrizione(b.dataset.isc));
@@ -6267,7 +6342,7 @@ function renderLavoro(V){
     const righe=vis.map(j=>({j,m:requisitiJob(j)})).filter(x=>!soloDisponibili||!x.m.length);
     h+=`<div class="sec"><span>Offerte di lavoro</span><button class="chip" id="btnFiltro" style="padding:2px 10px;font-size:11px;font-family:var(--f-body);letter-spacing:0;text-transform:none">${soloDisponibili?'Mostra tutte':'Solo disponibili'}</button></div><div class="list">`;
     h+=righe.length?righe.map(({j,m})=>{const mio=L&&L.id===j.id,f=fatto('job_'+j.id);
-      return `<div class="job"><div><div class="jn">${esc(nomeJob(j,0))}</div><div class="jm">${eur(stipLiv(j,0))} RAL${S.eta>=14?` · affinità ${matchLavoro(j.id)}%`:''}${j.pt?' · part-time':''}${j.conc?' · concorso pubblico':''}${j.var?' · variabile':''} · carriera fino a ${esc(nomeJob(j,j.liv.length-1).toLowerCase())}</div>${m.length&&!mio?`<div class="jr">Serve: ${esc(m.slice(0,2).join(' · '))}</div>`:''}</div><button class="chip${!m.length&&!mio&&!f?' pri':''}" data-job="${j.id}" ${m.length||f||mio?'disabled':''}>${mio?'Il tuo':f?'Inviata':m.length?'Bloccato':j.conc?'Concorso':'Candidati'}</button></div>`}).join(''):'<div class="note" style="padding:12px 0">Nessuna offerta disponibile per ora. Studia o fai un corso per sbloccarne altre.</div>';
+      return `<div class="job"><div><div class="jn">${esc(nomeJob(j,0))}</div><div class="jm">${eur(stipLiv(j,0))} RAL${S.eta>=14?` · affinità ${matchLavoro(j.id)}%`:''}${j.pt?' · part-time':''}${j.conc?(j.cdiff?' · concorso molto difficile':' · concorso pubblico'):''}${j.elez?' · si entra con le elezioni':''}${j.var?' · variabile':''} · carriera fino a ${esc(nomeJob(j,j.liv.length-1).toLowerCase())}</div>${m.length&&!mio?`<div class="jr">Serve: ${esc(m.slice(0,2).join(' · '))}</div>`:''}</div><button class="chip${!m.length&&!mio&&!f?' pri':''}" data-job="${j.id}" ${m.length||f||mio?'disabled':''}>${mio?'Il tuo':f?'Inviata':m.length?'Bloccato':j.conc?'Concorso':'Candidati'}</button></div>`}).join(''):'<div class="note" style="padding:12px 0">Nessuna offerta disponibile per ora. Studia o fai un corso per sbloccarne altre.</div>';
     h+='</div>';
   }
   V.innerHTML=h;

@@ -87,7 +87,8 @@ function abilitazioneDisponibile(A){
 }
 function faiCorso(id){
   const c=CORSI.find(x=>x.id===id);
-  return azione(una('corso_'+id,c.costo,()=>{
+  const manca=c.req?mancanti(c.req):[];if(manca.length)return azione(()=>[`Per iscriverti serve: ${manca.join(', ')}.`,'x']);
+  return azione(una('corso_'+id,P(c.costo),()=>{
     const p=typeof c.p==='function'?c.p():c.p;
     if(c.sk)eff(c.sk);
     if(!chance(p))return [`Non superi l'esame finale di: ${c.n.toLowerCase()}. Hai comunque imparato qualcosa.`,'b'];
@@ -107,6 +108,7 @@ function candidati(id){
   if(fatto('job_'+id))return toast('Ti sei già candidat'+g('o','a')+' per questo lavoro questo mese.');
   if(requisitiJob(j).length)return toast('Non hai i requisiti.');
   segnaAz('job_'+id);
+  if(j.elez)return elezione(j);
   if(j.conc)return concorso(j);
   colloquio(j);
 }

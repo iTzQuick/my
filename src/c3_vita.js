@@ -120,7 +120,7 @@ function formaAttaccamento(){
 
 /* ---------- Interessi (RIASEC di Holland) ---------- */
 const RIASEC={R:'Pratico',I:'Investigativo',A:'Artistico',S:'Sociale',E:'Intraprendente',C:'Convenzionale'};
-const JOB_RIASEC={vol:'RC',rip:'SI',bpt:'SE',cpt:'EC',rider:'RE',cam:'SE',com:'EC',mag:'RC',ope:'RC',mur:'RC',aut:'RC',oss:'SR',cuoco:'RA',parr:'AS',pt:'SR',imp:'CE',rec:'SC',tec:'IR',agi:'EC',gra:'AI',pol:'RS',vvf:'RS',comu:'CS',ins:'SA',inf:'SI',pro:'IC',gio:'AI',mkt:'EA',cons:'EC',comm:'CE',avv:'ES',psi:'SI',ing:'IR',arc:'AI',far:'IC',bio:'IR',med:'IS',ric:'IA',man:'ES',mus:'AE',crea:'AE',calc:'RE',att:'AE'};
+const JOB_RIASEC={colf:'RC',badante:'SR',bracc:'RC',idra:'RI',elet:'RI',mecc:'RI',fale:'RA',pane:'RC',past:'RA',macel:'RE',camion:'RC',cass:'CE',puli:'RC',callc:'CS',segr:'CS',este:'SA',edu:'SA',maes:'SA',cara:'RS',mil:'RE',gdf:'CE',post:'RC',taxi:'RE',guida:'SE',anim:'ES',bagn:'RS',hostess:'SE',pilota:'RI',vet:'IS',dent:'IR',fisio:'SR',notaio:'CE',magis:'IE',agcom:'EC',ds:'IC',poli:'ES',volley:'RS',cicl:'RE',tennis:'RE',vol:'RC',rip:'SI',bpt:'SE',cpt:'EC',rider:'RE',cam:'SE',com:'EC',mag:'RC',ope:'RC',mur:'RC',aut:'RC',oss:'SR',cuoco:'RA',parr:'AS',pt:'SR',imp:'CE',rec:'SC',tec:'IR',agi:'EC',gra:'AI',pol:'RS',vvf:'RS',comu:'CS',ins:'SA',inf:'SI',pro:'IC',gio:'AI',mkt:'EA',cons:'EC',comm:'CE',avv:'ES',psi:'SI',ing:'IR',arc:'AI',far:'IC',bio:'IR',med:'IS',ric:'IA',man:'ES',mus:'AE',crea:'AE',calc:'RE',att:'AE'};
 function interessi(X){
   X=X||S;const p=X.pers,a=X.abil;
   const s={R:28+a.sport*.3+a.cucina*.25+(50-p.O)*.15,I:24+X.intelligenza*.3+p.O*.2+a.tech*.25,A:22+p.O*.3+a.arte*.3+a.musica*.3,S:24+p.A*.32+p.E*.18,E:24+p.E*.3+(100-p.A)*.12+p.C*.1,C:26+p.C*.36+(100-p.O)*.15+a.tech*.05};
@@ -176,7 +176,7 @@ function oreScuola(){
 function oreLavoro(){
   const L=S.lavoro;if(!L)return 0;const j=JOB[L.id];
   if(j.pt)return 18;
-  return 40+(['med','man','cuoco','avv','spec','calc'].includes(L.id)?6:0)+(L.liv>=2&&!j.conc?3:0);
+  return (j.ore||40)+(['med','man','cuoco','avv','spec','calc','dent','vet','notaio','magis','poli'].includes(L.id)?6:0)+(L.liv>=2&&!j.conc?3:0);
 }
 function obblighi(){
   const o=[];const e=S.eta;
@@ -339,6 +339,7 @@ function umoreFrase(){
 /* ---------- Salute mensile ----------
    Malattie lievi (molto più spesso da bambini), acute, croniche che crescono con l'età, tumori per tipo con cure e remissione,
    demenza, depressione e ansia. I numeri veri sono in ANALISI.md (ISTAT, AIRC, ISS). */
+const MANUALI=['mur','ope','mag','aut','vvf','bracc','idra','elet','mecc','fale','camion','mil','cara'];
 const PESO_CRON={'Cardiopatia ischemica':6,'Ipertensione':2,'Artrosi':3,'Asma':3,'Emicrania cronica':3,'Diabete di tipo 2':5,'BPCO':7,'Demenza':8};
 const pesoMal=m=>m.g===3?(PESO_CRON[m.n]||6):({1:3,2:7,4:22}[m.g]||0);
 const fattoreSesso=s=>s==='F'?.62:.9;   // le donne vivono circa 4 anni in più (ISTAT 2025: 85,7 contro 81,7)
@@ -429,7 +430,7 @@ function causaMorte(){
   for(const m of S.malattie){const x=rischioMalattia(m);if(x)voci.push([m,x])}
   const v=pesata(voci);
   if(v!=='base')return v.tum||TUMORE[v.n]?causaTumore(v.n):(CAUSE[v.n]||'per una grave malattia');
-  const e=S.eta,manuale=S.lavoro&&['mur','ope','mag','aut','vvf'].includes(S.lavoro.id);
+  const e=S.eta,manuale=S.lavoro&&MANUALI.includes(S.lavoro.id);
   const L=e<30?[['in un incidente stradale',40],['in un incidente in montagna',8],['in un incidente in mare',6],['per un malore improvviso',20],['in un incidente sul lavoro',manuale?10:0]]
     :e<60?[['per un infarto',30],['per un ictus',15],['per un malore improvviso',15],['in un incidente stradale',12],['in un incidente sul lavoro',manuale?6:0],['per una polmonite',4]]
     :e<80?[['per un infarto',25],['per un ictus',22],['per una polmonite',7],['per un\'insufficienza respiratoria',S.dip.fumo?9:4],['per un malore improvviso',3],['per le conseguenze di una caduta',3],['per un\'infezione',8],['per un\'insufficienza renale',7],['per una malattia del fegato',4],['serenamente, nel sonno',4]]

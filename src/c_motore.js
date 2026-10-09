@@ -187,8 +187,8 @@ function assumi(j){
 function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);avviaNaspi(L)}}
 function lavoroPerFiglio(p){
   if(p.studio&&p.studio.startsWith('laurea:')){const f=p.studio.slice(7);const ok=LAVORI.filter(j=>j.req&&j.req.lau&&j.req.lau.includes(f)&&!j.req.abil&&!j.req.liv);if(ok.length)return pick(ok).id;return 'imp'}
-  if(p.studio==='diploma')return pick(['imp','tec','com','agi','rec','cam','ope']);
-  return pick(['cam','com','mag','ope','rider','mur']);
+  if(p.studio==='diploma')return pick(['imp','tec','com','agi','rec','cam','ope','segr','cass','callc','post','agcom']);
+  return pick(['cam','com','mag','ope','rider','mur','puli','bracc','idra','elet','mecc','pane','colf','badante']);
 }
 
 /* ---------- Scelte ed effetti ---------- */
@@ -491,8 +491,9 @@ function meseLavoro(){
   const j=JOB[L.id];
   L.mesi=(L.mesi||0)+1;if(L.mesi%12===0){L.anni++;L.anniLiv++}
   S.contributi+=(j.pt?.5:1)/12;
+  if(j.elez){L.mandato=(L.mandato||0)+1;if(L.mandato>=60){L.mandato=0;if(chance(.5+L.perf/250+S.fama/400))log(`Alle elezioni vieni rielett${g('o','a')}: altri cinque anni.`,'g');else{licenzia(`Alle elezioni non vieni rielett${g('o','a')}: il mandato finisce.`,true);mod('felicita',-8);return}}}
   if(S.mondo.crisi&&!j.conc&&!j.var&&chance(.011)){licenzia('La crisi colpisce la tua azienda: sei tra i licenziati.');segnaVita('licenziato');return}
-  if(S.mondo.pandemia&&['cam','bpt','cuoco','parr','pt'].includes(L.id)&&chance(.02)){licenzia('Con la pandemia il locale chiude e perdi il lavoro.');segnaVita('licenziato');return}
+  if(S.mondo.pandemia&&['cam','bpt','cuoco','parr','pt','este','anim','guida','hostess','bagn'].includes(L.id)&&chance(.02)){licenzia('Con la pandemia il locale chiude e perdi il lavoro.');segnaVita('licenziato');return}
   if(!j.conc&&!j.var&&chance((j.pt?.008:.0035)*(S.eta<30?1.6:1)*(S.mondo.crisi?1.5:1))){licenzia(pick(['Il tuo contratto a termine scade e non viene rinnovato.','L\'azienda chiude e resti senza lavoro.','Riorganizzazione: il tuo posto viene tagliato.']));return}
   const sod=soddLavoro();
   L.perf=clamp(L.perf+(r(-7,5)+(S.felicita<30?-4:0)+(S.dip.alcol?-6:0)+(S.salute<30?-4:0))/3.5+pz('C')*.7+(S.bis.energia<30?-1:0)+(S.bis.stress>80?-1:0)+(sod-50)/90);

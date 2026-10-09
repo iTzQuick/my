@@ -393,6 +393,7 @@ I modelli scientifici da usare come riferimento:
   - **part-time involontario**.
   - Poi rinnovi, licenziamenti, dimissioni, NASpI, cassa integrazione, sindacato, sciopero.
 - **Divario uomo-donna**: 27.967 € contro 19.833 € di media nel privato (INPS 2024), soprattutto per part-time e maternità.
+- ✅ *(fatto il 9 ottobre 2026: 39 lavori nuovi, ora sono 81, con facoltà, esami e corsi per arrivarci, concorsi difficili per notaio e magistrato, elezioni per la politica e il negozio di quartiere come attività in proprio; il «creator» c'era già come Content creator)*
 - **Lavori da aggiungere** (oggi 42; i più diffusi in Italia mancano):
   - **colf e badanti** (817.403 nel 2024, l'89% donne);
   - **agricoltura** (circa 1 milione di operai agricoli e 415.000 autonomi);
@@ -668,7 +669,7 @@ Ogni passo si chiude con: build → sintassi → `fuzz.py` → `sim.py` → **`r
 | 3 | **Morte e malattie**: mortalità per sesso, cause di morte dalle malattie, tumori per tipo e guaribili, demenza, depressione e ansia, malattie lievi frequenti, screening | 🔴 | M | donne +3–5 anni; tumori 20–30% delle morti; «nel sonno» sotto il 10% | ✅ fatto (manca solo l'ansia «come percorso» con ricadute) |
 | 4 | **Storia vera e prezzi per anno** (punto 4.13), nomi per generazione | 🔴 | M | chi nasce nel 2005 vive il lockdown a 15 anni | ✅ fatto |
 | 5 | **Gravidanza e figli** (punto 4.1) | 🔴 | L | fertilità per età; il 10–20% delle gravidanze finisce in un aborto spontaneo; congedi | ✅ fatto (gravidanza, PMA, adozione, congedi; non i figli malati e i permessi) |
-| 6 | **Lavoro vero**: regioni, sesso, contratti, catalogo dei lavori | 🔴 | L | occupati 60–75%, NEET 10–16%, divario uomo-donna visibile | 🟡 in parte: zone, età, crisi, lavori che finiscono; mancano contratti, divario uomo-donna, nuovi lavori |
+| 6 | **Lavoro vero**: regioni, sesso, contratti, catalogo dei lavori | 🔴 | L | occupati 60–75%, NEET 10–16%, divario uomo-donna visibile | 🟡 in parte: zone, età, crisi, lavori che finiscono, 39 lavori nuovi; mancano contratti e divario uomo-donna |
 | 7 | **Pilota automatico più umano** (roadmap 7): meno ricerche di lavoro, abbandoni della scuola, uscita di casa più tardi, meno matrimoni | 🔴 | S | la tabella misura il gioco, non il pilota | ✅ fatto |
 | 8 | **Persone e famiglie di oggi** (punto 4.4 + roadmap Fase 2) | 🔴 | L | figli fuori dal matrimonio ≈ 40%; coppie dello stesso sesso tra le altre persone | 🟡 in parte: coppie dello stesso sesso e figli fuori dal matrimonio; mancano gruppi di amici, colleghi e vicini persistenti |
 | 9 | **Carattere e comportamento** (punto 4.3) | 🟠 | M | N scende tra 20 e 40 anni; attaccamento ≈ 60% sicuro; stress da anziani tra 15 e 25 | ✅ fatto |
