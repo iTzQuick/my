@@ -176,7 +176,8 @@ function oreScuola(){
 function oreLavoro(){
   const L=S.lavoro;if(!L)return 0;const j=JOB[L.id];
   if(j.pt)return 18;
-  return (j.ore||40)+(['med','man','cuoco','avv','spec','calc','dent','vet','notaio','magis','poli'].includes(L.id)?6:0)+(L.liv>=2&&!j.conc?3:0);
+  const h=(j.ore||40)+(['med','man','cuoco','avv','spec','calc','dent','vet','notaio','magis','poli'].includes(L.id)?6:0)+(L.liv>=2&&!j.conc?3:0);
+  return L.ptv?Math.round(h*.6):h;
 }
 function obblighi(){
   const o=[];const e=S.eta;
@@ -297,8 +298,9 @@ function bisogni(){
   // stress
   const deb=S.soldi<0&&e>=18?Math.min(18,-S.soldi/P(1500)):0;
   const insodd=S.lavoro?Math.max(0,50-soddLavoro())*.25:0;
+  const prec=S.lavoro&&S.lavoro.contratto?({det:4,app:1,piva:2}[S.lavoro.contratto.t]||0):0;   // l'incertezza del contratto pesa
   const disocc=e>=20&&e<S.mondo.pensEta&&!S.lavoro&&!iscritto()&&!S.azienda&&!S.pensione&&S.casa.tipo!=='carcere'?8:0;
-  let tSt=22+Math.max(0,ca-20)*.7*(1+pz('N')*.6)+deb+insodd+disocc+(S.tensione||0)+malG*.6+(S.fatti.assisti?6:0)
+  let tSt=22+Math.max(0,ca-20)*.7*(1+pz('N')*.6)+deb+insodd+prec+disocc+(S.tensione||0)+malG*.6+(S.fatti.assisti?6:0)
     -Math.min(10,rOre('sport')*1.1)-Math.min(e>=65?5:10,lib*.25)-Math.min(6,rOre('hobby')*.6)-(B.soc>60?3:0)
     +Math.max(0,62-S.salute)*.25+Math.max(0,40-B.soc)*.2+(e>=70?5:0)
     +(S.sonno<6.5?(6.5-S.sonno)*9:0)+(S.carcere?25:0)+pz('N')*10;

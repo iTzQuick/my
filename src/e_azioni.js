@@ -120,13 +120,15 @@ function azLavoro(k){
   if(k==='promo')return azione(una('promo',0,()=>{
     if(L.liv>=j.liv.length-1)return ['Sei già al livello più alto.','x'];
     const m=mancanti(j.promo&&j.promo[L.liv+1]);if(m.length)return [`Per salire di livello ti serve: ${m.join(', ')}.`,'x'];
-    if(L.anniLiv>=1&&chance((L.perf-45)/70)){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100));L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
+    if(L.anniLiv>=1&&chance((L.perf-45)/70*fattoreCarriera(L))){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere());if(PIVA_LIV[j.id]===L.liv&&!isPiva(L))L.contratto={t:'piva',da:S.t};L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
     L.perf=clamp(L.perf-3);return ['Per ora la promozione va a un collega.','b'];
   }));
   if(k==='collega')return azione(una('collega',0,()=>{if(chance(.35)){const p=nuovoAmico(true);if(p)return [`Fai amicizia con ${p.nome}, ${gp(p,'un collega','una collega')}.`,'g']}return ['Pausa caffè un po\' imbarazzante.','']}));
   if(k==='licenziati')return showSheet({k:'Lavoro',t:'Ti licenzi?',p:`Lasci il posto da ${L.nome.toLowerCase()}.`,chiudi:true,scelte:[
     {l:'Sì, mi licenzio',sub:'Ricevi il TFR, ma chi si dimette non ha la NASpI',fx:()=>{pagaTFR();S.storico.push(L.nome);S.lavoro=null;mod('felicita',3);return ['Hai dato le dimissioni. Si volta pagina.','']}}]});
   if(k==='pensione'){coda.unshift({e:EV.pensione,d:{}});return next()}
+  if(k==='parttime')return azione(una('parttime',0,()=>chiediPartTime(false)));
+  if(k==='tempopieno')return azione(una('tempopieno',0,()=>tornaTempoPieno()));
 }
 function apriAzienda(){
   showSheet({k:'Imprenditoria',t:'Apri un\'attività',p:'Gestirai prezzi, qualità, pubblicità, dipendenti e sedi. Se la cassa va troppo in rosso, fallisci.',chiudi:true,scelte:AZIENDE.map(t=>({l:t.n,sub:`${eur(P(t.costo))} · conta ${ABIL[t.sk]}`,costo:P(t.costo),fx:()=>{nuovaAzienda(t);mod('felicita',6);return [`Apri ${S.azienda.n}. In bocca al lupo!`,'g']}}))});
@@ -322,7 +324,7 @@ function compraCasa(){
 function dettaglioCasa(i){
   const M=mercato(),h=M.casa[i];if(!h)return;
   const spese=Math.round(h.prezzo*.05),ant=Math.round(h.prezzo*.2),rata=rataMutuo(h.prezzo-ant,25,.035);
-  const L=S.lavoro,nettoAnn=L&&!JOB[L.id].pt?netto(L.stip):0;
+  const L=S.lavoro,nettoAnn=L&&!JOB[L.id].pt?(isPiva(L)?nettoPiva(ralEff(L),L):netto(ralEff(L))):0,ctr=L&&L.contratto?L.contratto.t:'';
   const compra=mutuo=>{
     M.casa.splice(i,1);
     const p={id:S.nextId++,tipo:h.t,citta:S.citta,valore:h.prezzo,stato:h.stato,lusso:h.lusso,mutuo:mutuo?{residuo:h.prezzo-ant,rata,anni:25}:null};
@@ -334,6 +336,8 @@ function dettaglioCasa(i){
     {l:'Paga in contanti',sub:eur(h.prezzo+spese),costo:h.prezzo+spese,fx:()=>compra(false)},
     {l:'Chiedi un mutuo a 25 anni',sub:`Anticipo ${eur(ant+spese)} · rata ${eur(rata)} l'anno`,costo:ant+spese,fx:()=>{
       if(!nettoAnn){soldi(ant+spese);return ['La banca rifiuta: serve un lavoro stabile (non part-time).','b']}
+      if(ctr==='det'&&chance(.75)){soldi(ant+spese);return ['La banca rifiuta: con un contratto a termine serve un garante o un tempo indeterminato.','b']}
+      if(ctr==='piva'&&L.anni<2){soldi(ant+spese);return ['La banca vuole almeno due anni di dichiarazioni dei redditi con la partita IVA.','b']}
       if(rata>nettoAnn*.35){soldi(ant+spese);return [`La banca rifiuta: la rata supera il 35% del tuo stipendio netto (${eur(nettoAnn)}).`,'b']}
       if(S.fedina.length&&chance(.4)){soldi(ant+spese);return ['La banca rifiuta: i tuoi precedenti penali non la convincono.','b']}
       if(S.fatti.crif!==undefined&&S.eta-S.fatti.crif<7){soldi(ant+spese);return ['La banca rifiuta: sei segnalat'+g('o','a')+' come cattivo pagatore dopo il sovraindebitamento.','b']}

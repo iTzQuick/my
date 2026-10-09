@@ -245,14 +245,16 @@ function renderLavoro(V){
   if(L){const j=JOB[L.id];const nx=L.liv<j.liv.length-1?nomeJob(j,L.liv+1):null;
     const nm=nx?mancanti(j.promo&&j.promo[L.liv+1]):[];
     h+=`<div class="panel"><h3>${esc(L.nome)}</h3><div class="meta">${j.pt?'Part-time · ':''}${L.anni} ${L.anni===1?'anno':'anni'} in azienda · livello ${L.liv+1} di ${j.liv.length}</div>
-    ${kv(j.var?'Guadagno medio (lordo annuo)':'RAL (lordo annuo)',eur(L.stip))}${kv('Netto al mese (13 mensilità)',eur(netto(L.stip)/13))}${(()=>{const t=tasseDettaglio(L.stip);return kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">IRPEF ${eur(t.irpef)} · INPS ${eur(t.inps)} · addizionali ${eur(t.addiz)}</span>`)})()}
+    ${isPiva(L)?`${kv(j.var?'Compensi medi (lordi annui)':'Compensi (lordi annui)',eur(ralEff(L)))}${kv('Netto al mese',eur(nettoPiva(ralEff(L),L)/12))}${kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">regime forfettario: contributi INPS e imposta sostitutiva · niente tredicesima, TFR e NASpI</span>`)}`
+     :`${kv(j.var?'Guadagno medio (lordo annuo)':L.ptv?'RAL in part-time (lordo annuo)':'RAL (lordo annuo)',eur(ralEff(L)))}${kv('Netto al mese (13 mensilità)',eur(netto(ralEff(L))/13))}${(()=>{const t=tasseDettaglio(ralEff(L));return kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">IRPEF ${eur(t.irpef)} · INPS ${eur(t.inps)} · addizionali ${eur(t.addiz)}</span>`)})()}`}
     ${nx?kv('Prossimo livello',esc(nx)+(nm.length?` <span style="color:var(--bad);font-weight:400">· serve ${esc(nm.join(', '))}</span>`:'')):''}
-    ${kv('Rendimento',L.perf+'%')}${bar(L.perf,'--salute')}${kv('Soddisfazione',soddLavoro()+'%')}${bar(soddLavoro(),'--felicita')}<div class="meta">Affinità con i tuoi interessi: ${matchLavoro(L.id)}% · ${oreLavoro()} ore a settimana</div>
+    ${kv('Contratto',descrContratto(L))}${kv('Rendimento',L.perf+'%')}${bar(L.perf,'--salute')}${kv('Soddisfazione',soddLavoro()+'%')}${bar(soddLavoro(),'--felicita')}<div class="meta">Affinità con i tuoi interessi: ${matchLavoro(L.id)}% · ${oreLavoro()} ore a settimana</div>
     <div class="row-btns">
       <button class="chip" data-lv="sodo" ${fatto('sodo')?'disabled':''}>Dai il massimo questo mese</button>
       <button class="chip" data-lv="aumento" ${fatto('aumento')?'disabled':''}>Chiedi un aumento</button>
       ${nx?`<button class="chip" data-lv="promo" ${fatto('promo')?'disabled':''}>Chiedi una promozione</button>`:''}
       <button class="chip" data-lv="collega" ${fatto('collega')?'disabled':''}>Fai amicizia con un collega</button>
+      ${!j.pt&&!isPiva(L)&&!j.elez?(L.ptv?`<button class="chip" data-lv="tempopieno" ${fatto('tempopieno')?'disabled':''}>Torna a tempo pieno</button>`:`<button class="chip" data-lv="parttime" ${fatto('parttime')?'disabled':''}>Chiedi il part-time</button>`):''}
       ${pensioneMaturata()?'<button class="chip pri" data-lv="pensione">Vai in pensione</button>':''}
       <button class="chip warn" data-lv="licenziati">Licenziati</button>
     </div></div>`;
@@ -278,8 +280,9 @@ function renderLavoro(V){
     const righe=vis.map(j=>({j,m:requisitiJob(j)})).filter(x=>!soloDisponibili||!x.m.length);
     h+=`<div class="sec"><span>Offerte di lavoro</span><button class="chip" id="btnFiltro" style="padding:2px 10px;font-size:11px;font-family:var(--f-body);letter-spacing:0;text-transform:none">${soloDisponibili?'Mostra tutte':'Solo disponibili'}</button></div><div class="list">`;
     h+=righe.length?righe.map(({j,m})=>{const mio=L&&L.id===j.id,f=fatto('job_'+j.id);
-      return `<div class="job"><div><div class="jn">${esc(nomeJob(j,0))}</div><div class="jm">${eur(stipLiv(j,0))} RAL${S.eta>=14?` · affinità ${matchLavoro(j.id)}%`:''}${j.pt?' · part-time':''}${j.conc?(j.cdiff?' · concorso molto difficile':' · concorso pubblico'):''}${j.elez?' · si entra con le elezioni':''}${j.var?' · variabile':''} · carriera fino a ${esc(nomeJob(j,j.liv.length-1).toLowerCase())}</div>${m.length&&!mio?`<div class="jr">Serve: ${esc(m.slice(0,2).join(' · '))}</div>`:''}</div><button class="chip${!m.length&&!mio&&!f?' pri':''}" data-job="${j.id}" ${m.length||f||mio?'disabled':''}>${mio?'Il tuo':f?'Inviata':m.length?'Bloccato':j.conc?'Concorso':'Candidati'}</button></div>`}).join(''):'<div class="note" style="padding:12px 0">Nessuna offerta disponibile per ora. Studia o fai un corso per sbloccarne altre.</div>';
+      return `<div class="job"><div><div class="jn">${esc(nomeJob(j,0))}</div><div class="jm">${eur(stipLiv(j,0))} RAL${S.eta>=14?` · affinità ${matchLavoro(j.id)}%`:''}${j.pt?' · part-time':''}${j.conc?(j.cdiff?' · concorso molto difficile':' · concorso pubblico'):''}${PIVA.includes(j.id)?' · partita IVA':''}${j.elez?' · si entra con le elezioni':''}${j.var?' · variabile':''} · carriera fino a ${esc(nomeJob(j,j.liv.length-1).toLowerCase())}</div>${m.length&&!mio?`<div class="jr">Serve: ${esc(m.slice(0,2).join(' · '))}</div>`:''}</div><button class="chip${!m.length&&!mio&&!f?' pri':''}" data-job="${j.id}" ${m.length||f||mio?'disabled':''}>${mio?'Il tuo':f?'Inviata':m.length?'Bloccato':j.conc?'Concorso':'Candidati'}</button></div>`}).join(''):'<div class="note" style="padding:12px 0">Nessuna offerta disponibile per ora. Studia o fai un corso per sbloccarne altre.</div>';
     h+='</div>';
+    if(S.eta>=16)h+='<div class="meta">In Italia i contratti a termine sono il 15% (quasi il 30% sotto i 35 anni). A parità di ora le donne guadagnano circa il 5% in meno, in un anno quasi il 30% in meno: pesano part-time, figli e carriere più lente (ISTAT, INPS).</div>';
   }
   V.innerHTML=h;
   V.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>azLavoro(b.dataset.lv));

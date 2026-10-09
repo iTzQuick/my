@@ -20,7 +20,7 @@ JS = r'''
    const x=pick(['M','F']);const cc=comuneCaso();
    nuovaVita({sesso:x,nome:pick(x==='M'?NOMI_M:NOMI_F),cognome:pick(COGNOMI),citta:cc.n,prov:cc.s});
    evEta={};
-   const L={sesso:x,classe:S.classe,primo:{},stato:{},ral:{},casa:{},fumo:{},amici:{},mal:new Set(),coniugi:new Set(),div:0,ved:0,citta:new Set([S.citta]),estero:0,animMax:0,figliNati:0,pensEta:null,pensRap:null,ultNetto:0,genMorte:{},umore:{}};
+   const L={sesso:x,classe:S.classe,primo:{},stato:{},ral:{},casa:{},fumo:{},amici:{},mal:new Set(),coniugi:new Set(),div:0,ved:0,citta:new Set([S.citta]),estero:0,animMax:0,figliNati:0,pensEta:null,pensRap:null,ultNetto:0,genMorte:{},umore:{},ctr:{},ptv:{},redd:{}};
    const prima=(k)=>{if(L.primo[k]===undefined)L.primo[k]=S.eta};
    let k=0;
    while(S.vivo&&k<1500){
@@ -46,6 +46,7 @@ JS = r'''
      {const dk=Math.floor(S.eta/10)*10;const u=L.umore[dk]||(L.umore[dk]={f:0,s:0,st:0,n:0});u.f+=S.felicita;u.s+=S.salute;u.st+=S.bis.stress;u.n++}
      if(S.mese===S.meseNascita){
        const e=S.eta;
+       if(S.lavoro){L.ctr[e]=S.lavoro.contratto?S.lavoro.contratto.t:'ind';L.ptv[e]=S.lavoro.ptv?1:0;L.redd[e]=Math.round(ralEff(S.lavoro)/S.mondo.ip)}
        L.stato[e]=S.carcere>0?'carcere':S.pensione?'pens':S.lavoro?(JOB[S.lavoro.id].pt?'pt':'lav'):S.azienda?'az':iscritto()?'stud':'nulla';
        if([25,30,40,50,60].includes(e)&&S.lavoro)L.ral[e]=Math.round(S.lavoro.stip/S.mondo.ip);
        if([30,40,50,65,80].includes(e))L.casa[e]=S.casa.tipo;
@@ -70,7 +71,7 @@ with sync_playwright() as p:
     b.close()
 o = r['out']
 for x in o:
-    for f in ('stato', 'ral', 'casa', 'fumo', 'amici', 'evEta', 'umore'):
+    for f in ('stato', 'ral', 'casa', 'fumo', 'amici', 'evEta', 'umore', 'ctr', 'ptv', 'redd'):
         x[f] = {int(k): v for k, v in x[f].items()}
 json.dump(r, open(ROOT/'tools'/'realismo_out.json', 'w', encoding='utf-8'))
 sys.stdout.reconfigure(encoding='utf-8')
@@ -115,6 +116,21 @@ for k, rif in ((30, '29.900 € a 25–34'), (40, '33.000 € a 35–44'), (60, 
 R('Età di pensionamento', med([x['pensEta'] for x in o if x['pensEta']]), '67 (vecchiaia) o 42a10m di contributi (anticipata)')
 R('Pensione / ultimo netto', med([round(x['pensRap'], 2) for x in o if x['pensRap']]), 'dipende dai contributi di tutta la vita (contributivo)')
 R('Senza pensione (morti dopo i 70)', pc(sum(1 for x in o if not x['pensEta'] and x['eta'] > 70), sum(1 for x in o if x['eta'] > 70)), 'chi non ha i contributi ha l\'assegno sociale (538 €/mese, 2025)')
+def quotaCtr(a, b, tipo):
+    n = d = 0
+    for x in o:
+        for e, t in x['ctr'].items():
+            if a <= e <= b and t != 'piva' and t != 'carica':
+                d += 1; n += t == tipo
+    return n, d
+print('Contratti tra 20 e 34 anni:', Counter(t for x in o for e, t in x['ctr'].items() if 20 <= e <= 34).most_common())
+n, d = quotaCtr(20, 64, 'det'); R('Dipendenti a termine (20–64 anni)', pc(n, d), '14,7% dei dipendenti (ISTAT 2024)')
+n, d = quotaCtr(18, 34, 'det'); R('Dipendenti a termine sotto i 35 anni', pc(n, d), '28,1% degli occupati sotto i 35 (2024)')
+for ses, rif in (('M', '7,5%'), ('F', '30,0%')):
+    g = [x for x in o if x['sesso'] == ses]; n = sum(1 for x in g for e, v in x['ptv'].items() if 25 <= e <= 54 and v); d = sum(1 for x in g for e, v in x['ptv'].items() if 25 <= e <= 54)
+    R(f'In part-time tra 25 e 54 anni ({"uomini" if ses == "M" else "donne"})', pc(n, d), f'{rif} degli occupati (ISTAT 2024, tutte le età)')
+rm = [v for x in M for e, v in x['redd'].items() if 25 <= e <= 59 and v]; rf = [v for x in F for e, v in x['redd'].items() if 25 <= e <= 59 and v]
+if rm and rf: R('Reddito da lavoro 25–59 anni: uomini / donne (mediana)', f'{round(st.median(rm)/1000,1)}k / {round(st.median(rf)/1000,1)}k ({round((1-st.median(rf)/st.median(rm))*100)}% in meno)', 'medie 27.967 / 19.833 € nel privato (−29%, INPS 2024)')   # la mediana: le carriere da star rendono la media instabile
 n = sum(1 for x in o if x['casa'].get(50) == 'proprieta'); d = sum(1 for x in o if 50 in x['casa'])
 R('Casa di proprietà a 50 anni', pc(n, d), '70,8% delle famiglie (2021); 81,6% delle persone (2024)')
 R('Fumatori a 30 anni', pc(sum(1 for x in o if x['fumo'].get(30)), sum(1 for x in o if 30 in x['fumo'])), '18,6% dai 14 anni (2025; uomini ≈ 22%, donne ≈ 15%)')

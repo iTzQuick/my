@@ -42,16 +42,95 @@ function storiaMese(){
   if(ELEZIONI_VERE.some(([a,m])=>a===S.anno&&m===S.mese)&&S.eta>=18&&S.carcere===0)coda.push({e:EV.elezioni,d:{}});
 }
 
+/* ---------- Contratti di lavoro ----------
+   A termine: 14,7% dei dipendenti nel 2024, 28% sotto i 35 anni (ISTAT); al massimo 24 mesi, poi o si viene stabilizzati o si resta a casa.
+   Apprendistato sotto i 30 anni (3 anni, poi quasi sempre la conferma). Partita IVA per le professioni (regime forfettario fino a 85.000 €).
+   Il part-time si può chiedere (60% di ore e stipendio): in Italia lo fa il 30% delle donne occupate e il 7,5% degli uomini. */
+const PIVA=['avv','comm','arc','psi','notaio','agcom','guida','taxi','pt','mus','att','crea'];
+const PIVA_LIV={idra:2,elet:2,mecc:2,fale:2,pane:2,macel:2,past:2,este:2,fisio:2,vet:2,dent:2,bracc:2,camion:2};   // il livello in cui ci si mette in proprio
+const STAGIONALI=['anim','bagn','bracc'];
+const SPORTIVI=['calc','volley','cicl','tennis'];
+const ralEff=L=>L?L.stip*(L.ptv?.6:1):0;                     // stipendio vero, con il part-time
+const isPiva=L=>!!(L&&L.contratto&&L.contratto.t==='piva');
+const fattoreGenere=()=>S.sesso==='F'?.96:1;                 // a parità di ora le donne guadagnano circa il 5% in meno (ISTAT 2022: 5,6%)
+function contrattoIniziale(j,liv){
+  if(j.elez)return {t:'carica'};
+  if(PIVA.includes(j.id)||(PIVA_LIV[j.id]!==undefined&&liv>=PIVA_LIV[j.id]))return {t:'piva',da:S.t};
+  if(['ins','maes'].includes(j.id))return {t:'det',fine:S.t+12,mesi:0,pror:0,scuola:1};
+  if(j.conc)return {t:'ind'};
+  if(SPORTIVI.includes(j.id))return {t:'det',fine:S.t+24,mesi:0,pror:0,sport:1};
+  if(STAGIONALI.includes(j.id)||j.pt)return {t:'det',fine:S.t+(j.pt?12:6),mesi:0,pror:0};
+  const e=S.eta,pA=e<30&&!(j.req&&j.req.lau)?.15:0,pD=e<30?.7:e<45?.6:.5,x=Math.random();   // circa 7 assunzioni su 10 sono a termine
+  if(x<pA)return {t:'app',fine:S.t+36};
+  if(x<pA+pD)return {t:'det',fine:S.t+pick([3,6,6,12,12,24]),mesi:0,pror:0};
+  return {t:'ind'};
+}
+function descrContratto(L){
+  const c=L&&L.contratto;if(!c)return 'Tempo indeterminato';
+  const quando=t=>{const k=S.mese+(t-S.t);return `${MESI[((k%12)+12)%12]} ${S.anno+Math.floor(k/12)}`};
+  const pt=L.ptv?' · part-time':'';
+  if(c.t==='det')return `A tempo determinato fino a ${quando(c.fine)}${c.pror?` (proroga ${c.pror})`:''}${pt}`;
+  if(c.t==='app')return `Apprendistato fino a ${quando(c.fine)}${pt}`;
+  if(c.t==='piva')return `Partita IVA${(S.t-(c.da||S.t))<60?' · regime forfettario al 5% (primi 5 anni)':' · regime forfettario'}`;
+  if(c.t==='carica')return 'Carica elettiva: ogni 5 anni si vota';
+  return 'Tempo indeterminato'+pt;
+}
+/* ogni mese: scadenze, proroghe, stabilizzazioni, licenziamenti. Ritorna true se il lavoro è finito */
+function meseContratto(){
+  const L=S.lavoro;if(!L)return false;
+  if(!L.contratto)L.contratto={t:'ind'};
+  const c=L.contratto,M=S.mondo;
+  if(c.t==='det'){
+    c.mesi=(c.mesi||0)+1;if(S.t<c.fine)return false;
+    if(c.scuola){if(L.liv>=1){L.contratto={t:'ind'};log('Passi di ruolo: ora sei a tempo indeterminato.','g');mod('felicita',8);return false}
+      if(chance(.9)){c.fine=S.t+12;c.pror=(c.pror||0)+1;log('Anche quest\'anno arriva la supplenza: altro contratto fino a giugno, poi si vedrà.','h');return false}
+      licenzia('Quest\'anno la supplenza non arriva.');return true}
+    if(c.sport){if(chance(.7+(L.perf-60)/300)){c.fine=S.t+24;log('La squadra ti rinnova il contratto per altri due anni.','g');return false}licenzia('La squadra non ti rinnova il contratto.');return true}
+    const pInd=Math.max(.03,Math.min(.8,(c.mesi>=24?.25:.05)+(L.perf-60)/250+(M.crisi?-.1:0)+(M.boom?.08:0)));
+    if(!STAGIONALI.includes(L.id)&&!JOB[L.id].pt&&chance(pInd)){L.contratto={t:'ind'};mod('felicita',8);S.bis.stress=clamp(S.bis.stress-6);log('Ti trasformano il contratto: tempo indeterminato! Finalmente.','g');return false}
+    if(c.mesi<24&&(c.pror||0)<4&&chance(.6)){const n=pick([6,12]);c.fine=S.t+n;c.pror=(c.pror||0)+1;log(`Il contratto a termine viene prorogato di ${n} mesi.`,'h');return false}
+    licenzia(STAGIONALI.includes(L.id)?'Finisce la stagione, e con lei il contratto.':'Il contratto a termine scade e non viene rinnovato.');return true;
+  }
+  if(c.t==='app'&&S.t>=c.fine){
+    if(chance(.75+(L.perf-60)/200)){L.contratto={t:'ind'};log('Finisce l\'apprendistato: ti confermano a tempo indeterminato.','g');mod('felicita',6);return false}
+    licenzia('Finisce l\'apprendistato e non ti confermano.');return true;
+  }
+  if(c.t==='ind'&&!JOB[L.id].conc&&chance(.0035*(M.crisi?2:1)*(S.eta<35?1.8:1)))   // licenziamenti e chiusure: circa 4% l'anno
+{licenzia(pick(['L\'azienda chiude e resti senza lavoro.','Riorganizzazione: il tuo posto viene tagliato.']));return true}
+  return false;
+}
+/* Netto della partita IVA: regime forfettario (78% di redditività, 26% di contributi, imposta al 5% per 5 anni, poi 15%) fino a 85.000 € */
+function nettoPiva(l,L){
+  if(l<=0)return 0;
+  if(l<=85000*fattoreFisco()){const imp=l*.78,contr=imp*.26,anni=(S.t-((L&&L.contratto&&L.contratto.da)||S.t))/12;return Math.round(l-contr-(imp-contr)*(anni<5?.05:.15))}
+  return Math.round(netto(l)*.9);
+}
+/* Part-time imposto: in commercio, pulizie, ristorazione e assistenza molti posti sono solo part-time, e li accettano soprattutto donne
+   (part-time involontario: 13,7% delle occupate contro 4,6% degli occupati, ISTAT 2024) */
+const PT_LAVORO={cass:.45,puli:.5,callc:.45,colf:.4,com:.3,cam:.3,este:.3,edu:.3,oss:.2,segr:.15,inf:.1,imp:.1,badante:.15,past:.15,pane:.1,maes:.1,mag:.1};
+const ptIniziale=j=>j.pt||j.conc||j.elez||PIVA.includes(j.id)?0:Math.min(.75,(PT_LAVORO[j.id]||.06)*(S.sesso==='F'?2.5:1));
+/* Part-time a richiesta: l'azienda può dire di no (più facile con un figlio piccolo) */
+function chiediPartTime(maternita){
+  const L=S.lavoro;if(!L)return ['Non hai un lavoro.','x'];if(L.ptv)return ['Sei già in part-time.','x'];
+  if(JOB[L.id].pt||isPiva(L))return ['Con questo lavoro gli orari li decidi già tu.','x'];
+  if(chance(maternita||vivi(['Figlio']).some(f=>f.eta<12&&!f.conEx)?.8:.55)){L.ptv=true;return [`${maternita?'Rientri':'Passi'} in part-time: circa ${oreLavoro()} ore a settimana e il 60% dello stipendio. Più tempo per la vita, meno soldi, e la carriera rallenta.`,'']}
+  return ['L\'azienda dice di no: per il tuo ruolo serve il tempo pieno.','b'];
+}
+function tornaTempoPieno(){const L=S.lavoro;if(!L||!L.ptv)return ['Lavori già a tempo pieno.','x'];if(chance(.5)){L.ptv=false;return ['Torni a tempo pieno: più ore, stipendio intero.','g']}return ['Per ora non c\'è un posto a tempo pieno: riprova più avanti.','b']}
+/* Le carriere: più lente in part-time e durante il congedo; per le donne, ai livelli alti, un po' più lente («soffitto di cristallo») */
+const fattoreCarriera=L=>(L.ptv?.5:1)*(S.sesso==='F'&&L.liv>=1?.85:1)*(S.fatti.congedo>S.t?0:1);
+
 /* ---------- Lavoro: mesi lavorati, TFR, NASpI ---------- */
 /* Ogni mese: storico degli ultimi 48 mesi (per la NASpI), TFR che matura, montante dei contributi (per la pensione) */
 function meseItalia(){
   S.lav48=(S.lav48||[]).concat(S.lavoro?1:0).slice(-48);
   const L=S.lavoro;
-  if(L){L.tfr=(L.tfr||0)+L.stip/13.5/12;S.montante=(S.montante||0)+L.stip*.33/12}
+  if(L){if(isPiva(L))S.montante=(S.montante||0)+ralEff(L)*.78*.26/12;else{L.tfr=(L.tfr||0)+ralEff(L)/13.5/12;S.montante=(S.montante||0)+ralEff(L)*.33/12}}
   if(S.azienda&&S.azienda.compenso)S.montante=(S.montante||0)+S.azienda.compenso*.24/12;
   if(S.naspi){S.naspi.m++;if(S.naspi.m>S.naspi.mesi||S.lavoro){if(!S.lavoro)log('Finisce la NASpI.','h');S.naspi=null}}
   if(S.sfl){S.sfl.m++;if(S.sfl.m>S.sfl.mesi||S.lavoro){if(!S.lavoro)log('Finisce il corso, e con lui il Supporto formazione e lavoro.','h');S.sfl=null}}
-  if(S.fatti.congedo&&S.fatti.congedo===S.t){S.fatti.congedo=0;log('Finisce il congedo di maternità: si torna al lavoro.','h')}
+  if(S.fatti.congedo&&S.fatti.congedo===S.t+1&&S.sesso==='F'&&S.lavoro&&!JOB[S.lavoro.id].pt&&S.t-(S.fatti.rientroT||-99)>12){S.fatti.rientroT=S.t;coda.push({e:EV.rientro_lavoro,d:{}})}
+  if(S.fatti.congedo&&S.fatti.congedo===S.t){S.fatti.congedo=0;S.fatti.congedoQuota=0;log('Finisce il congedo: si torna al lavoro.','h')}
 }
 /* La liquidazione (TFR) quando un lavoro finisce, per qualsiasi motivo */
 function pagaTFR(){
@@ -63,7 +142,7 @@ function pagaTFR(){
 function avviaNaspi(L){
   const n=(S.lav48||[]).reduce((s,x)=>s+x,0);
   if(n<3||!L)return;
-  const lordo=L.stip/12,soglia=P(1460),cap=P(1585);
+  const lordo=ralEff(L)/12,soglia=P(1460),cap=P(1585);
   const imp=Math.min(cap,lordo<=soglia?lordo*.75:soglia*.75+(lordo-soglia)*.25);
   S.naspi={mesi:Math.min(24,Math.floor(n/2)),imp:Math.round(imp*.88),m:0,over55:S.eta>=55};
   log(`Fai domanda di NASpI: circa ${eur(S.naspi.imp)} netti al mese per ${S.naspi.mesi} mesi (dal sesto mese cala del 3% ogni mese).`,'h');
@@ -107,7 +186,7 @@ function pensioneNpc(p){
 /* Reversibilità: il 60% della pensione del coniuge, ridotta se hai già redditi alti */
 function avviaReversibilita(p){
   if(p.eta<40&&p.stato!=='pensione')return;
-  const mio=(S.lavoro?S.lavoro.stip:0)+(S.pensione||0),min=P(7800);
+  const mio=ralEff(S.lavoro)+(S.pensione||0),min=P(7800);
   const rid=mio>5*min?.5:mio>4*min?.6:mio>3*min?.75:1;
   S.reversibilita=Math.round(pensioneNpc(p)*.6*rid);
   log(`Ti spetta la pensione di reversibilità di ${p.nome}: ${eur(S.reversibilita/13)} al mese.`,'h');
@@ -118,7 +197,7 @@ function avviaReversibilita(p){
 function minoriConTe(){return vivi(['Figlio']).filter(f=>f.eta<18&&!f.fuori&&!f.conEx).length}
 function iseeStima(){
   const pa=partnerAttuale(),conv=pa&&pa.conv;
-  const red=(S.lavoro?netto(S.lavoro.stip):0)+(S.pensione||0)+(conv?(pa.stato==='lavora'?P(20000):0):0)+(S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045,0));
+  const red=(S.lavoro?netto(ralEff(S.lavoro)):0)+(S.pensione||0)+(conv?(pa.stato==='lavora'?P(20000):0):0)+(S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045,0));
   const n=1+(conv?1:0)+minoriConTe();
   const scala=[1,1,1.57,2.04,2.46,2.85][Math.min(5,n)];
   return (red+Math.max(0,S.soldi)*.2)/scala;
@@ -133,7 +212,7 @@ function sussidio(){
   if(S.eta>=S.mondo.pensEta)return null;
   if(iseeStima()>P(10140)||S.soldi>P(6000+2000*min))return null;
   const scala=1+(S.eta>=60?.4:0)+Math.min(2,min)*.15+Math.max(0,min-2)*.1+(pa&&pa.conv&&min?.4:0);
-  const red=S.lavoro?netto(S.lavoro.stip):0;
+  const red=S.lavoro?netto(ralEff(S.lavoro)):0;
   const aff=S.casa.tipo==='affitto'?Math.min(P(3360),S.casa.costo*(convivente()?.5:1)):0;
   const x=Math.max(0,P(rdc?6000:6500)*Math.min(2.2,scala)-red)+aff;
   return x>0?{n:rdc?'Reddito di cittadinanza':'Assegno di inclusione',x:Math.round(x)}:null;
@@ -147,7 +226,7 @@ function vociWelfare(add){
   if(S.reversibilita)add('Pensione di reversibilità',S.reversibilita);
   const su=sussidio();if(su)add(su.n,su.x);
   if(S.eta>=S.mondo.pensEta&&S.carcere===0){
-    const red=(S.pensione||0)+(S.reversibilita||0)+(S.lavoro?netto(S.lavoro.stip):0)+S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045*.79,0)+(S.azienda?netto(S.azienda.compenso||0):0);
+    const red=(S.pensione||0)+(S.reversibilita||0)+(S.lavoro?netto(ralEff(S.lavoro)):0)+S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045*.79,0)+(S.azienda?netto(S.azienda.compenso||0):0);
     if(red<P(ASSEGNO_SOCIALE))add('Assegno sociale',P(ASSEGNO_SOCIALE)-red);
   }
   voceMantenimento(add);

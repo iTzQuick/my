@@ -206,6 +206,7 @@ function vitaNpc(p){
   if(e>=78&&!p.nonAuto&&['Madre','Padre','Nonno'].includes(p.ruolo)&&chance(.004+(e-78)*.0008)){p.nonAuto=true;if(S.eta>=18&&p.ruolo!=='Nonno')richiesta('r_assistenza',p);else annuncia(p,`${p.nome} non è più autosufficiente: serve qualcuno che l${gp(p,'o','a')} assista.`,'b')}
   if(e<18||p.ruolo==='Figlio'&&e<19)return;
   // lavoro
+  if(p.stato==='casa'&&p.tornaLav&&S.t>=p.tornaLav){p.stato='lavora';p.tornaLav=0;if(!p.lavoro)p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} torna a lavorare.`,'h')}
   if(p.stato==='lavora'&&chance(.003+(M.crisi?.012:0)+(A.C<35?.002:0))){p.stato='disoccupato';p.umore=clamp(p.umore-20);
     if(!(p.rapporto>=50&&chance(.3)&&richiesta('r_lavoro_perso',p)))annuncia(p,`${p.nome} ha perso il lavoro.`,'b')}
   else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1))){p.stato='lavora';p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}

@@ -54,3 +54,13 @@ ev({id:'eredita_casa',link:1,k:'Famiglia',t:'La casa di famiglia',x:d=>`I tuoi g
   {l:'La lasci ai tuoi fratelli',sub:'Ti pagano la tua quota, un po\' scontata',cond:d=>d.n>1,_incl:0,fx:d=>{
     const q=Math.round(d.x/d.n*.85);soldi(q);vivi(['Fratello']).forEach(f=>{f.rapporto=clamp(f.rapporto+6)});
     return [lasciCasaGenitori(`I tuoi fratelli tengono la casa e ti pagano ${eur(q)}.`),'g']}}]});
+
+/* ---------- Figli e lavoro: le scelte che fanno il divario tra uomini e donne ---------- */
+ev({id:'rientro_lavoro',link:1,k:'Lavoro',t:'Il rientro',x:()=>`Il congedo di maternità sta per finire. ${vivi(['Nonno']).length?'I nonni possono dare una mano, ma non tutti i giorni. ':''}Come torni al lavoro?`,c:[
+  {l:'Torno a tempo pieno',sub:'Nido o babysitter, e giornate di corsa',_incl:0,fx:()=>{pesa(6,3);return ['Torni al lavoro con le occhiaie e il cuore diviso a metà. Ce la fai, un giorno alla volta.','']}},
+  {l:'Chiedo il part-time',sub:'Più tempo con tuo figlio, il 60% dello stipendio, una carriera più lenta',_incl:0,fx:()=>chiediPartTime(true)},
+  {l:'Prendo altri mesi di congedo parentale',sub:'Quattro mesi con una parte dello stipendio',_incl:0,fx:()=>{S.fatti.congedo=S.t+4;S.fatti.congedoQuota=.6;return ['Altri quattro mesi a casa con il bambino, con una parte dello stipendio. Al lavoro, intanto, la vita va avanti senza di te.','']}},
+  {l:'Mi dimetto per stare con il bambino',sub:'Nel primo anno del bambino le dimissioni danno diritto alla NASpI',_incl:0,fx:()=>{const L=S.lavoro;if(!L)return ['Non hai più un lavoro.','x'];pagaTFR();S.storico.push(L.nome);S.lavoro=null;avviaNaspi(L);S.fatti.dimissioniMadre=(S.fatti.dimissioniMadre||0)+1;return ['Ti dimetti. L\'Ispettorato del lavoro convalida le dimissioni e ti spetta la NASpI. Per un po\' il lavoro può aspettare.','']}}]});
+ev({id:'congedo_padre',link:1,k:'Lavoro',t:'Il congedo del papà',x:'Ti spettano 10 giorni di congedo di paternità pagati per intero. Puoi prendere anche il congedo parentale, come le mamme.',c:[
+  {l:'Prendi tre mesi di congedo parentale',sub:'Stipendio all\'80% per tre mesi; in Italia lo fanno ancora pochi papà',_incl:0,fx:()=>{S.fatti.congedo=S.t+3;S.fatti.congedoQuota=.8;vivi(['Figlio']).filter(f=>f.eta===0).forEach(f=>f.rapporto=clamp(f.rapporto+10));return ['Tre mesi di pannolini, passeggiate e notti in bianco. In ufficio qualcuno alza un sopracciglio; tu non te ne penti.','g']}},
+  {l:'Solo i dieci giorni',_incl:0,pers:{A:-1},r:'Dieci giorni e poi di nuovo al lavoro. Le giornate più lunghe le vedi la sera.'}]});

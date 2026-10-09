@@ -72,5 +72,8 @@ window.AP={
   if(pa&&pa.ruolo==='Partner'&&pa.conv&&e>=27&&pa.rapporto>=60&&F.apNozze&&chance(.018)){apriPersona(pa.id);const b=[...document.querySelectorAll('#shA button:not([disabled])')].find(x=>/sposarti/i.test(x.textContent));if(b)b.click();else next();return}
   if(S.soldi>P(30000)&&e>=30&&!casaMia()&&chance(.015)){compraCasa();return}
   if(S.malattie.some(m=>m.g===2)&&chance(.3)){faiAttivita(S.soldi>P(5000)?'clinica':'spec');return}
+  // con figli piccoli c'è chi chiede il part-time (molto più spesso le madri) e chi, quando crescono, torna a tempo pieno
+  if(S.lavoro&&!S.lavoro.ptv&&vivi(['Figlio']).some(f=>f.eta<6&&!f.conEx)&&chance(S.sesso==='F'?.012:.002)){chiediPartTime(false);return}
+  if(S.lavoro&&S.lavoro.ptv&&!vivi(['Figlio']).some(f=>f.eta<12&&!f.conEx)&&chance(.01)){tornaTempoPieno();return}
  }
 };

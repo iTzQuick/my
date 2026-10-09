@@ -52,10 +52,12 @@ function meseFamiglia(){
       const nomi=nati.map(f=>f.nome).join(' e ');
       log(`${n===2?`Sono nati due gemelli: ${nomi}!`:`È nat${gp(nati[0],'o','a')} ${nomi}!`}${ces?' Parto cesareo, ma state tutti bene.':''}`,'g');
       if(p&&p.vivo&&!['Partner','Coniuge'].includes(p.ruolo))nati.forEach(f=>{if(!G.tu)f.conEx=true});
-      if(S.lavoro&&!JOB[S.lavoro.id].pt){
-        if(G.tu){S.fatti.congedo=S.t+5;log('Inizi il congedo di maternità: 5 mesi all\'80% dello stipendio.','h')}
-        else log('Prendi i 10 giorni di congedo di paternità. Notti in bianco garantite.','h');
+      if(S.lavoro&&!JOB[S.lavoro.id].pt&&!isPiva(S.lavoro)){
+        if(G.tu){S.fatti.congedo=S.t+5;S.fatti.congedoQuota=.8;log('Inizi il congedo di maternità: 5 mesi all\'80% dello stipendio.','h')}
+        else coda.push({e:EV.congedo_padre,d:{}});
       }
+      // la compagna che lavora: a volte lascia il lavoro per qualche anno (nel 2024 si sono dimesse 42.237 madri, quasi sempre per i figli)
+      if(!G.tu&&p&&p.vivo&&p.stato==='lavora'&&chance(.2)){p.stato='casa';p.tornaLav=S.t+r(12,48);log(`${p.nome} lascia il lavoro per stare con ${G.gem?'i bambini':'il bambino'}.`,'h')}
     }
     return;
   }

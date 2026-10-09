@@ -1101,11 +1101,13 @@ function assumi(j){
   if(S.lavoro){pagaTFR();S.storico.push(S.lavoro.nome)}
   S.naspi=null;S.sfl=null;
   let liv=0;if(j.boost&&S.istr.cert.includes(j.boost.cert))liv=j.boost.liv;
-  S.lavoro={id:j.id,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)),nome:nomeJob(j,liv)};
+  S.lavoro={id:j.id,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)*fattoreGenere()),nome:nomeJob(j,liv),contratto:contrattoIniziale(j,liv)};
+  if(chance(ptIniziale(j)))S.lavoro.ptv=true;
+  if(S.vivo)log(`Contratto: ${descrContratto(S.lavoro).toLowerCase()}${S.lavoro.ptv&&S.lavoro.contratto.t!=='piva'&&!/part-time/.test(descrContratto(S.lavoro))?' · part-time':''}.`,'h');
   S.ultimoLavoro=S.lavoro.nome;
 }
 /* vol: lo lasci tu (niente NASpI) */
-function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);avviaNaspi(L)}}
+function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L)}}   // la partita IVA non ha la NASpI
 function lavoroPerFiglio(p){
   if(p.studio&&p.studio.startsWith('laurea:')){const f=p.studio.slice(7);const ok=LAVORI.filter(j=>j.req&&j.req.lau&&j.req.lau.includes(f)&&!j.req.abil&&!j.req.liv);if(ok.length)return pick(ok).id;return 'imp'}
   if(p.studio==='diploma')return pick(['imp','tec','com','agi','rec','cam','ope','segr','cass','callc','post','agcom']);
@@ -1415,11 +1417,12 @@ function meseLavoro(){
   if(j.elez){L.mandato=(L.mandato||0)+1;if(L.mandato>=60){L.mandato=0;if(chance(.5+L.perf/250+S.fama/400))log(`Alle elezioni vieni rielett${g('o','a')}: altri cinque anni.`,'g');else{licenzia(`Alle elezioni non vieni rielett${g('o','a')}: il mandato finisce.`,true);mod('felicita',-8);return}}}
   if(S.mondo.crisi&&!j.conc&&!j.var&&chance(.011)){licenzia('La crisi colpisce la tua azienda: sei tra i licenziati.');segnaVita('licenziato');return}
   if(S.mondo.pandemia&&['cam','bpt','cuoco','parr','pt','este','anim','guida','hostess','bagn'].includes(L.id)&&chance(.02)){licenzia('Con la pandemia il locale chiude e perdi il lavoro.');segnaVita('licenziato');return}
-  if(!j.conc&&!j.var&&chance((j.pt?.008:.0035)*(S.eta<30?1.6:1)*(S.mondo.crisi?1.5:1))){licenzia(pick(['Il tuo contratto a termine scade e non viene rinnovato.','L\'azienda chiude e resti senza lavoro.','Riorganizzazione: il tuo posto viene tagliato.']));return}
+  if(meseContratto())return;
+  if(S.fatti.congedo>S.t)return;   // in congedo: niente valutazioni né promozioni
   const sod=soddLavoro();
   L.perf=clamp(L.perf+(r(-7,5)+(S.felicita<30?-4:0)+(S.dip.alcol?-6:0)+(S.salute<30?-4:0))/3.5+pz('C')*.7+(S.bis.energia<30?-1:0)+(S.bis.stress>80?-1:0)+(sod-50)/90);
-  if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100)/12)&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
-    L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100));L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
+  if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100)/12*fattoreCarriera(L))&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
+    L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100)*fattoreGenere());if(PIVA_LIV[j.id]===L.liv&&!isPiva(L)){L.contratto={t:'piva',da:S.t};log('Ti metti in proprio: apri la partita IVA.','h')}L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
     mod('felicita',8);segnaVita('promozione');log(`Promozione! Ora sei ${L.nome.toLowerCase()}, con una RAL di ${eur(L.stip)}.`,'g');
   }
   if(L.perf<20&&chance(.04)){licenzia(`Sei stat${g('o','a')} licenziat${g('o','a')}: il tuo rendimento era troppo basso.`);segnaVita('licenziato');return}
@@ -1428,13 +1431,13 @@ function tasseUni(){return P({umile:200,media:1800,agiata:3200}[S.classe])}
 function pagatoDaiGenitori(){return genitoriVivi()&&S.classe!=='umile'&&S.eta<=28}
 /* Quanto costa un figlio in un anno: da circa 7.800 € (reddito basso) a 21.000 € (reddito alto), prezzi di oggi */
 function costoFiglio(){
-  const L=S.lavoro,red=(L?netto(L.stip):0)+(S.pensione||0)+(S.azienda?netto(S.azienda.compenso||0):0)+(convivente()?P(20000):0);
+  const L=S.lavoro,red=(L?netto(ralEff(L)):0)+(S.pensione||0)+(S.azienda?netto(S.azienda.compenso||0):0)+(convivente()?P(20000):0);
   return P(Math.max(7800,Math.min(21000,7800+(red/ip()-26500)*.32)));
 }
 function bilancio(simula){
   const v=[];const add=(n,x)=>{x=Math.round(x||0);if(x)v.push([n,x])};
   const conv=convivente(),L=S.lavoro;
-  if(L){const j=JOB[L.id];let l=L.stip;if(j.var&&!simula)l=l*r(40,170)/100;add(j.var?'Guadagni (variabili)':'Stipendio netto',netto(l))}
+  if(L){const j=JOB[L.id],pv=isPiva(L);let l=ralEff(L);if(j.var&&!simula)l=l*r(40,170)/100;add(pv?'Compensi da partita IVA (netti)':j.var?'Guadagni (variabili)':'Stipendio netto',pv?nettoPiva(l,L):netto(l))}
   if(S.pensione)add('Pensione',S.pensione);
   if(S.scuola.stato==='dottorato')add('Borsa di dottorato',P(16000));
   if(S.scuola.stato==='spec')add('Contratto di specializzazione',P(23000));
@@ -1480,8 +1483,9 @@ function bilancioMese(simula){
   const v=bilancio(true),dic=S.mese===11,out=[];
   for(const [n,x] of v){
     let y;
-    if(n==='Stipendio netto')y=x/13*(dic?2:1)*(S.fatti.congedo>S.t?.8:1);
+    if(n==='Stipendio netto')y=x/13*(dic?2:1)*(S.fatti.congedo>S.t?(S.fatti.congedoQuota||.8):1);
     else if(n==='Guadagni (variabili)')y=x/12*(simula?1:r(30,180)/100);
+    else if(n.startsWith('Compensi da partita IVA'))y=x/12*(simula?1:r(70,130)/100);
     else if(n==='Collaborazioni social')y=x/12*(simula?1:r(60,140)/100);
     else y=x/12;
     out.push([n==='Stipendio netto'&&dic?'Stipendio netto e tredicesima':n,Math.round(y)]);
@@ -1615,6 +1619,7 @@ function load(){
 function aggiornaStato(){
   if(S.montante===undefined)S.montante=Math.round((S.contributi||0)*(S.lavoro?S.lavoro.stip:P(25000))*.33*1.1);
   if(!S.lav48)S.lav48=[];
+  if(S.lavoro&&!S.lavoro.contratto)S.lavoro.contratto=PIVA.includes(S.lavoro.id)?{t:'piva',da:S.t-60}:{t:'ind'};
   if(!S.orient)S.orient=S.attrazione?(S.attrazione==='E'?'bi':S.attrazione===S.sesso?'omo':'etero'):pesata([['etero',94],['omo',3],['bi',3]]);
   if(!S.fatti.cittaNascita){S.fatti.cittaNascita=S.citta;S.fatti.provNascita=S.prov}
 }
@@ -2154,7 +2159,8 @@ function oreScuola(){
 function oreLavoro(){
   const L=S.lavoro;if(!L)return 0;const j=JOB[L.id];
   if(j.pt)return 18;
-  return (j.ore||40)+(['med','man','cuoco','avv','spec','calc','dent','vet','notaio','magis','poli'].includes(L.id)?6:0)+(L.liv>=2&&!j.conc?3:0);
+  const h=(j.ore||40)+(['med','man','cuoco','avv','spec','calc','dent','vet','notaio','magis','poli'].includes(L.id)?6:0)+(L.liv>=2&&!j.conc?3:0);
+  return L.ptv?Math.round(h*.6):h;
 }
 function obblighi(){
   const o=[];const e=S.eta;
@@ -2275,8 +2281,9 @@ function bisogni(){
   // stress
   const deb=S.soldi<0&&e>=18?Math.min(18,-S.soldi/P(1500)):0;
   const insodd=S.lavoro?Math.max(0,50-soddLavoro())*.25:0;
+  const prec=S.lavoro&&S.lavoro.contratto?({det:4,app:1,piva:2}[S.lavoro.contratto.t]||0):0;   // l'incertezza del contratto pesa
   const disocc=e>=20&&e<S.mondo.pensEta&&!S.lavoro&&!iscritto()&&!S.azienda&&!S.pensione&&S.casa.tipo!=='carcere'?8:0;
-  let tSt=22+Math.max(0,ca-20)*.7*(1+pz('N')*.6)+deb+insodd+disocc+(S.tensione||0)+malG*.6+(S.fatti.assisti?6:0)
+  let tSt=22+Math.max(0,ca-20)*.7*(1+pz('N')*.6)+deb+insodd+prec+disocc+(S.tensione||0)+malG*.6+(S.fatti.assisti?6:0)
     -Math.min(10,rOre('sport')*1.1)-Math.min(e>=65?5:10,lib*.25)-Math.min(6,rOre('hobby')*.6)-(B.soc>60?3:0)
     +Math.max(0,62-S.salute)*.25+Math.max(0,40-B.soc)*.2+(e>=70?5:0)
     +(S.sonno<6.5?(6.5-S.sonno)*9:0)+(S.carcere?25:0)+pz('N')*10;
@@ -2741,6 +2748,7 @@ function vitaNpc(p){
   if(e>=78&&!p.nonAuto&&['Madre','Padre','Nonno'].includes(p.ruolo)&&chance(.004+(e-78)*.0008)){p.nonAuto=true;if(S.eta>=18&&p.ruolo!=='Nonno')richiesta('r_assistenza',p);else annuncia(p,`${p.nome} non è più autosufficiente: serve qualcuno che l${gp(p,'o','a')} assista.`,'b')}
   if(e<18||p.ruolo==='Figlio'&&e<19)return;
   // lavoro
+  if(p.stato==='casa'&&p.tornaLav&&S.t>=p.tornaLav){p.stato='lavora';p.tornaLav=0;if(!p.lavoro)p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} torna a lavorare.`,'h')}
   if(p.stato==='lavora'&&chance(.003+(M.crisi?.012:0)+(A.C<35?.002:0))){p.stato='disoccupato';p.umore=clamp(p.umore-20);
     if(!(p.rapporto>=50&&chance(.3)&&richiesta('r_lavoro_perso',p)))annuncia(p,`${p.nome} ha perso il lavoro.`,'b')}
   else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1))){p.stato='lavora';p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
@@ -2950,10 +2958,12 @@ function meseFamiglia(){
       const nomi=nati.map(f=>f.nome).join(' e ');
       log(`${n===2?`Sono nati due gemelli: ${nomi}!`:`È nat${gp(nati[0],'o','a')} ${nomi}!`}${ces?' Parto cesareo, ma state tutti bene.':''}`,'g');
       if(p&&p.vivo&&!['Partner','Coniuge'].includes(p.ruolo))nati.forEach(f=>{if(!G.tu)f.conEx=true});
-      if(S.lavoro&&!JOB[S.lavoro.id].pt){
-        if(G.tu){S.fatti.congedo=S.t+5;log('Inizi il congedo di maternità: 5 mesi all\'80% dello stipendio.','h')}
-        else log('Prendi i 10 giorni di congedo di paternità. Notti in bianco garantite.','h');
+      if(S.lavoro&&!JOB[S.lavoro.id].pt&&!isPiva(S.lavoro)){
+        if(G.tu){S.fatti.congedo=S.t+5;S.fatti.congedoQuota=.8;log('Inizi il congedo di maternità: 5 mesi all\'80% dello stipendio.','h')}
+        else coda.push({e:EV.congedo_padre,d:{}});
       }
+      // la compagna che lavora: a volte lascia il lavoro per qualche anno (nel 2024 si sono dimesse 42.237 madri, quasi sempre per i figli)
+      if(!G.tu&&p&&p.vivo&&p.stato==='lavora'&&chance(.2)){p.stato='casa';p.tornaLav=S.t+r(12,48);log(`${p.nome} lascia il lavoro per stare con ${G.gem?'i bambini':'il bambino'}.`,'h')}
     }
     return;
   }
@@ -3067,16 +3077,95 @@ function storiaMese(){
   if(ELEZIONI_VERE.some(([a,m])=>a===S.anno&&m===S.mese)&&S.eta>=18&&S.carcere===0)coda.push({e:EV.elezioni,d:{}});
 }
 
+/* ---------- Contratti di lavoro ----------
+   A termine: 14,7% dei dipendenti nel 2024, 28% sotto i 35 anni (ISTAT); al massimo 24 mesi, poi o si viene stabilizzati o si resta a casa.
+   Apprendistato sotto i 30 anni (3 anni, poi quasi sempre la conferma). Partita IVA per le professioni (regime forfettario fino a 85.000 €).
+   Il part-time si può chiedere (60% di ore e stipendio): in Italia lo fa il 30% delle donne occupate e il 7,5% degli uomini. */
+const PIVA=['avv','comm','arc','psi','notaio','agcom','guida','taxi','pt','mus','att','crea'];
+const PIVA_LIV={idra:2,elet:2,mecc:2,fale:2,pane:2,macel:2,past:2,este:2,fisio:2,vet:2,dent:2,bracc:2,camion:2};   // il livello in cui ci si mette in proprio
+const STAGIONALI=['anim','bagn','bracc'];
+const SPORTIVI=['calc','volley','cicl','tennis'];
+const ralEff=L=>L?L.stip*(L.ptv?.6:1):0;                     // stipendio vero, con il part-time
+const isPiva=L=>!!(L&&L.contratto&&L.contratto.t==='piva');
+const fattoreGenere=()=>S.sesso==='F'?.96:1;                 // a parità di ora le donne guadagnano circa il 5% in meno (ISTAT 2022: 5,6%)
+function contrattoIniziale(j,liv){
+  if(j.elez)return {t:'carica'};
+  if(PIVA.includes(j.id)||(PIVA_LIV[j.id]!==undefined&&liv>=PIVA_LIV[j.id]))return {t:'piva',da:S.t};
+  if(['ins','maes'].includes(j.id))return {t:'det',fine:S.t+12,mesi:0,pror:0,scuola:1};
+  if(j.conc)return {t:'ind'};
+  if(SPORTIVI.includes(j.id))return {t:'det',fine:S.t+24,mesi:0,pror:0,sport:1};
+  if(STAGIONALI.includes(j.id)||j.pt)return {t:'det',fine:S.t+(j.pt?12:6),mesi:0,pror:0};
+  const e=S.eta,pA=e<30&&!(j.req&&j.req.lau)?.15:0,pD=e<30?.7:e<45?.6:.5,x=Math.random();   // circa 7 assunzioni su 10 sono a termine
+  if(x<pA)return {t:'app',fine:S.t+36};
+  if(x<pA+pD)return {t:'det',fine:S.t+pick([3,6,6,12,12,24]),mesi:0,pror:0};
+  return {t:'ind'};
+}
+function descrContratto(L){
+  const c=L&&L.contratto;if(!c)return 'Tempo indeterminato';
+  const quando=t=>{const k=S.mese+(t-S.t);return `${MESI[((k%12)+12)%12]} ${S.anno+Math.floor(k/12)}`};
+  const pt=L.ptv?' · part-time':'';
+  if(c.t==='det')return `A tempo determinato fino a ${quando(c.fine)}${c.pror?` (proroga ${c.pror})`:''}${pt}`;
+  if(c.t==='app')return `Apprendistato fino a ${quando(c.fine)}${pt}`;
+  if(c.t==='piva')return `Partita IVA${(S.t-(c.da||S.t))<60?' · regime forfettario al 5% (primi 5 anni)':' · regime forfettario'}`;
+  if(c.t==='carica')return 'Carica elettiva: ogni 5 anni si vota';
+  return 'Tempo indeterminato'+pt;
+}
+/* ogni mese: scadenze, proroghe, stabilizzazioni, licenziamenti. Ritorna true se il lavoro è finito */
+function meseContratto(){
+  const L=S.lavoro;if(!L)return false;
+  if(!L.contratto)L.contratto={t:'ind'};
+  const c=L.contratto,M=S.mondo;
+  if(c.t==='det'){
+    c.mesi=(c.mesi||0)+1;if(S.t<c.fine)return false;
+    if(c.scuola){if(L.liv>=1){L.contratto={t:'ind'};log('Passi di ruolo: ora sei a tempo indeterminato.','g');mod('felicita',8);return false}
+      if(chance(.9)){c.fine=S.t+12;c.pror=(c.pror||0)+1;log('Anche quest\'anno arriva la supplenza: altro contratto fino a giugno, poi si vedrà.','h');return false}
+      licenzia('Quest\'anno la supplenza non arriva.');return true}
+    if(c.sport){if(chance(.7+(L.perf-60)/300)){c.fine=S.t+24;log('La squadra ti rinnova il contratto per altri due anni.','g');return false}licenzia('La squadra non ti rinnova il contratto.');return true}
+    const pInd=Math.max(.03,Math.min(.8,(c.mesi>=24?.25:.05)+(L.perf-60)/250+(M.crisi?-.1:0)+(M.boom?.08:0)));
+    if(!STAGIONALI.includes(L.id)&&!JOB[L.id].pt&&chance(pInd)){L.contratto={t:'ind'};mod('felicita',8);S.bis.stress=clamp(S.bis.stress-6);log('Ti trasformano il contratto: tempo indeterminato! Finalmente.','g');return false}
+    if(c.mesi<24&&(c.pror||0)<4&&chance(.6)){const n=pick([6,12]);c.fine=S.t+n;c.pror=(c.pror||0)+1;log(`Il contratto a termine viene prorogato di ${n} mesi.`,'h');return false}
+    licenzia(STAGIONALI.includes(L.id)?'Finisce la stagione, e con lei il contratto.':'Il contratto a termine scade e non viene rinnovato.');return true;
+  }
+  if(c.t==='app'&&S.t>=c.fine){
+    if(chance(.75+(L.perf-60)/200)){L.contratto={t:'ind'};log('Finisce l\'apprendistato: ti confermano a tempo indeterminato.','g');mod('felicita',6);return false}
+    licenzia('Finisce l\'apprendistato e non ti confermano.');return true;
+  }
+  if(c.t==='ind'&&!JOB[L.id].conc&&chance(.0035*(M.crisi?2:1)*(S.eta<35?1.8:1)))   // licenziamenti e chiusure: circa 4% l'anno
+{licenzia(pick(['L\'azienda chiude e resti senza lavoro.','Riorganizzazione: il tuo posto viene tagliato.']));return true}
+  return false;
+}
+/* Netto della partita IVA: regime forfettario (78% di redditività, 26% di contributi, imposta al 5% per 5 anni, poi 15%) fino a 85.000 € */
+function nettoPiva(l,L){
+  if(l<=0)return 0;
+  if(l<=85000*fattoreFisco()){const imp=l*.78,contr=imp*.26,anni=(S.t-((L&&L.contratto&&L.contratto.da)||S.t))/12;return Math.round(l-contr-(imp-contr)*(anni<5?.05:.15))}
+  return Math.round(netto(l)*.9);
+}
+/* Part-time imposto: in commercio, pulizie, ristorazione e assistenza molti posti sono solo part-time, e li accettano soprattutto donne
+   (part-time involontario: 13,7% delle occupate contro 4,6% degli occupati, ISTAT 2024) */
+const PT_LAVORO={cass:.45,puli:.5,callc:.45,colf:.4,com:.3,cam:.3,este:.3,edu:.3,oss:.2,segr:.15,inf:.1,imp:.1,badante:.15,past:.15,pane:.1,maes:.1,mag:.1};
+const ptIniziale=j=>j.pt||j.conc||j.elez||PIVA.includes(j.id)?0:Math.min(.75,(PT_LAVORO[j.id]||.06)*(S.sesso==='F'?2.5:1));
+/* Part-time a richiesta: l'azienda può dire di no (più facile con un figlio piccolo) */
+function chiediPartTime(maternita){
+  const L=S.lavoro;if(!L)return ['Non hai un lavoro.','x'];if(L.ptv)return ['Sei già in part-time.','x'];
+  if(JOB[L.id].pt||isPiva(L))return ['Con questo lavoro gli orari li decidi già tu.','x'];
+  if(chance(maternita||vivi(['Figlio']).some(f=>f.eta<12&&!f.conEx)?.8:.55)){L.ptv=true;return [`${maternita?'Rientri':'Passi'} in part-time: circa ${oreLavoro()} ore a settimana e il 60% dello stipendio. Più tempo per la vita, meno soldi, e la carriera rallenta.`,'']}
+  return ['L\'azienda dice di no: per il tuo ruolo serve il tempo pieno.','b'];
+}
+function tornaTempoPieno(){const L=S.lavoro;if(!L||!L.ptv)return ['Lavori già a tempo pieno.','x'];if(chance(.5)){L.ptv=false;return ['Torni a tempo pieno: più ore, stipendio intero.','g']}return ['Per ora non c\'è un posto a tempo pieno: riprova più avanti.','b']}
+/* Le carriere: più lente in part-time e durante il congedo; per le donne, ai livelli alti, un po' più lente («soffitto di cristallo») */
+const fattoreCarriera=L=>(L.ptv?.5:1)*(S.sesso==='F'&&L.liv>=1?.85:1)*(S.fatti.congedo>S.t?0:1);
+
 /* ---------- Lavoro: mesi lavorati, TFR, NASpI ---------- */
 /* Ogni mese: storico degli ultimi 48 mesi (per la NASpI), TFR che matura, montante dei contributi (per la pensione) */
 function meseItalia(){
   S.lav48=(S.lav48||[]).concat(S.lavoro?1:0).slice(-48);
   const L=S.lavoro;
-  if(L){L.tfr=(L.tfr||0)+L.stip/13.5/12;S.montante=(S.montante||0)+L.stip*.33/12}
+  if(L){if(isPiva(L))S.montante=(S.montante||0)+ralEff(L)*.78*.26/12;else{L.tfr=(L.tfr||0)+ralEff(L)/13.5/12;S.montante=(S.montante||0)+ralEff(L)*.33/12}}
   if(S.azienda&&S.azienda.compenso)S.montante=(S.montante||0)+S.azienda.compenso*.24/12;
   if(S.naspi){S.naspi.m++;if(S.naspi.m>S.naspi.mesi||S.lavoro){if(!S.lavoro)log('Finisce la NASpI.','h');S.naspi=null}}
   if(S.sfl){S.sfl.m++;if(S.sfl.m>S.sfl.mesi||S.lavoro){if(!S.lavoro)log('Finisce il corso, e con lui il Supporto formazione e lavoro.','h');S.sfl=null}}
-  if(S.fatti.congedo&&S.fatti.congedo===S.t){S.fatti.congedo=0;log('Finisce il congedo di maternità: si torna al lavoro.','h')}
+  if(S.fatti.congedo&&S.fatti.congedo===S.t+1&&S.sesso==='F'&&S.lavoro&&!JOB[S.lavoro.id].pt&&S.t-(S.fatti.rientroT||-99)>12){S.fatti.rientroT=S.t;coda.push({e:EV.rientro_lavoro,d:{}})}
+  if(S.fatti.congedo&&S.fatti.congedo===S.t){S.fatti.congedo=0;S.fatti.congedoQuota=0;log('Finisce il congedo: si torna al lavoro.','h')}
 }
 /* La liquidazione (TFR) quando un lavoro finisce, per qualsiasi motivo */
 function pagaTFR(){
@@ -3088,7 +3177,7 @@ function pagaTFR(){
 function avviaNaspi(L){
   const n=(S.lav48||[]).reduce((s,x)=>s+x,0);
   if(n<3||!L)return;
-  const lordo=L.stip/12,soglia=P(1460),cap=P(1585);
+  const lordo=ralEff(L)/12,soglia=P(1460),cap=P(1585);
   const imp=Math.min(cap,lordo<=soglia?lordo*.75:soglia*.75+(lordo-soglia)*.25);
   S.naspi={mesi:Math.min(24,Math.floor(n/2)),imp:Math.round(imp*.88),m:0,over55:S.eta>=55};
   log(`Fai domanda di NASpI: circa ${eur(S.naspi.imp)} netti al mese per ${S.naspi.mesi} mesi (dal sesto mese cala del 3% ogni mese).`,'h');
@@ -3132,7 +3221,7 @@ function pensioneNpc(p){
 /* Reversibilità: il 60% della pensione del coniuge, ridotta se hai già redditi alti */
 function avviaReversibilita(p){
   if(p.eta<40&&p.stato!=='pensione')return;
-  const mio=(S.lavoro?S.lavoro.stip:0)+(S.pensione||0),min=P(7800);
+  const mio=ralEff(S.lavoro)+(S.pensione||0),min=P(7800);
   const rid=mio>5*min?.5:mio>4*min?.6:mio>3*min?.75:1;
   S.reversibilita=Math.round(pensioneNpc(p)*.6*rid);
   log(`Ti spetta la pensione di reversibilità di ${p.nome}: ${eur(S.reversibilita/13)} al mese.`,'h');
@@ -3143,7 +3232,7 @@ function avviaReversibilita(p){
 function minoriConTe(){return vivi(['Figlio']).filter(f=>f.eta<18&&!f.fuori&&!f.conEx).length}
 function iseeStima(){
   const pa=partnerAttuale(),conv=pa&&pa.conv;
-  const red=(S.lavoro?netto(S.lavoro.stip):0)+(S.pensione||0)+(conv?(pa.stato==='lavora'?P(20000):0):0)+(S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045,0));
+  const red=(S.lavoro?netto(ralEff(S.lavoro)):0)+(S.pensione||0)+(conv?(pa.stato==='lavora'?P(20000):0):0)+(S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045,0));
   const n=1+(conv?1:0)+minoriConTe();
   const scala=[1,1,1.57,2.04,2.46,2.85][Math.min(5,n)];
   return (red+Math.max(0,S.soldi)*.2)/scala;
@@ -3158,7 +3247,7 @@ function sussidio(){
   if(S.eta>=S.mondo.pensEta)return null;
   if(iseeStima()>P(10140)||S.soldi>P(6000+2000*min))return null;
   const scala=1+(S.eta>=60?.4:0)+Math.min(2,min)*.15+Math.max(0,min-2)*.1+(pa&&pa.conv&&min?.4:0);
-  const red=S.lavoro?netto(S.lavoro.stip):0;
+  const red=S.lavoro?netto(ralEff(S.lavoro)):0;
   const aff=S.casa.tipo==='affitto'?Math.min(P(3360),S.casa.costo*(convivente()?.5:1)):0;
   const x=Math.max(0,P(rdc?6000:6500)*Math.min(2.2,scala)-red)+aff;
   return x>0?{n:rdc?'Reddito di cittadinanza':'Assegno di inclusione',x:Math.round(x)}:null;
@@ -3172,7 +3261,7 @@ function vociWelfare(add){
   if(S.reversibilita)add('Pensione di reversibilità',S.reversibilita);
   const su=sussidio();if(su)add(su.n,su.x);
   if(S.eta>=S.mondo.pensEta&&S.carcere===0){
-    const red=(S.pensione||0)+(S.reversibilita||0)+(S.lavoro?netto(S.lavoro.stip):0)+S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045*.79,0)+(S.azienda?netto(S.azienda.compenso||0):0);
+    const red=(S.pensione||0)+(S.reversibilita||0)+(S.lavoro?netto(ralEff(S.lavoro)):0)+S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045*.79,0)+(S.azienda?netto(S.azienda.compenso||0):0);
     if(red<P(ASSEGNO_SOCIALE))add('Assegno sociale',P(ASSEGNO_SOCIALE)-red);
   }
   voceMantenimento(add);
@@ -5066,6 +5155,16 @@ ev({id:'eredita_casa',link:1,k:'Famiglia',t:'La casa di famiglia',x:d=>`I tuoi g
     const q=Math.round(d.x/d.n*.85);soldi(q);vivi(['Fratello']).forEach(f=>{f.rapporto=clamp(f.rapporto+6)});
     return [lasciCasaGenitori(`I tuoi fratelli tengono la casa e ti pagano ${eur(q)}.`),'g']}}]});
 
+/* ---------- Figli e lavoro: le scelte che fanno il divario tra uomini e donne ---------- */
+ev({id:'rientro_lavoro',link:1,k:'Lavoro',t:'Il rientro',x:()=>`Il congedo di maternità sta per finire. ${vivi(['Nonno']).length?'I nonni possono dare una mano, ma non tutti i giorni. ':''}Come torni al lavoro?`,c:[
+  {l:'Torno a tempo pieno',sub:'Nido o babysitter, e giornate di corsa',_incl:0,fx:()=>{pesa(6,3);return ['Torni al lavoro con le occhiaie e il cuore diviso a metà. Ce la fai, un giorno alla volta.','']}},
+  {l:'Chiedo il part-time',sub:'Più tempo con tuo figlio, il 60% dello stipendio, una carriera più lenta',_incl:0,fx:()=>chiediPartTime(true)},
+  {l:'Prendo altri mesi di congedo parentale',sub:'Quattro mesi con una parte dello stipendio',_incl:0,fx:()=>{S.fatti.congedo=S.t+4;S.fatti.congedoQuota=.6;return ['Altri quattro mesi a casa con il bambino, con una parte dello stipendio. Al lavoro, intanto, la vita va avanti senza di te.','']}},
+  {l:'Mi dimetto per stare con il bambino',sub:'Nel primo anno del bambino le dimissioni danno diritto alla NASpI',_incl:0,fx:()=>{const L=S.lavoro;if(!L)return ['Non hai più un lavoro.','x'];pagaTFR();S.storico.push(L.nome);S.lavoro=null;avviaNaspi(L);S.fatti.dimissioniMadre=(S.fatti.dimissioniMadre||0)+1;return ['Ti dimetti. L\'Ispettorato del lavoro convalida le dimissioni e ti spetta la NASpI. Per un po\' il lavoro può aspettare.','']}}]});
+ev({id:'congedo_padre',link:1,k:'Lavoro',t:'Il congedo del papà',x:'Ti spettano 10 giorni di congedo di paternità pagati per intero. Puoi prendere anche il congedo parentale, come le mamme.',c:[
+  {l:'Prendi tre mesi di congedo parentale',sub:'Stipendio all\'80% per tre mesi; in Italia lo fanno ancora pochi papà',_incl:0,fx:()=>{S.fatti.congedo=S.t+3;S.fatti.congedoQuota=.8;vivi(['Figlio']).filter(f=>f.eta===0).forEach(f=>f.rapporto=clamp(f.rapporto+10));return ['Tre mesi di pannolini, passeggiate e notti in bianco. In ufficio qualcuno alza un sopracciglio; tu non te ne penti.','g']}},
+  {l:'Solo i dieci giorni',_incl:0,pers:{A:-1},r:'Dieci giorni e poi di nuovo al lavoro. Le giornate più lunghe le vedi la sera.'}]});
+
 /* ================= AZIONI ================= */
 function fatto(k){return !!S.azioni[k]}
 function cdAzione(k){
@@ -5188,13 +5287,15 @@ function azLavoro(k){
   if(k==='promo')return azione(una('promo',0,()=>{
     if(L.liv>=j.liv.length-1)return ['Sei già al livello più alto.','x'];
     const m=mancanti(j.promo&&j.promo[L.liv+1]);if(m.length)return [`Per salire di livello ti serve: ${m.join(', ')}.`,'x'];
-    if(L.anniLiv>=1&&chance((L.perf-45)/70)){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100));L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
+    if(L.anniLiv>=1&&chance((L.perf-45)/70*fattoreCarriera(L))){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere());if(PIVA_LIV[j.id]===L.liv&&!isPiva(L))L.contratto={t:'piva',da:S.t};L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
     L.perf=clamp(L.perf-3);return ['Per ora la promozione va a un collega.','b'];
   }));
   if(k==='collega')return azione(una('collega',0,()=>{if(chance(.35)){const p=nuovoAmico(true);if(p)return [`Fai amicizia con ${p.nome}, ${gp(p,'un collega','una collega')}.`,'g']}return ['Pausa caffè un po\' imbarazzante.','']}));
   if(k==='licenziati')return showSheet({k:'Lavoro',t:'Ti licenzi?',p:`Lasci il posto da ${L.nome.toLowerCase()}.`,chiudi:true,scelte:[
     {l:'Sì, mi licenzio',sub:'Ricevi il TFR, ma chi si dimette non ha la NASpI',fx:()=>{pagaTFR();S.storico.push(L.nome);S.lavoro=null;mod('felicita',3);return ['Hai dato le dimissioni. Si volta pagina.','']}}]});
   if(k==='pensione'){coda.unshift({e:EV.pensione,d:{}});return next()}
+  if(k==='parttime')return azione(una('parttime',0,()=>chiediPartTime(false)));
+  if(k==='tempopieno')return azione(una('tempopieno',0,()=>tornaTempoPieno()));
 }
 function apriAzienda(){
   showSheet({k:'Imprenditoria',t:'Apri un\'attività',p:'Gestirai prezzi, qualità, pubblicità, dipendenti e sedi. Se la cassa va troppo in rosso, fallisci.',chiudi:true,scelte:AZIENDE.map(t=>({l:t.n,sub:`${eur(P(t.costo))} · conta ${ABIL[t.sk]}`,costo:P(t.costo),fx:()=>{nuovaAzienda(t);mod('felicita',6);return [`Apri ${S.azienda.n}. In bocca al lupo!`,'g']}}))});
@@ -5390,7 +5491,7 @@ function compraCasa(){
 function dettaglioCasa(i){
   const M=mercato(),h=M.casa[i];if(!h)return;
   const spese=Math.round(h.prezzo*.05),ant=Math.round(h.prezzo*.2),rata=rataMutuo(h.prezzo-ant,25,.035);
-  const L=S.lavoro,nettoAnn=L&&!JOB[L.id].pt?netto(L.stip):0;
+  const L=S.lavoro,nettoAnn=L&&!JOB[L.id].pt?(isPiva(L)?nettoPiva(ralEff(L),L):netto(ralEff(L))):0,ctr=L&&L.contratto?L.contratto.t:'';
   const compra=mutuo=>{
     M.casa.splice(i,1);
     const p={id:S.nextId++,tipo:h.t,citta:S.citta,valore:h.prezzo,stato:h.stato,lusso:h.lusso,mutuo:mutuo?{residuo:h.prezzo-ant,rata,anni:25}:null};
@@ -5402,6 +5503,8 @@ function dettaglioCasa(i){
     {l:'Paga in contanti',sub:eur(h.prezzo+spese),costo:h.prezzo+spese,fx:()=>compra(false)},
     {l:'Chiedi un mutuo a 25 anni',sub:`Anticipo ${eur(ant+spese)} · rata ${eur(rata)} l'anno`,costo:ant+spese,fx:()=>{
       if(!nettoAnn){soldi(ant+spese);return ['La banca rifiuta: serve un lavoro stabile (non part-time).','b']}
+      if(ctr==='det'&&chance(.75)){soldi(ant+spese);return ['La banca rifiuta: con un contratto a termine serve un garante o un tempo indeterminato.','b']}
+      if(ctr==='piva'&&L.anni<2){soldi(ant+spese);return ['La banca vuole almeno due anni di dichiarazioni dei redditi con la partita IVA.','b']}
       if(rata>nettoAnn*.35){soldi(ant+spese);return [`La banca rifiuta: la rata supera il 35% del tuo stipendio netto (${eur(nettoAnn)}).`,'b']}
       if(S.fedina.length&&chance(.4)){soldi(ant+spese);return ['La banca rifiuta: i tuoi precedenti penali non la convincono.','b']}
       if(S.fatti.crif!==undefined&&S.eta-S.fatti.crif<7){soldi(ant+spese);return ['La banca rifiuta: sei segnalat'+g('o','a')+' come cattivo pagatore dopo il sovraindebitamento.','b']}
@@ -6317,14 +6420,16 @@ function renderLavoro(V){
   if(L){const j=JOB[L.id];const nx=L.liv<j.liv.length-1?nomeJob(j,L.liv+1):null;
     const nm=nx?mancanti(j.promo&&j.promo[L.liv+1]):[];
     h+=`<div class="panel"><h3>${esc(L.nome)}</h3><div class="meta">${j.pt?'Part-time · ':''}${L.anni} ${L.anni===1?'anno':'anni'} in azienda · livello ${L.liv+1} di ${j.liv.length}</div>
-    ${kv(j.var?'Guadagno medio (lordo annuo)':'RAL (lordo annuo)',eur(L.stip))}${kv('Netto al mese (13 mensilità)',eur(netto(L.stip)/13))}${(()=>{const t=tasseDettaglio(L.stip);return kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">IRPEF ${eur(t.irpef)} · INPS ${eur(t.inps)} · addizionali ${eur(t.addiz)}</span>`)})()}
+    ${isPiva(L)?`${kv(j.var?'Compensi medi (lordi annui)':'Compensi (lordi annui)',eur(ralEff(L)))}${kv('Netto al mese',eur(nettoPiva(ralEff(L),L)/12))}${kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">regime forfettario: contributi INPS e imposta sostitutiva · niente tredicesima, TFR e NASpI</span>`)}`
+     :`${kv(j.var?'Guadagno medio (lordo annuo)':L.ptv?'RAL in part-time (lordo annuo)':'RAL (lordo annuo)',eur(ralEff(L)))}${kv('Netto al mese (13 mensilità)',eur(netto(ralEff(L))/13))}${(()=>{const t=tasseDettaglio(ralEff(L));return kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">IRPEF ${eur(t.irpef)} · INPS ${eur(t.inps)} · addizionali ${eur(t.addiz)}</span>`)})()}`}
     ${nx?kv('Prossimo livello',esc(nx)+(nm.length?` <span style="color:var(--bad);font-weight:400">· serve ${esc(nm.join(', '))}</span>`:'')):''}
-    ${kv('Rendimento',L.perf+'%')}${bar(L.perf,'--salute')}${kv('Soddisfazione',soddLavoro()+'%')}${bar(soddLavoro(),'--felicita')}<div class="meta">Affinità con i tuoi interessi: ${matchLavoro(L.id)}% · ${oreLavoro()} ore a settimana</div>
+    ${kv('Contratto',descrContratto(L))}${kv('Rendimento',L.perf+'%')}${bar(L.perf,'--salute')}${kv('Soddisfazione',soddLavoro()+'%')}${bar(soddLavoro(),'--felicita')}<div class="meta">Affinità con i tuoi interessi: ${matchLavoro(L.id)}% · ${oreLavoro()} ore a settimana</div>
     <div class="row-btns">
       <button class="chip" data-lv="sodo" ${fatto('sodo')?'disabled':''}>Dai il massimo questo mese</button>
       <button class="chip" data-lv="aumento" ${fatto('aumento')?'disabled':''}>Chiedi un aumento</button>
       ${nx?`<button class="chip" data-lv="promo" ${fatto('promo')?'disabled':''}>Chiedi una promozione</button>`:''}
       <button class="chip" data-lv="collega" ${fatto('collega')?'disabled':''}>Fai amicizia con un collega</button>
+      ${!j.pt&&!isPiva(L)&&!j.elez?(L.ptv?`<button class="chip" data-lv="tempopieno" ${fatto('tempopieno')?'disabled':''}>Torna a tempo pieno</button>`:`<button class="chip" data-lv="parttime" ${fatto('parttime')?'disabled':''}>Chiedi il part-time</button>`):''}
       ${pensioneMaturata()?'<button class="chip pri" data-lv="pensione">Vai in pensione</button>':''}
       <button class="chip warn" data-lv="licenziati">Licenziati</button>
     </div></div>`;
@@ -6350,8 +6455,9 @@ function renderLavoro(V){
     const righe=vis.map(j=>({j,m:requisitiJob(j)})).filter(x=>!soloDisponibili||!x.m.length);
     h+=`<div class="sec"><span>Offerte di lavoro</span><button class="chip" id="btnFiltro" style="padding:2px 10px;font-size:11px;font-family:var(--f-body);letter-spacing:0;text-transform:none">${soloDisponibili?'Mostra tutte':'Solo disponibili'}</button></div><div class="list">`;
     h+=righe.length?righe.map(({j,m})=>{const mio=L&&L.id===j.id,f=fatto('job_'+j.id);
-      return `<div class="job"><div><div class="jn">${esc(nomeJob(j,0))}</div><div class="jm">${eur(stipLiv(j,0))} RAL${S.eta>=14?` · affinità ${matchLavoro(j.id)}%`:''}${j.pt?' · part-time':''}${j.conc?(j.cdiff?' · concorso molto difficile':' · concorso pubblico'):''}${j.elez?' · si entra con le elezioni':''}${j.var?' · variabile':''} · carriera fino a ${esc(nomeJob(j,j.liv.length-1).toLowerCase())}</div>${m.length&&!mio?`<div class="jr">Serve: ${esc(m.slice(0,2).join(' · '))}</div>`:''}</div><button class="chip${!m.length&&!mio&&!f?' pri':''}" data-job="${j.id}" ${m.length||f||mio?'disabled':''}>${mio?'Il tuo':f?'Inviata':m.length?'Bloccato':j.conc?'Concorso':'Candidati'}</button></div>`}).join(''):'<div class="note" style="padding:12px 0">Nessuna offerta disponibile per ora. Studia o fai un corso per sbloccarne altre.</div>';
+      return `<div class="job"><div><div class="jn">${esc(nomeJob(j,0))}</div><div class="jm">${eur(stipLiv(j,0))} RAL${S.eta>=14?` · affinità ${matchLavoro(j.id)}%`:''}${j.pt?' · part-time':''}${j.conc?(j.cdiff?' · concorso molto difficile':' · concorso pubblico'):''}${PIVA.includes(j.id)?' · partita IVA':''}${j.elez?' · si entra con le elezioni':''}${j.var?' · variabile':''} · carriera fino a ${esc(nomeJob(j,j.liv.length-1).toLowerCase())}</div>${m.length&&!mio?`<div class="jr">Serve: ${esc(m.slice(0,2).join(' · '))}</div>`:''}</div><button class="chip${!m.length&&!mio&&!f?' pri':''}" data-job="${j.id}" ${m.length||f||mio?'disabled':''}>${mio?'Il tuo':f?'Inviata':m.length?'Bloccato':j.conc?'Concorso':'Candidati'}</button></div>`}).join(''):'<div class="note" style="padding:12px 0">Nessuna offerta disponibile per ora. Studia o fai un corso per sbloccarne altre.</div>';
     h+='</div>';
+    if(S.eta>=16)h+='<div class="meta">In Italia i contratti a termine sono il 15% (quasi il 30% sotto i 35 anni). A parità di ora le donne guadagnano circa il 5% in meno, in un anno quasi il 30% in meno: pesano part-time, figli e carriere più lente (ISTAT, INPS).</div>';
   }
   V.innerHTML=h;
   V.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>azLavoro(b.dataset.lv));

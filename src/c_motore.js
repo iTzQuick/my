@@ -180,11 +180,13 @@ function assumi(j){
   if(S.lavoro){pagaTFR();S.storico.push(S.lavoro.nome)}
   S.naspi=null;S.sfl=null;
   let liv=0;if(j.boost&&S.istr.cert.includes(j.boost.cert))liv=j.boost.liv;
-  S.lavoro={id:j.id,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)),nome:nomeJob(j,liv)};
+  S.lavoro={id:j.id,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)*fattoreGenere()),nome:nomeJob(j,liv),contratto:contrattoIniziale(j,liv)};
+  if(chance(ptIniziale(j)))S.lavoro.ptv=true;
+  if(S.vivo)log(`Contratto: ${descrContratto(S.lavoro).toLowerCase()}${S.lavoro.ptv&&S.lavoro.contratto.t!=='piva'&&!/part-time/.test(descrContratto(S.lavoro))?' · part-time':''}.`,'h');
   S.ultimoLavoro=S.lavoro.nome;
 }
 /* vol: lo lasci tu (niente NASpI) */
-function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);avviaNaspi(L)}}
+function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L)}}   // la partita IVA non ha la NASpI
 function lavoroPerFiglio(p){
   if(p.studio&&p.studio.startsWith('laurea:')){const f=p.studio.slice(7);const ok=LAVORI.filter(j=>j.req&&j.req.lau&&j.req.lau.includes(f)&&!j.req.abil&&!j.req.liv);if(ok.length)return pick(ok).id;return 'imp'}
   if(p.studio==='diploma')return pick(['imp','tec','com','agi','rec','cam','ope','segr','cass','callc','post','agcom']);
@@ -494,11 +496,12 @@ function meseLavoro(){
   if(j.elez){L.mandato=(L.mandato||0)+1;if(L.mandato>=60){L.mandato=0;if(chance(.5+L.perf/250+S.fama/400))log(`Alle elezioni vieni rielett${g('o','a')}: altri cinque anni.`,'g');else{licenzia(`Alle elezioni non vieni rielett${g('o','a')}: il mandato finisce.`,true);mod('felicita',-8);return}}}
   if(S.mondo.crisi&&!j.conc&&!j.var&&chance(.011)){licenzia('La crisi colpisce la tua azienda: sei tra i licenziati.');segnaVita('licenziato');return}
   if(S.mondo.pandemia&&['cam','bpt','cuoco','parr','pt','este','anim','guida','hostess','bagn'].includes(L.id)&&chance(.02)){licenzia('Con la pandemia il locale chiude e perdi il lavoro.');segnaVita('licenziato');return}
-  if(!j.conc&&!j.var&&chance((j.pt?.008:.0035)*(S.eta<30?1.6:1)*(S.mondo.crisi?1.5:1))){licenzia(pick(['Il tuo contratto a termine scade e non viene rinnovato.','L\'azienda chiude e resti senza lavoro.','Riorganizzazione: il tuo posto viene tagliato.']));return}
+  if(meseContratto())return;
+  if(S.fatti.congedo>S.t)return;   // in congedo: niente valutazioni né promozioni
   const sod=soddLavoro();
   L.perf=clamp(L.perf+(r(-7,5)+(S.felicita<30?-4:0)+(S.dip.alcol?-6:0)+(S.salute<30?-4:0))/3.5+pz('C')*.7+(S.bis.energia<30?-1:0)+(S.bis.stress>80?-1:0)+(sod-50)/90);
-  if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100)/12)&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
-    L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100));L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
+  if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100)/12*fattoreCarriera(L))&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
+    L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100)*fattoreGenere());if(PIVA_LIV[j.id]===L.liv&&!isPiva(L)){L.contratto={t:'piva',da:S.t};log('Ti metti in proprio: apri la partita IVA.','h')}L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
     mod('felicita',8);segnaVita('promozione');log(`Promozione! Ora sei ${L.nome.toLowerCase()}, con una RAL di ${eur(L.stip)}.`,'g');
   }
   if(L.perf<20&&chance(.04)){licenzia(`Sei stat${g('o','a')} licenziat${g('o','a')}: il tuo rendimento era troppo basso.`);segnaVita('licenziato');return}
@@ -507,13 +510,13 @@ function tasseUni(){return P({umile:200,media:1800,agiata:3200}[S.classe])}
 function pagatoDaiGenitori(){return genitoriVivi()&&S.classe!=='umile'&&S.eta<=28}
 /* Quanto costa un figlio in un anno: da circa 7.800 € (reddito basso) a 21.000 € (reddito alto), prezzi di oggi */
 function costoFiglio(){
-  const L=S.lavoro,red=(L?netto(L.stip):0)+(S.pensione||0)+(S.azienda?netto(S.azienda.compenso||0):0)+(convivente()?P(20000):0);
+  const L=S.lavoro,red=(L?netto(ralEff(L)):0)+(S.pensione||0)+(S.azienda?netto(S.azienda.compenso||0):0)+(convivente()?P(20000):0);
   return P(Math.max(7800,Math.min(21000,7800+(red/ip()-26500)*.32)));
 }
 function bilancio(simula){
   const v=[];const add=(n,x)=>{x=Math.round(x||0);if(x)v.push([n,x])};
   const conv=convivente(),L=S.lavoro;
-  if(L){const j=JOB[L.id];let l=L.stip;if(j.var&&!simula)l=l*r(40,170)/100;add(j.var?'Guadagni (variabili)':'Stipendio netto',netto(l))}
+  if(L){const j=JOB[L.id],pv=isPiva(L);let l=ralEff(L);if(j.var&&!simula)l=l*r(40,170)/100;add(pv?'Compensi da partita IVA (netti)':j.var?'Guadagni (variabili)':'Stipendio netto',pv?nettoPiva(l,L):netto(l))}
   if(S.pensione)add('Pensione',S.pensione);
   if(S.scuola.stato==='dottorato')add('Borsa di dottorato',P(16000));
   if(S.scuola.stato==='spec')add('Contratto di specializzazione',P(23000));
@@ -559,8 +562,9 @@ function bilancioMese(simula){
   const v=bilancio(true),dic=S.mese===11,out=[];
   for(const [n,x] of v){
     let y;
-    if(n==='Stipendio netto')y=x/13*(dic?2:1)*(S.fatti.congedo>S.t?.8:1);
+    if(n==='Stipendio netto')y=x/13*(dic?2:1)*(S.fatti.congedo>S.t?(S.fatti.congedoQuota||.8):1);
     else if(n==='Guadagni (variabili)')y=x/12*(simula?1:r(30,180)/100);
+    else if(n.startsWith('Compensi da partita IVA'))y=x/12*(simula?1:r(70,130)/100);
     else if(n==='Collaborazioni social')y=x/12*(simula?1:r(60,140)/100);
     else y=x/12;
     out.push([n==='Stipendio netto'&&dic?'Stipendio netto e tredicesima':n,Math.round(y)]);
@@ -694,6 +698,7 @@ function load(){
 function aggiornaStato(){
   if(S.montante===undefined)S.montante=Math.round((S.contributi||0)*(S.lavoro?S.lavoro.stip:P(25000))*.33*1.1);
   if(!S.lav48)S.lav48=[];
+  if(S.lavoro&&!S.lavoro.contratto)S.lavoro.contratto=PIVA.includes(S.lavoro.id)?{t:'piva',da:S.t-60}:{t:'ind'};
   if(!S.orient)S.orient=S.attrazione?(S.attrazione==='E'?'bi':S.attrazione===S.sesso?'omo':'etero'):pesata([['etero',94],['omo',3],['bi',3]]);
   if(!S.fatti.cittaNascita){S.fatti.cittaNascita=S.citta;S.fatti.provNascita=S.prov}
 }
