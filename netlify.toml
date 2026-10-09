@@ -1,0 +1,11 @@
+# Netlify pubblica la web app già pronta in dist/app (index.html, manifest, service worker, icone).
+# Niente comando di build: dist/ si rifà sul PC con «python build.py» e si carica nella repo.
+[build]
+  publish = "dist/app"
+  command = ""
+
+# il service worker deve essere sempre quello nuovo, sennò l'app resta alla versione vecchia
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
