@@ -70,7 +70,7 @@ JS_BASE = r'''async ()=>{
  for(const j of ['cam','bpt','cass'])if(!prova(j))ko.push(j+' (dipendente, anche part-time): manca la squadra');
  nuova(30,'cass');S.lavoro.ptv=true;completaSquadra(true);if(!squadra().capo)ko.push('part-time: manca il capo');
  if(!prova('calc'))ko.push('sportivo: manca la squadra');
- else{completaSquadra(true);const s=ric();if(!/Allenator/.test(ruoloLabel(s.capo)))ko.push('sportivo: capo '+ruoloLabel(s.capo));if(!/squadra/.test(ruoloLabel(s.colleghi[0])))ko.push('sportivo: compagno '+ruoloLabel(s.colleghi[0]))}
+ else{completaSquadra(true);const s=ric();if(!/Allenat/.test(ruoloLabel(s.capo)))ko.push('sportivo: capo '+ruoloLabel(s.capo));if(!/squadra/.test(ruoloLabel(s.colleghi[0])))ko.push('sportivo: compagno '+ruoloLabel(s.colleghi[0]))}
  // 5) salvataggio vecchio: nessuna squadra, nessun diario
  nuova(35,'imp');completaSquadra(true);
  S.relazioni=S.relazioni.filter(p=>!p.lav);delete S.lavoro.sq;const righe=S.log[S.log.length-1].righe.length;

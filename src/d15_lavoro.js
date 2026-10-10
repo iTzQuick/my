@@ -148,6 +148,6 @@ const COL_EV=[
   {id:'col_confida',w:3,rip:4,ok:sq=>sq.colleghi.length>0,d:sq=>{const p=pick(sq.colleghi);return {p,x:{c:pick(['si sta separando e non sa a chi dirlo','non dorme da settimane per i soldi','ha avuto un\'offerta da un\'altra azienda e non sa se accettare','ha ricevuto una diagnosi che non ha ancora detto a casa'])}}}},
   {id:'col_lite',w:2,rip:5,ok:sq=>sq.colleghi.length>=2,d:sq=>{const c=sq.colleghi.slice().sort(()=>Math.random()-.5);return {p:c[0],q:c[1]}}},
   {id:'col_neonato',w:1,rip:4,ok:sq=>!sportSq()&&sq.colleghi.some(p=>p.eta>=24&&p.eta<=42&&!(p.neoT&&S.t-p.neoT<24)),d:sq=>{const p=pick(sq.colleghi.filter(p=>p.eta>=24&&p.eta<=42&&!(p.neoT&&S.t-p.neoT<24)));p.figliN=(p.figliN||0)+1;p.neoT=S.t;return {p}}},
-  {id:'prg_riorg1',w:()=>2+(S.mondo.crisi?3:0),rip:8,ok:sq=>!!sq.capo&&!sportSq()&&S.lavoro.contratto&&S.lavoro.contratto.t==='ind'&&S.lavoro.anni>=2&&!JOB[S.lavoro.id].conc,d:sq=>({p:sq.capo})}
+  {id:'prg_riorg1',w:()=>8+(S.mondo.crisi?4:0),rip:8,ok:sq=>!!sq.capo&&!sportSq()&&S.lavoro.contratto&&S.lavoro.contratto.t==='ind'&&S.lavoro.anni>=2&&!JOB[S.lavoro.id].conc,d:sq=>({p:sq.capo})}
 ];
 const salutaVia=p=>{p.lav.via=S.t;p.stato='disoccupato';p.lavT=0};
