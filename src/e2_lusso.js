@@ -160,7 +160,7 @@ function apriAnimale(i){
 /* ---------- Da amici a innamorati ---------- */
 const attratto=p=>S.attrazione==='E'||S.attrazione===p.sesso||(!S.attrazione&&p.sesso!==S.sesso);
 function ricambia(p){if(!p.orient)p.orient=pesata([['etero',88],['omo',6],['bi',6]]);return p.orient==='bi'||(p.orient==='etero'?p.sesso!==S.sesso:p.sesso===S.sesso)}
-function etaCompatibile(p){const d=Math.abs(p.eta-S.eta);if(S.eta<14||p.eta<14)return false;if(S.eta<18||p.eta<18)return d<=3;return d<=15}
+function etaCompatibile(p){const d=Math.abs(p.eta-S.eta);if(S.eta<14||p.eta<14)return false;if(S.eta<18||p.eta<18)return d<=2;   /* da minorenni coetanei, come candidato(): con 3 anni a 18 ci si trovava con chi ne aveva 14 */return d<=15}
 const amorePossibile=p=>p.ruolo==='Amico'&&single()&&attratto(p)&&etaCompatibile(p);
 function diventaPartner(p){
   p.ruolo='Partner';p.best=false;p.dal=S.t;p.conv=false;

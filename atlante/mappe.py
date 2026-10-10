@@ -259,3 +259,4 @@ COND.update({
 "()=>S.anno>=1980&&['Centro','Sud','Isole'].includes(zonaMia())":"Dal 1980, se vivi al Centro, al Sud o nelle Isole",
 })
 PC.update({"p=>p.rapporto>=62&&(p.sesso!==S.sesso||unioneCivilePossibile())":"il rapporto è almeno 62 e, se è dello stesso sesso, c'è già l'unione civile (da giugno 2016)"})
+PC.update({"p=>etaCompatibile(p)":"ha un'età compatibile con la tua (da minorenni al massimo 2 anni di differenza)"})

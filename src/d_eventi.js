@@ -564,7 +564,7 @@ ev({id:'fig_ospita',min:70,max:100,chi:['Figlio'],pc:p=>p.eta>=30&&p.rapporto>=5
 ev({id:'nip_visita',min:50,max:100,chi:['Nipote'],t:'Visita',x:'{Tuo} {P} viene a trovarti.',c:[
   {l:'Racconta una storia',e:{rel:10,f:5},r:'{P} ascolta a bocca aperta.'},
   {l:'Dagli la paghetta',costo:()=>P(50),e:{rel:12,f:3},r:'«Non dirlo a mamma e papà.»'}]});
-ev({id:'ex_ritorno',min:18,max:80,chi:['Ex'],cond:()=>single(),t:'Un messaggio',x:'{P}, la tua ex fiamma, ti scrive: «Mi manchi».',c:[
+ev({id:'ex_ritorno',min:18,max:80,chi:['Ex'],pc:p=>etaCompatibile(p),cond:()=>single(),t:'Un messaggio',x:'{P}, la tua ex fiamma, ti scrive: «Mi manchi».',c:[
   {l:'Riprova',p:.5,si:{fx:d=>{d.p.ruolo='Partner';d.p.rapporto=55},e:{f:7},r:'Tornate insieme!'},no:{e:{f:-5},r:'Dopo due settimane vi ricordate perché vi eravate lasciati.'}},
   {l:'Ignora',pers:{N:-1},r:'Il passato resta nel passato.'},
   {l:'Blocca',fx:d=>{S.relazioni=S.relazioni.filter(x=>x!==d.p)},r:'Numero bloccato.'}]});

@@ -172,7 +172,7 @@ function apriPersona(id){
     return showSheet({k:info0.join(' · '),t:`${p.nome} ${p.cognome}`,p:`Rancore: ${p.rancore||50}%`,chiudi:true,scelte:o,d:{p}});
   }
   if(R==='Ex'){
-    opt('Scrivi un messaggio','msg',0,()=>{if(single()&&chance(.25)){p.ruolo='Partner';p.rapporto=55;mod('felicita',6);return [`Vi rivedete e tornate insieme!`,'g']}rel(-3,3);return [`${p.nome} risponde in modo freddo.`,'']});
+    opt('Scrivi un messaggio','msg',0,()=>{if(single()&&etaCompatibile(p)&&chance(.25)){p.ruolo='Partner';p.rapporto=55;mod('felicita',6);return [`Vi rivedete e tornate insieme!`,'g']}rel(-3,3);return [`${p.nome} risponde in modo freddo.`,'']});
     o.push({l:'Dimentica',fx:()=>{S.relazioni=S.relazioni.filter(x=>x!==p);return [`Cancelli il numero di ${p.nome}.`,'']}});
   }else{
     if(R==='Partner'||R==='Coniuge'){

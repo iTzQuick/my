@@ -25,6 +25,8 @@ Ogni fase ha una priorità (🔴 alta · 🟠 media · 🟢 bassa), una stima di
 
 > **10 ottobre 2026 — Fase 2 fatta:** gruppi e legami tra le persone, ricordi con un segno che tornano anni dopo, conversazioni su quello che l'altro sta vivendo, stile da genitore che forma il carattere dei figli, crisi e terapia di coppia, volti dappertutto. `tools/persone.py` dice «FASE 2: FATTA ✓».
 
+> **10 ottobre 2026, sera — Fase 3 fatta:** si nasce dal 1950 con le lire e la storia vera, nessun anacronismo, pensioni con le regole dell'anno, naja, cassa integrazione, addizionali, assegno unico e ISEE, successione legittima, mutuo fisso o variabile con i tassi veri, screening dell'ASL e liste d'attesa, stipendi e lavoro per zona, emigrazione dal Sud. `tools/italia_vera.py` dice «ANACRONISMI: nessuno ✓».
+
 ---
 
 ## Fase 0 — Zero errori (🔴, da fare per prima, M)
@@ -79,7 +81,7 @@ Misura: `python tools/persone.py 60` → amici stretti legati ad altre persone d
 
 ---
 
-## Fase 3 — Italia vera (🟠, L)
+## Fase 3 — Italia vera (🟠, L) — ✅ fatta il 10 ottobre 2026
 - 3.1 **Anni prima del 2000**: lira fino al 2001, tecnologia per decennio (niente smartphone prima del 2007, social dopo il 2004), fatti storici veri (euro, crisi del 2008, pandemia del 2020) e futuro generato dopo il presente.
 - 3.2 **Lavoro all'italiana**: contratti (indeterminato, determinato, partita IVA), NASpI, cassa integrazione, TFR, concorsi pubblici, precariato realistico per età e regione.
 - 3.3 **Pensioni e tasse precise**: contributi veri, età e importi aggiornati, ISEE e bonus, successione ereditaria secondo legge.
@@ -137,6 +139,7 @@ Una **tabella di realismo** che la simulazione stampa a ogni build, confrontando
 1. **Fase 0 + Fase 7** (affidabilità e misura): sono le fondamenta, e ogni cosa dopo diventa più sicura.
 2. ✅ **Fase 1** (ritmo): fatta il 10 ottobre 2026.
 3. ✅ **Fase 2** (persone): fatta il 10 ottobre 2026.
-4. Poi Fasi 5, 4, 3, 6, secondo quello che emerge dalle prove con Noemi.
+4. ✅ **Fase 3** (Italia vera): fatta il 10 ottobre 2026.
+5. Poi Fasi 5, 4, 6, secondo quello che emerge dalle prove con Noemi.
 
 Ogni fase si chiude con: build → controlli → simulazione → prova sul telefono (Netlify) → feedback.
