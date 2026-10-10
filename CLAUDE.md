@@ -42,6 +42,15 @@ python tools/italia_vera.py 25  # Fase 3: vite nate nel 1950, 1965, 1980, 2000 (
 
 Su Windows, se l'uscita va in un file, metti `PYTHONIOENCODING=utf-8` davanti (i ✓ e i ⚠ dei controlli altrimenti fanno fallire la stampa).
 
+### Modelli e impegno (per consumare meno)
+Davide usa un abbonamento claude.ai: il limite si consuma più in fretta con Opus e con i ragionamenti lunghi. Il modello lo sceglie lui (`/model`, oppure `opusplan`: Opus per il piano, Sonnet per il codice); queste sono le regole per scegliere e per lavorare senza sprechi.
+- **Sonnet**: il lavoro normale (eventi nuovi, testi, correzioni, controlli, piccole funzioni).
+- **Opus**: progettare una fase nuova della ROADMAP, errori difficili da trovare, bilanciamento delle formule. Se un compito è da Opus e la sessione usa un modello più piccolo, diglielo prima di iniziare.
+- **Haiku**: domande veloci, riassunti, cercare dove sta una cosa nel codice.
+- **Sotto-agenti**: per lanciare i controlli lunghi (`fuzz.py`, `invarianti.py`, `sim.py`, `realismo.py`, `italia_vera.py`) e riassumerne l'esito puoi usare un sotto-agente con `model: haiku` ed `effort: low`; per cercare nel codice un `Explore` con `model: haiku`. Non per i lavori brevi: un sotto-agente parte da zero e rilegge tutto.
+- **Controlli**: lancia solo quelli che servono per quello che hai toccato (vedi «Dopo ogni modifica»), con il numero di vite indicato, non di più; dall'uscita leggi solo la coda (`| tail`) o le righe con ✗ ed errori.
+- **Letture**: non rileggere file interi grandi (`dist/`, `b2_comuni.js`, `c_motore.js`): cerca con `grep` e leggi solo le righe che servono.
+
 ---
 
 ## Struttura
