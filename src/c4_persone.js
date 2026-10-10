@@ -6,7 +6,10 @@ function affinita(p){
   const a=p.pers,b=S.pers;
   return clamp(62-Math.abs(a.O-b.O)*.25-Math.abs(a.C-b.C)*.15-Math.abs(a.E-b.E)*.1+(a.A-50)*.22+(b.A-50)*.1-(a.N-50)*.15-(b.N-50)*.1);
 }
-function ricorda(p,t){if(!p)return;p.ricordi=p.ricordi||[];p.ricordi.push({t:S.t,s:t});if(p.ricordi.length>8)p.ricordi.shift()}
+/* v: quanto conta (da −3 a +3); senza, si capisce dalle parole (valenza() in c8_legami.js). Nel gruppo le voci girano. */
+function ricorda(p,t,v){if(!p)return;p.ricordi=p.ricordi||[];if(v===undefined)v=valenza(t);p.ricordi.push({t:S.t,s:t,v});
+  if(p.ricordi.length>8){const i=p.ricordi.findIndex(m=>Math.abs(vRic(m))<=1);p.ricordi.splice(i>=0&&i<6?i:0,1)}
+  voci(p,v)}
 function initNpc(p){
   if(p.umore===undefined)p.umore=r(45,80);
   if(p.ultimo===undefined)p.ultimo=S?S.t:0;
@@ -60,7 +63,7 @@ function contatti(){
     const base=(fr.length?fr:[...am].sort((a,b)=>b.rapporto-a.rapporto));
     const n=Math.max(1,Math.min(base.length,Math.round(amiciH/2.5),5));
     const sel=base.slice(0,n),h=amiciH/n;
-    for(const p of sel){p.rapporto=clamp(p.rapporto+Math.min(7,h*1.1)*(p.lontano?.45:1)*(.7+affinita(p)/170));p.ultimo=S.t}
+    for(const p of sel){p.rapporto=clamp(p.rapporto+Math.min(7,h*1.1)*(p.lontano?.45:1)*(.7+affinita(p)/170));p.ultimo=S.t;contattoGruppo(p,h)}
   }
   const fam=S.relazioni.filter(p=>p.vivo&&['Madre','Padre','Patrigno','Fratello','Nonno'].includes(p.ruolo));
   const aCasa=S.casa.tipo==='genitori';
@@ -72,6 +75,7 @@ function contatti(){
   const fig=vivi(['Figlio']).filter(p=>!p.fuori||p.eta>=18);
   if(fig.length){
     const h=figH/Math.max(1,fig.filter(p=>p.eta<18).length);
+    if(fig.some(p=>p.eta<18&&!p.fuori&&!p.conEx)){const G=GEN();G.cal+=(Math.min(90,20+h*8+pz('A')*12-pz('N')*6)-G.cal)*.02;G.reg+=(45+pz('C')*25-pz('O')*6-G.reg)*.02}
     for(const p of fig){
       if(p.eta<18){p.rapporto=clamp(p.rapporto+Math.min(5,h*.35)-(h<3?2:0));if(p.eta>=6&&h>=4)p.voto=clamp((p.voto||50)+.4);p.ultimo=S.t}
       else if(famH>0){p.rapporto=clamp(p.rapporto+Math.min(4,famH/fam.length*.6||1));p.ultimo=S.t}
@@ -93,6 +97,11 @@ function mesePartner(p){
   const prima=p.rapporto;
   const base=clamp(p.intim*.45+p.pass*.25+p.imp*.3-conflitto*2.2);
   p.rapporto=clamp(p.rapporto+(base-p.rapporto)*.3);
+  // crisi: tre mesi sotto il 40% aprono «La crisi»; la terapia di coppia (S.terapia) aiuta mese dopo mese
+  p.crisiN=p.rapporto<40?(p.crisiN||0)+1:0;
+  const T0=S.terapia&&S.terapia.pid===p.id?S.terapia:null;
+  if(T0){p.intim=clamp(p.intim+1.5);p.rapporto=clamp(p.rapporto+1);soldi(-P(80)*4);if(S.t>=T0.fine&&!coda.length){S.terapia=null;coda.push({e:EV.cop_terapia_fine,d:{p}})}}
+  else if(p.crisiN>=3&&S.t-(p.crisiT||-99)>=24&&!coda.length){p.crisiT=S.t;coda.push({e:EV.cop_crisi,d:{p}})}
   if(conflitto>4.5&&chance(.12)&&!coda.length)coda.push({e:EV.lite_coppia,d:{p}});
   else if(h<3&&prima>40&&chance(.08)&&!coda.length)coda.push({e:EV.trascurato,d:{p}});
   if(p.ruolo==='Partner'&&!p.conv&&anni>=1.5&&p.rapporto>=65&&p.imp>=60&&chance(.03)&&S.eta>=19&&!coda.length&&S.carcere===0)coda.push({e:EV.proposta_conv,d:{p}});
@@ -127,7 +136,7 @@ function meseNpc(){
     p.umore=clamp(p.umore+(60+ppz(p,'E')*8-ppz(p,'N')*15-p.umore)*.2+r(-4,4));
     vitaNpc(p);
     // chi ti cerca
-    if(['Amico','Fratello','Madre','Padre','Nonno','Cugino','Figlio'].includes(p.ruolo)&&p.rapporto>=35&&chance(.012+p.pers.E*.0004)){
+    if(['Amico','Fratello','Madre','Padre','Nonno','Cugino','Figlio'].includes(p.ruolo)&&p.rapporto>=35&&chance((.012+p.pers.E*.0004)*Math.max(.3,Math.min(1.8,1+bilancioRicordi(p)*.15)))){
       p.rapporto=clamp(p.rapporto+2);p.ultimo=S.t;
       const ct=chance(.2)&&cercaTesto(p);if(ct)log(`${p.nome} ${ct}.`,'h');
     }
@@ -162,14 +171,14 @@ function cercaTesto(p){
 /* «la zia Giorgia si separa dal marito Giovanni»: il partner di una persona non è sempre stato presentato */
 const partnerDi=(p,sposati)=>`${(p.pSesso||(p.sesso==='F'?'M':'F'))==='M'?(sposati?'dal marito':'dal compagno'):(sposati?'dalla moglie':'dalla compagna')} ${p.pNome||''}`.trim();
 /* un nuovo compagno o una nuova compagna per una persona del gioco, del sesso giusto per il suo orientamento */
-function nuovoCompagnoNpc(p){const ps=sessoCompagnoNpc(p);p.pSesso=ps;p.pNome=pick(nomiPer(ps,S.anno-p.eta+r(-3,3)));p.coppia='coppia';p.dalC=S.t}
+function nuovoCompagnoNpc(p){const ps=sessoCompagnoNpc(p);p.pSesso=ps;p.pNome=pick(nomiPer(ps,S.anno-p.eta+r(-3,3)));p.coppia='coppia';p.dalC=S.t;p.nuovoT=S.t;p.pId=null}
 function compleannoNpc(p){
   if(p.ruolo==='Figlio')annoFiglio(p);
   const e=p.eta;
   if(p.stato==='bambino'&&e>=6)p.stato='studente';
   if(p.stato==='studente'&&e>=19&&p.ruolo!=='Figlio'&&chance(e>=24?.9:.4)){p.stato=chance(.85)?'lavora':'disoccupato';if(p.stato==='lavora')p.lavoro=lavoroPerNpc(p)}
   if(p.ruolo==='Figlio'&&p.eta>=19&&p.lavoro)p.stato='lavora';
-  if(p.stato==='lavora'&&e>=67){p.stato='pensione';if(vicino(p))log(`${p.nome} va in pensione.`,'h')}
+  if(p.stato==='lavora'&&e>=67){p.stato='pensione';p.pensT=S.t;if(vicino(p))log(`${p.nome} va in pensione.`,'h')}
   if(vicino(p)&&S.carcere===0&&['Madre','Padre','Partner','Coniuge','Figlio','Fratello'].includes(p.ruolo)||p.best){
     if(!coda.length&&chance(['Partner','Coniuge','Figlio'].includes(p.ruolo)||p.best?.12:.04)&&S.eta>=6)coda.push({e:EV.compleanno_npc,d:{p}});
     else if(chance(.25)&&['Partner','Coniuge','Figlio'].includes(p.ruolo))log(`${p.nome} compie ${e} anni.`,'h');
@@ -208,8 +217,8 @@ function vitaNpc(p){
   // lavoro
   if(p.stato==='casa'&&p.tornaLav&&S.t>=p.tornaLav){p.stato='lavora';p.tornaLav=0;if(!p.lavoro)p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} torna a lavorare.`,'h')}
   if(p.stato==='lavora'&&chance(.003+(M.crisi?.012:0)+(A.C<35?.002:0))){p.stato='disoccupato';p.umore=clamp(p.umore-20);
-    if(!(p.rapporto>=50&&chance(.3)&&richiesta('r_lavoro_perso',p)))annuncia(p,`${p.nome} ha perso il lavoro.`,'b')}
-  else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1))){p.stato='lavora';p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
+    p.lavT=0;if(!(p.rapporto>=50&&chance(.3)&&richiesta('r_lavoro_perso',p)))annuncia(p,`${p.nome} ha perso il lavoro.`,'b')}
+  else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1))){p.stato='lavora';p.lavoro=lavoroPerNpc(p);p.lavT=S.t;annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
   else if(p.stato==='lavora'&&chance(.002*(A.C/50))){annuncia(p,`${p.nome} ha avuto una promozione.`,'g');p.umore=clamp(p.umore+10)}
   // amore
   if(['Partner','Coniuge','Ex'].includes(p.ruolo))return;
@@ -220,16 +229,16 @@ function vitaNpc(p){
     return;
   }
   if(['single','separato','vedovo'].includes(p.coppia)&&e<65&&chance(.01*(.5+A.E/100))){nuovoCompagnoNpc(p);annuncia(p,`${cap(tuoR(p))} ${p.nome} ha una nuova relazione con ${p.pNome}.`,'h')}
-  else if(p.coppia==='coppia'&&S.t-(p.dalC||0)>=20&&e>=23&&e<60&&chance(.012)){p.coppia='sposato';
+  else if(p.coppia==='coppia'&&S.t-(p.dalC||0)>=20&&e>=23&&e<60&&chance(.012)){p.coppia='sposato';if(p.pId){const q=persona(p.pId);if(q&&q.vivo)q.coppia='sposato'}
     if(vicino(p)&&!richiesta('r_matrimonio',p))annuncia(p,`${cap(tuoR(p))} ${p.nome} ${coppiaStessoSesso(p)?'celebra l\'unione civile con':'si sposa con'} ${p.pNome||'la persona che ama'}.`,'g');
     if(p.ruolo==='Fratello'&&!S.relazioni.some(x=>x.famDi===p.id))nuovaPersona('Cognato',p.pSesso||(p.sesso==='M'?'F':'M'),p.eta+r(-3,3),null,{rapporto:r(40,70),famDi:p.id,nome:p.pNome||undefined})}
-  else if(['coppia','sposato'].includes(p.coppia)&&chance(.003*(1+(A.N-50)/60-(A.A-50)/80))){const sp=p.coppia==='sposato';p.coppia='separato';p.umore=clamp(p.umore-25);
+  else if(['coppia','sposato'].includes(p.coppia)&&chance(.003*(1+(A.N-50)/60-(A.A-50)/80))){const sp=p.coppia==='sposato';p.coppia='separato';p.umore=clamp(p.umore-25);p.sepT=S.t;if(p.pId)separaNpc(p);
     if(!(p.rapporto>=55&&chance(.4)&&richiesta('r_separazione',p)))annuncia(p,`${cap(tuoR(p))} ${p.nome} si ${sp?'separa':'lascia'} ${partnerDi(p,sp)}.`,'b')}
-  if(['sposato','coppia'].includes(p.coppia)&&!coppiaStessoSesso(p)&&e<44&&(p.figliN||0)<4&&chance(p.coppia==='sposato'?.009:S.t-(p.dalC||0)>=18?.006:0)){p.figliN=(p.figliN||0)+1;
+  if(['sposato','coppia'].includes(p.coppia)&&!coppiaStessoSesso(p)&&e<44&&(p.figliN||0)<4&&chance(p.coppia==='sposato'?.009:S.t-(p.dalC||0)>=18?.006:0)){p.figliN=(p.figliN||0)+1;p.neoT=S.t;if(p.pId){const q=persona(p.pId);if(q){q.figliN=(q.figliN||0)+1;q.neoT=S.t}}
     if(['Fratello'].includes(p.ruolo)){annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}: sei diventat${g('o','a')} zi${g('o','a')}!`,'g');mod('felicita',4)}
     else annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}.`,'g')}
   // trasloco
-  if(!p.lontano&&e>=20&&e<50&&['Amico','Fratello','Cugino','Figlio'].includes(p.ruolo)&&chance(.0018)){p.lontano=true;
+  if(!p.lontano&&e>=20&&e<50&&['Amico','Fratello','Cugino','Figlio'].includes(p.ruolo)&&chance(.0018)){p.lontano=true;p.trasfT=S.t;
     const dove=pick(['Milano','Londra','Berlino','Bologna','Roma','Torino','Barcellona','Parigi','Amsterdam','Dublino'].filter(x=>x!==S.citta));p.dove=dove;
     if(!(p.rapporto>=60&&richiesta('r_trasloco',p)))annuncia(p,`${p.nome} si trasferisce a ${dove}.`,'h')}
   // momenti difficili e richieste
@@ -260,8 +269,8 @@ function incontri(){
 }
 const DOVE={uscite:['a una festa','in un locale','a un aperitivo','a un concerto'],hobby:['al corso','in palestra, tra un esercizio e l\'altro','al tuo gruppo di '+'hobby'],volont:['al volontariato','a una raccolta fondi'],sport:['al campo','in piscina','al parco, correndo'],amici:['a cena da amici','a una grigliata tra amici'],lavoro:['al lavoro','in pausa caffè','a una riunione'],scuola:['a scuola','in classe','in biblioteca']};
 function doveTesto(x){if(x==='hobby'){const hb=HOBBY.find(z=>z.id===S.hobby);return hb?`al corso di ${hb.n.toLowerCase()}`:'al corso'}return pick(DOVE[x]||['in giro'])}
-function nuovoConoscente(c,dove){
-  return nuovaPersona('Conoscente',c.sesso,c.eta,c.cognome,{nome:c.nome,pers:c.pers,tr:c.tr,rapporto:r(25,40),dove});
+function nuovoConoscente(c,dove,extra){
+  return nuovaPersona('Conoscente',c.sesso,c.eta,c.cognome,Object.assign({nome:c.nome,pers:c.pers,tr:c.tr,look:c.look,rapporto:r(25,40),dove},extra||{}));
 }
 
 function orePartnerAuto(){

@@ -272,12 +272,18 @@ function rimuoviSuoceri(p){S.relazioni=S.relazioni.filter(x=>x.famDi!==p.id||!['
 
 /* ---------- Dialoghi ---------- */
 function parla(p){
-  const temi=TEMI.filter(t=>(!t.min||S.eta>=t.min)&&(!t.max||S.eta<=t.max)&&(!t.pmin||p.eta>=t.pmin)&&(!t.solo||t.solo.includes(p.ruolo))&&(!t.etaMax||p.eta<=t.etaMax)&&(!t.basso||p.rapporto<60)&&(t.id!=='scuola_fig'||p.eta>=6));
-  const scelte=shuffle(temi.filter(t=>!t.solo&&!t.basso)).slice(0,5).concat(temi.filter(t=>t.solo||t.basso));
+  const temi=TEMI.filter(t=>!t.c&&(!t.min||S.eta>=t.min)&&(!t.max||S.eta<=t.max)&&(!t.pmin||p.eta>=t.pmin)&&(!t.solo||t.solo.includes(p.ruolo))&&(!t.etaMax||p.eta<=t.etaMax)&&(!t.basso||p.rapporto<60)&&(t.id!=='scuola_fig'||p.eta>=6));
+  // gli argomenti legati a quello che sta vivendo (lutto, neonato, lavoro nuovo…) vengono per primi
+  const ctx=TEMI.filter(t=>t.c&&(!t.min||S.eta>=t.min)&&t.c(p)).slice(0,2);
+  const scelte=ctx.concat(shuffle(temi.filter(t=>!t.solo&&!t.basso)).slice(0,5-ctx.length)).concat(temi.filter(t=>t.solo||t.basso));
   showSheet({k:`Parli con ${p.nome}`,t:'Di cosa parlate?',p:`${tratto(p)} · rapporto ${p.rapporto}%`,chiudi:true,d:{p},scelte:scelte.map(t=>({l:T(t.l,{p}),disabled:fatto(p.id+'t_'+t.id),fx:una(p.id+'t_'+t.id,0,()=>{
     const ok=t.ok.includes(p.tr),ko=t.ko.includes(p.tr);
     let d0,txt,k;
-    if(ok||(!ko&&chance(.55+p.rapporto/300))){d0=ok?r(5,10):r(2,5);txt=t.si;k='g';if(t.id==='scuse')d0+=10}
+    if(t.c){   // parlare di quello che sta vivendo: di solito fa bene, e se ne ricorda
+      if(ok||chance(.6+ppz(p,'A')*.15+p.rapporto/300)){d0=r(6,11);txt=t.si;k='g';p.umore=clamp((p.umore||50)+10);if(t.mem)ricorda(p,t.mem(p),1);if(t.dopo)t.dopo(p)}
+      else{d0=-r(0,3);txt=t.no;k=''}
+    }
+    else if(ok||(!ko&&chance(.55+p.rapporto/300))){d0=ok?r(5,10):r(2,5);txt=t.si;k='g';if(t.id==='scuse')d0+=10;if(t.id==='ricordi'){const m=ricordoDi(p,1,10);if(m)ritorno(p,m,'ricordi')}}
     else{d0=-(ko?r(4,10):r(1,4));txt=t.no;k='b';if(t.id==='segreto'){mod('felicita',-4)}}
     p.rapporto=clamp(p.rapporto+d0);if(k==='g')mod('felicita',1);
     return [T(txt,{p})+` (${d0>0?'+':''}${d0})`,k];

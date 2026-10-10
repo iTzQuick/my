@@ -187,16 +187,16 @@ function apriPersona(id){
     else o.push({l:`Parla con ${p.nome}`,sub:'Scegli tu l\'argomento',fx:()=>parla(p)});
     if(S.eta>=8)opt('Fai un regalo','regalo',R==='Partner'||R==='Coniuge'?150:60,()=>{rel(6,12);return [`${p.nome} apprezza molto il regalo.`,'g']});
     if(['Madre','Padre','Nonno'].includes(R)&&S.eta>=6)opt('Chiedi dei soldi','soldi',0,()=>{
-      const pp=p.rapporto/150*(p.tr===TR.GENEROSO?1.3:p.tr===TR.EGOISTA?.6:1);
+      const pp=p.rapporto/150*(p.tr===TR.GENEROSO?1.3:p.tr===TR.EGOISTA?.6:1)*memoriaAiuto(p);
       if(chance(pp)){const x=r(20,60)*(S.eta<18?1:6)*({umile:.6,media:1,agiata:3}[S.classe]);soldi(x);return [`${p.nome} ti dà ${eur(x)}.`,'g']}
-      rel(-5,-2);return ['«I soldi non crescono sugli alberi.»','b']});
+      rel(-5,-2);return [rifiutoRicordo(p)||'«I soldi non crescono sugli alberi.»','b']});
     // da ricchi si può aiutare la famiglia
     if(S.eta>=25&&['Madre','Padre','Fratello','Figlio','Nipote','Nonno'].includes(R)&&p.eta>=18&&S.soldi>=P(60000))opt('Fai un bonifico generoso','bonif',P(20000),()=>{rel(8,14);ricorda(p,'Gli hai fatto un regalo importante'.replace('Gli',gp(p,'Gli','Le')));return [`${p.nome} ti chiama commoss${gp(p,'o','a')}: «Non dovevi».`,'g']},0);
     if(R==='Figlio'&&p.eta>=20&&!p.casaRegalata&&S.soldi>=P(400000))opt('Regala una casa','casareg',P(250000),()=>{p.casaRegalata=true;rel(18,25);mod('felicita',8);ricorda(p,'Gli hai regalato una casa'.replace('Gli',gp(p,'Gli','Le')));return [`Consegni a ${p.nome} le chiavi di un appartamento. Non riesce a dire niente, poi ti abbraccia.`,'g']},0);
     if(['Madre','Padre','Nonno'].includes(R)&&p.eta>=75&&S.eta>=18)opt(`Prenditi cura di ${gp(p,'lui','lei')}`,'cura',0,()=>{rel(10,16);mod('felicita',-1);S.karma=clamp(S.karma+4);return [`Passi molto tempo con ${p.nome}. Ti è grat${gp(p,'o','a')}.`,'g']});
     if(R==='Amico'){
       if(S.eta>=18)opt('Invita in vacanza','vac',1000,()=>{rel(12,18);mod('felicita',8);return [`Una settimana in Sardegna con ${p.nome}.`,'g']});
-      if(S.eta>=18)opt('Chiedi un prestito','prest',0,()=>{if(chance(p.rapporto/140)){const x=r(5,20)*100;soldi(x);rel(-4,-1);return [`${p.nome} ti presta ${eur(x)}.`,'g']}rel(-6,-3);return [`${p.nome} dice che non può.`,'b']});
+      if(S.eta>=18)opt('Chiedi un prestito','prest',0,()=>{if(chance(p.rapporto/140*memoriaAiuto(p))){const x=P(r(5,20)*100);soldi(x);rel(-4,-1);return [`${p.nome} ti presta ${eur(x)}.${aiutoRicordo(p)}`,'g']}rel(-6,-3);return [rifiutoRicordo(p)||`${p.nome} dice che non può.`,'b']});
       if(amorePossibile(p)&&p.rapporto>=45)opt('Dichiara i tuoi sentimenti','ama',0,()=>dichiarati(p),4,'Rischi di rovinare l\'amicizia');
       if(!p.best&&p.rapporto>=85&&!vivi(['Amico']).some(x=>x.best))opt('Proponi di essere migliori amici','best',0,()=>{if(chance(.45+(p.rapporto-85)/40+(affinita(p)-50)/250)){p.best=true;mod('felicita',6);return [`Ora tu e ${p.nome} siete migliori amici!`,'g']}relD(p,-4);mod('felicita',-2);return [`${p.nome} sorride: «Ma siamo già amici, che bisogno c'è di dirlo?» Ci rimani un po' male.`,'b']});
     }
@@ -214,12 +214,13 @@ function apriPersona(id){
       if(inGravidanza())o.push({l:'In attesa del bambino',sub:`Il parto è previsto tra ${Math.max(0,S.gravidanza.parto-S.t)} mesi`,disabled:true});
       if(R==='Coniuge'&&S.sesso!==p.sesso&&S.eta<=60&&!S.adozione)o.push({l:'Avviate un\'adozione',sub:puoAdottare(p)||'Domanda al Tribunale per i minorenni',disabled:!!puoAdottare(p),fx:()=>avviaAdozione(p)});
     }
-    if(R==='Coniuge')opt('Terapia di coppia','terapia',1000,()=>{rel(12,20);return ['Imparate ad ascoltarvi di nuovo.','g']});
+    if((R==='Coniuge'||R==='Partner'&&p.conv)&&!S.terapia)o.push({l:'Proponete una terapia di coppia',sub:`Sei mesi, circa ${eur(P(80))} a seduta`,fx:()=>{if(chance(.55+ppz(p,'A')*.2+(p.imp-50)/150)){S.terapia={pid:p.id,fine:S.t+6,t0:S.t};p.imp=clamp(p.imp+4);return [`${p.nome} accetta. Martedì la prima seduta.`,'']}p.intim=clamp(p.intim-3);return [`«Non abbiamo bisogno di uno psicologo», dice ${p.nome}.`,'b']}});
+    if(S.terapia&&S.terapia.pid===p.id)o.push({l:'In terapia di coppia',sub:`Ancora ${Math.max(0,S.terapia.fine-S.t)} mesi`,disabled:true});
     if(R==='Figlio'||R==='Nipote'){
       if(p.eta<10)opt('Leggi una favola','favola',0,()=>{rel(6,10);mod('felicita',3);return [`${p.nome} si addormenta prima della fine.`,'g']});
       if(R==='Figlio'&&p.eta>=6&&p.eta<=18)opt('Aiuta con i compiti','compiti',0,()=>{rel(4,8);p.voto=clamp((p.voto||50)+r(4,9));return ['Un pomeriggio sui libri insieme.','g']});
       if(p.eta>=10&&p.eta<=17)opt('Dai la paghetta','paghetta',300,()=>{rel(5,10);return [`${p.nome} è content${gp(p,'o','a')}.`,'g']});
-      if(R==='Figlio'&&p.eta>=25&&S.eta>=60)opt('Chiedi un aiuto economico','aiuto',0,()=>{if(chance(p.rapporto/130)){const x=r(10,50)*100;soldi(x);return [`${p.nome} ti aiuta con ${eur(x)}.`,'g']}rel(-6,-2);return [`${p.nome} è in difficoltà anche lui.`.replace('lui',gp(p,'lui','lei')),'b']});
+      if(R==='Figlio'&&p.eta>=25&&S.eta>=60)opt('Chiedi un aiuto economico','aiuto',0,()=>{if(chance(p.rapporto/130*memoriaAiuto(p))){const x=r(10,50)*100;soldi(x);return [`${p.nome} ti aiuta con ${eur(x)}.`,'g']}rel(-6,-2);return [rifiutoRicordo(p)||`${p.nome} è in difficoltà anche ${gp(p,'lui','lei')}.`,'b']});
     }
     opt('Litiga','litiga',0,()=>{rel(-18,-8);mod('felicita',-3);if(p.rapporto<10&&['Amico','Cugino','Cognato','Zio','Suocero'].includes(p.ruolo)&&chance(.4)){creaNemico('lite',p);return [`La lite con ${p.nome} degenera. Ora siete nemici.`,'b']}return [`Volano parole grosse con ${p.nome}.`,'b']});
     if(R==='Amico')o.push({l:'Chiudi l\'amicizia',fx:()=>{S.relazioni=S.relazioni.filter(x=>x!==p);mod('felicita',-3-Math.round(p.rapporto/25));pesa(Math.round(3+p.rapporto/10),2);return [`Non sei più amic${g('o','a')} di ${p.nome}.`,'b']}});
@@ -237,6 +238,7 @@ function schedaPersona(p){
   r0.push(`Carattere: ${descrPers(p.pers,p.sesso)}${p.ruolo!=='Nemico'?` · affinità con te ${affinita(p)}%`:''}`);
   const st=statoNpc(p),cp=coppiaNpc(p);
   if(st||cp)r0.push(cap([st,cp].filter(Boolean).join(' · ')));
+  const cx=S.legami&&contestoNpc(p);if(cx&&cx.id!=='malato')r0.push(`In questo periodo ${cx.s}`);
   if(p.malato)r0.push(`Sta poco bene${p.malattia?': '+p.malattia.toLowerCase():''}`);
   if(p.nonAuto)r0.push('Non è più autosufficiente');
   if(p.lontano)r0.push(`Vive lontano${p.dove?', a '+p.dove:''}`);
@@ -245,6 +247,10 @@ function schedaPersona(p){
   if(p.prestito)r0.push(`Ti deve ${eur(p.prestito)}`);
   const rc=(p.ricordi||[]).slice(-2).reverse();
   if(rc.length)r0.push('Si ricorda: '+rc.map(x=>x.s.toLowerCase()).join('; ')+'.');
+  if(S.legami&&!['Nemico'].includes(p.ruolo)){
+    const gr=gruppiDi(p).map(g=>g.n);if(gr.length)r0.push(`Gruppo: ${gr.join(', ')}`);
+    const co=conoscentiDi(p).filter(x=>!FAM_LEG.includes(x.ruolo)||!FAM_LEG.includes(p.ruolo)).slice(0,5).map(x=>x.nome);if(co.length)r0.push(`Conosce anche ${nomi(co)}`);
+  }
   return r0.join('\n');
 }
 /* Da minorenni ci si innamora di coetanei (al massimo 2 anni di differenza), da adulti di adulti */
@@ -256,7 +262,7 @@ function candidato(){
 function appuntamento(c,bonus){
   if(!c)return ['Non c\'era nessuno.','x'];
   const p=Math.max(.06,Math.min(.88,.3+(S.aspetto-c.asp)/150+S.felicita/400+S.karma/500+S.fama/300+(affinita(c)-50)/200+pz('E')*.06+(bonus||0)));
-  if(chance(p)){const n=nuovaPersona('Partner',c.sesso,c.eta,c.cognome,{nome:c.nome,tr:c.tr,pers:c.pers,rapporto:r(55,78)});S.relazioni=S.relazioni.filter(x=>!(x.ruolo==='Conoscente'&&x.nome===c.nome&&x.cognome===c.cognome));mod('felicita',10);return [`${n.nome} dice di sì! Ora state insieme.`,'g']}
+  if(chance(p)){const n=nuovaPersona('Partner',c.sesso,c.eta,c.cognome,{nome:c.nome,tr:c.tr,pers:c.pers,look:c.look,rapporto:r(55,78)});S.relazioni=S.relazioni.filter(x=>!(x.ruolo==='Conoscente'&&x.nome===c.nome&&x.cognome===c.cognome));mod('felicita',10);return [`${n.nome} dice di sì! Ora state insieme.`,'g']}
   mod('felicita',-4);return [`${c.nome} ti dice gentilmente che non è interessat${c.sesso==='F'?'a':'o'}.`,'b'];
 }
 function cercaAmore(){
@@ -273,6 +279,9 @@ function cercaAmore(){
 function sposa(p,fel){
   p.ruolo='Coniuge';if(!p.conv)convivi(p);p.rapporto=clamp(p.rapporto+10);p.imp=clamp((p.imp||60)+20);mod('felicita',fel);segnaVita('matrimonio');S.fatti.sposato=true;creaSuoceri(p);
   p.nozze=S.t;p.soldiNozze=S.soldi;pesa(6,2);
+  presentaAmici('Al matrimonio',true);
+  {const L=S.relazioni.filter(x=>x.vivo&&x!==p&&['Amico','Fratello','Cugino','Zio','Nonno'].includes(x.ruolo)).map(x=>[x,ricordoDi(x,1,5)]).filter(x=>x[1]);
+   if(L.length){const [x,m]=pick(L);log(`Al matrimonio c'è anche ${x.nome}, che si ricorda ancora di ${quanto(m)}: ${m.s.charAt(0).toLowerCase()+m.s.slice(1)}.`,'g');ritorno(x,m,'matrimonio')}}
   momento('matrimonio',{tit:`${S.nome} e ${p.nome}`,sub:p.sesso===S.sesso?'Unione civile':'Sposi',txt:pick(['Il sì più emozionante della tua vita, e un pranzo che finisce a mezzanotte.','Riso, lacrime, il primo ballo e una zia che piange più di tutti.','Fiori, promesse e un brindisi con tutte le persone che ami.']),pids:[p.id]});   // anche i cambiamenti belli stressano (Holmes e Rahe: matrimonio 50 su 100)
   return [p.sesso===S.sesso?`Celebrate l'unione civile! Il giorno più bello della tua vita insieme a ${p.nome}.`:`Vi sposate! Il giorno più bello della tua vita insieme a ${p.nome}.`,'g'];
 }
@@ -286,7 +295,7 @@ function nasceFiglio(p,ses,silenzio){
 }
 function chiudiRelazione(p,testo){
   if(p.ruolo==='Coniuge')return divorzia(p);
-  p.ruolo='Ex';p.conv=false;S.fatti.fineCoppiaT=S.t;mod('felicita',-6);pesa(Math.round(6+p.rapporto/8),4);rimuoviSuoceri(p);
+  p.ruolo='Ex';p.conv=false;S.fatti.fineCoppiaT=S.t;mod('felicita',-6);if(S.legami)bisognoAiuto('separazione',p);pesa(Math.round(6+p.rapporto/8),4);rimuoviSuoceri(p);
   return [T(testo,{p}),'b'];
 }
 function nuoveAmicizie(){

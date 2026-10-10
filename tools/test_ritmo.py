@@ -20,7 +20,7 @@ JS = r'''
  const out=[],bad=[],salt=new Set();
  const BAD=/\{\w+\}|undefined|NaN|\[object|\bnull\b/;
  // età di prova: dentro i limiti dell'evento (gli eventi «link» non ne hanno: si usa quella indicata qui)
- const ETA={cat_ritorno:62,cat_ritorno2:63,cat_ritorno3:64,cat_canna:45,cat_canna2:46,cat_canna3:46,cat_capanna4:30,lettera_ritorno:26,lettera_promessa:31,cat_tesi:23,cat_tesi2:23,cat_tesi3:24,cat_ospite:16,cat_ospite2:16,cat_ospite3:19,mez_figlio_estero:52,mez_figlio_affitto:58,mez_gen_patente:55,mez_gen_casa:55,mez_gen_smarrito:52,mez_capo_giovane:48,mez_menopausa:50,mez_prostata:58,cal_natale_ragazzi:15,cal_lavoretto:16,cal_ferie_amici:20,cal_natale_nonno:66,cal_ferie_pensione:68,cal_natale_figlio:32,cal_ferie_bimbo:32,cal_ferie_grandi:48,
+ const ETA={edu_capriccio:32,edu_buio:32,edu_compiti:38,edu_bugia:40,edu_sport:40,edu_schermi:42,edu_fratelli:40,edu_cuore:45,edu_uscita:45,edu_capelli:44,edu_lavoretto:47,cop_vent_anni:55,leg_rimpatriata:40,cat_ritorno:62,cat_ritorno2:63,cat_ritorno3:64,cat_canna:45,cat_canna2:46,cat_canna3:46,cat_capanna4:30,lettera_ritorno:26,lettera_promessa:31,cat_tesi:23,cat_tesi2:23,cat_tesi3:24,cat_ospite:16,cat_ospite2:16,cat_ospite3:19,mez_figlio_estero:52,mez_figlio_affitto:58,mez_gen_patente:55,mez_gen_casa:55,mez_gen_smarrito:52,mez_capo_giovane:48,mez_menopausa:50,mez_prostata:58,cal_natale_ragazzi:15,cal_lavoretto:16,cal_ferie_amici:20,cal_natale_nonno:66,cal_ferie_pensione:68,cal_natale_figlio:32,cal_ferie_bimbo:32,cal_ferie_grandi:48,
    inc_parco:4,inc_quartiere:66,inc_genitori:38};
  const ids=Object.keys(EV).filter(id=>PRE.some(p=>id.startsWith(p)));
  for(const id of ids){
@@ -80,10 +80,22 @@ JS = r'''
      mez_amici_figli:()=>{nuovaPersona('Figlio','F',3,S.cognome,{})},
      bim_castello_letto:()=>{nuovaPersona('Fratello','M',Math.max(1,eta-2),S.cognome,{rapporto:70})},rag_presenta:()=>{nuovaPersona('Partner',S.sesso==='M'?'F':'M',eta,null,{rapporto:60})}};
    if(SETUP[id])SETUP[id]();
+   // Fase 2: amici in un gruppo, ricordi vecchi, partner, figli dell'età giusta
+   if(/^(leg|mem)_/.test(id)){if(!S.gruppi){S.gruppi=[];S.legami=[]}const A=nuovaPersona('Amico',i%2?'F':'M',eta,null,{rapporto:72});const B=nuovaPersona('Amico',i%2?'M':'F',eta+1,null,{rapporto:66});
+     const G=gruppo(id==='leg_rimpatriata'?'medie':'festa');[A.id,B.id,amico.id].forEach(x=>{if(!G.m.includes(x))G.m.push(x)});if(id==='leg_rimpatriata')G.fine=S.t-150;d.g=G.id;
+     ricorda(A,i%2?'Non gli hai prestato i soldi':'Gli hai prestato 300 €',i%2?-1:2);A.ricordi[A.ricordi.length-1].t=S.t-150;d.mt=A.ricordi[A.ricordi.length-1].t;d.x=['lutto','lavoro','malattia','separazione','carcere','stanchezza'][i%6];
+     legame(A,B,'amici',40);p=A;d.q=B.id;
+     if(id==='leg_madre_partner'){p=partner();const m=S.relazioni.find(x=>x.ruolo==='Madre');if(m){m.vivo=true;d.q=m.id}}
+     if(id==='leg_gelosia'){p=partner();B.best=true;d.q=B.id}
+     if(id==='leg_coppia'&&i%2){S.attrazione=A.sesso}}
+   if(/^cop_/.test(id)){p=partner();p.nozze=S.t-250;p.pers.C=S.pers.C>50?10:90;if(id==='cop_decisione')d.i=i%4}
+   const EDU={edu_capriccio:3,edu_buio:5,edu_compiti:8,edu_bugia:10,edu_sport:9,edu_schermi:12,edu_fratelli:8,edu_cuore:15,edu_uscita:15,edu_capelli:14,edu_lavoretto:16};
+   if(EDU[id]){partner();p=nuovaPersona('Figlio',i%2?'F':'M',EDU[id],S.cognome,{rapporto:70});if(id==='edu_fratelli')nuovaPersona('Figlio','M',EDU[id]-2,S.cognome,{rapporto:70});S.anno=Math.max(S.anno,2015)}
    if(/fratello_grande/.test(id))nuovaPersona('Fratello','F',eta+4,S.cognome,{rapporto:70});
    if(!e.link&&e.cond&&!e.cond(d)){salt.add(id);break}
    if(e.auto){for(let k=0;k<4;k++){const res=scegli(e.auto,Object.assign({},d));const t=(res&&res[0])||'';const m=t.match(BAD);if(m)bad.push(`${id} [${ses}] auto: «${m[0]}» in ${t.slice(0,100)}`);out.push(`${id} [${ses}, ${eta} anni] (automatico)
    = ${t}`)}break}
+   if(p)d.p=p;
    coda.push({e,d});next();
    const bs=[...document.querySelectorAll('#shA button:not([disabled])')];
    if(i>=bs.length)break;

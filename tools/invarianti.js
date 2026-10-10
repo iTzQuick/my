@@ -70,6 +70,11 @@ window.INV={
   for(const n of V('Nipote')){const g0=n.gen&&byId(n.gen);if(g0&&nascita(n)-nascita(g0)<14*12)no('nipote con genitore troppo giovane',`${chi(g0)} e ${chi(n)}`)}
   // 7. animali con nomi diversi
   const nomiA=(S.animali||[]).map(a=>a.nome);if(new Set(nomiA).size<nomiA.length)no('animali con lo stesso nome',nomiA.join(', '));
+  // 8. persone vere (Fase 2): coppie tra le tue persone reciproche, legami con persone che esistono, stile da genitore valido
+  for(const p of S.relazioni)if(p.vivo&&p.pId){const q=byId(p.pId);if(q&&q.pId!==p.id)no('coppia tra persone non reciproca',`${chi(p)} → ${chi(q)}`)}
+  if(S.legami)for(const l of S.legami){if(l.a===l.b)no('legame con sé stessi',String(l.a));if(!in100(l.f))no('forza del legame fuori 0-100',String(l.f))}
+  if(S.genit&&(!in100(S.genit.cal)||!in100(S.genit.reg)))no('stile da genitore non valido',JSON.stringify(S.genit));
+  if(S.gruppi)for(const g of S.gruppi)if(new Set(g.m).size<g.m.length)no('persona due volte nello stesso gruppo',g.n);
   return out;
  }
 };

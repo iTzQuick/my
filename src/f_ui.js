@@ -10,6 +10,8 @@ function showSheet(o){
   sheetOpen=true;$('#scrim').hidden=false;
   const d=o.d||{};
   $('#shK').textContent=o.k||'';$('#shT').textContent=o.t||'';
+  const V0=$('#shV');if(V0){const fp=d.p&&d.p.vivo&&d.p.id&&d.p.nome?d.p:null,fc=!fp&&d.cand&&d.cand.look?d.cand:null;
+    V0.innerHTML=fp?volto(lookDi(fp),fp.eta,fp.sesso):fc?volto(fc.look,fc.eta,fc.sesso):'';V0.hidden=!fp&&!fc}
   const P=$('#shP');P.textContent=prezzi(o.p)||'';P.className='';P.hidden=!o.p;
   const A=$('#shA');A.innerHTML='';
   const sc=(o.scelte||[]).filter(c=>!c.cond||c.cond(d));
@@ -304,7 +306,7 @@ function personaRow(p){
   if(p.mezzo)info[0]=gp(p,'Fratellastro','Sorellastra');
   if(p.gemello)info[0]=gp(p,'Gemello','Gemella');
   const nem=p.ruolo==='Nemico';
-  return `<button class="person${p.vivo?'':' dead'}" data-p="${p.id}" ${p.vivo?'':'disabled'}><span class="pa" style="background:hsl(${h} 40% 46%)">${esc(p.nome[0])}</span><span class="pi"><span class="pn">${p.frequente?'★ ':''}${esc(p.nome)} ${esc(p.cognome)}</span><span class="pr">${info.join(' · ')}</span></span>${p.vivo&&p.ruolo!=='Ex'?(nem?`<span class="pb" title="Rancore">${p.rancore||50}%${bar(p.rancore||50,'--bad')}</span>`:`<span class="pb">${p.rapporto}%${bar(p.rapporto,'--aspetto')}</span>`):''}</button>`;
+  return `<button class="person${p.vivo?'':' dead'}" data-p="${p.id}" ${p.vivo?'':'disabled'}><span class="pa volto-mini">${volto(lookDi(p),p.eta,p.sesso)}</span><span class="pi"><span class="pn">${p.frequente?'★ ':''}${esc(p.nome)} ${esc(p.cognome)}</span><span class="pr">${info.join(' · ')}</span></span>${p.vivo&&p.ruolo!=='Ex'?(nem?`<span class="pb" title="Rancore">${p.rancore||50}%${bar(p.rancore||50,'--bad')}</span>`:`<span class="pb">${p.rapporto}%${bar(p.rapporto,'--aspetto')}</span>`):''}</button>`;
 }
 function renderPersone(V){
   const R=x=>S.relazioni.filter(p=>x.includes(p.ruolo));
@@ -318,10 +320,14 @@ function renderPersone(V){
   h+='<div class="sec">Amore</div>';
   if(amore.length)h+=`<div class="list">${amore.map(personaRow).join('')}</div>`;
   if(!amore.some(p=>p.vivo)&&S.carcere===0)h+=S.eta>=18?`<button class="btn" id="btnAmore" style="margin-top:${amore.length?8:0}px">Cerca l'amore</button>`:'<div class="note">Potrai cercare l\'amore dai 18 anni.</div>';
-  if(figli.length)h+=`<div class="sec">Figli e nipoti</div><div class="list">${figli.map(personaRow).join('')}</div>`;
+  if(figli.length){h+=`<div class="sec">Figli e nipoti</div>`;
+    if(S.genit&&figli.some(f=>f.ruolo==='Figlio'&&f.eta<18&&!f.fuori)){const G=S.genit,st=STILE_GEN[stileGen()];h+=`<div class="panel gen"><div class="kv"><span>Come genitore sei</span><b>${st.n}</b></div><div class="meta">Affetto ${Math.round(G.cal)} · regole ${Math.round(G.reg)}: ${esc(st.d)}.</div></div>`}
+    h+=`<div class="list">${figli.map(personaRow).join('')}</div>`}
   h+=`<div class="sec">Amici</div>${amici.length?`<div class="list">${amici.map(personaRow).join('')}</div>`:'<div class="note">Non hai ancora amici.</div>'}`;
   if(S.eta>=6&&S.carcere===0)h+=`<button class="btn ghost" id="btnAmici" style="margin-top:8px" ${fatto('nuoviamici')?'disabled':''}>${fatto('nuoviamici')?attesa('nuoviamici'):'Fai nuove amicizie'}</button>`;
   h+=gruppo('Conoscenti',R(['Conoscente']));
+  const gr=(S.gruppi||[]).map(G=>[G,membriVivi(G).filter(x=>['Amico','Conoscente'].includes(x.ruolo))]).filter(x=>x[1].length>=2);
+  if(gr.length)h+=`<div class="sec">I tuoi gruppi</div><div class="panel">${gr.map(([G,M])=>`<div class="kv"><span>${esc(G.n)}${gruppoAttivo(G)?'':' <small class="meta">· di una volta</small>'}</span><b class="meta">${esc(nomi(M.slice(0,4).map(x=>x.nome)))}${M.length>4?' e altri':''}</b></div>`).join('')}</div>`;
   h+=gruppo('Nemici',nem);
   if(ex.length)h+=`<div class="sec">Ex</div><div class="list">${ex.map(personaRow).join('')}</div>`;
   h+='<div class="sec">Animali</div>';
@@ -474,6 +480,12 @@ function intro(){
 }
 
 /* ---------- Creazione e necrologio ---------- */
+/* al funerale: le persone che ti volevano più bene, con il ricordo più forte che avevano di te */
+function funerale(){
+  const L=S.relazioni.filter(p=>p.vivo&&!['Nemico','Conoscente','Ex'].includes(p.ruolo)&&p.eta>=6).sort((a,b)=>(b.rapporto+bilancioRicordi(b)*4)-(a.rapporto+bilancioRicordi(a)*4)).slice(0,6);
+  if(!L.length)return '';
+  return `<div class="funerale"><div class="sec">Al funerale</div>${L.map(p=>{const m=ricordoDi(p,1);return `<div class="fun-p"><span class="volto-mini">${volto(lookDi(p),p.eta,p.sesso)}</span><span><b>${esc(p.nome)}</b> <small class="meta">${esc(ruoloLabel(p).toLowerCase())}</small>${m?`<br><small>Ricorda: ${esc(minus(m.s))}.</small>`:''}</span></div>`}).join('')}</div>`;
+}
 function renderMorte(V){
   const figli=S.relazioni.filter(p=>p.ruolo==='Figlio');
   const nip=S.relazioni.filter(p=>p.ruolo==='Nipote').length;
@@ -497,6 +509,7 @@ function renderMorte(V){
    ${S.fama>0?kv('Fama',S.fama+'/100'):''}${S.social.follower?kv('Follower',nf(S.social.follower)):''}
    ${kv('Ultima residenza',esc(nomeLuogo(S.citta,S.prov)))}
   </div>
+  ${funerale()}
   <div class="btns"><button class="btn ghost" id="btnFilm">Il film della tua vita</button>${eredi.map(p=>`<button class="btn" data-erede="${p.id}">Continua come ${esc(p.nome)} (${p.eta} anni)</button>`).join('')}
   <button class="btn ${eredi.length?'ghost':''}" id="btnRinasci">Vivi una vita nuova</button></div></div>`;
   V.querySelectorAll('[data-erede]').forEach(b=>b.onclick=()=>continuaCome(+b.dataset.erede));

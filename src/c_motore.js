@@ -111,7 +111,9 @@ function nuovaPersona(ruolo,sesso,eta,cognome,x){
   delete p.genitori;
   if(!x||x.tr===undefined)p.tr=trDaPers(p.pers);
   initNpc(p);
-  S.relazioni.push(p);if(ruolo==='Partner')orePartnerAuto();return p;
+  S.relazioni.push(p);if(ruolo==='Partner')orePartnerAuto();
+  if(S.gruppi&&['Amico','Conoscente'].includes(ruolo)&&!p.cella)assegnaGruppo(p,x&&x.dove,x&&x.via);
+  return p;
 }
 const vivi=ruoli=>S.relazioni.filter(p=>p.vivo&&ruoli.includes(p.ruolo));
 const genitoriVivi=()=>vivi(['Madre','Padre']).length>0;
@@ -182,7 +184,7 @@ function assumi(j){
   if(S.lavoro){pagaTFR();S.storico.push(S.lavoro.nome)}
   S.naspi=null;S.sfl=null;
   let liv=0;if(j.boost&&S.istr.cert.includes(j.boost.cert))liv=j.boost.liv;
-  S.lavoro={id:j.id,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)*fattoreGenere()),nome:nomeJob(j,liv),contratto:contrattoIniziale(j,liv)};
+  S.lavoro={id:j.id,da:S.t,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)*fattoreGenere()),nome:nomeJob(j,liv),contratto:contrattoIniziale(j,liv)};
   if(chance(ptIniziale(j)))S.lavoro.ptv=true;
   if(S.vivo)log(`Contratto: ${descrContratto(S.lavoro).toLowerCase()}${S.lavoro.ptv&&S.lavoro.contratto.t!=='piva'&&!/part-time/.test(descrContratto(S.lavoro))?' · part-time':''}.`,'h');
   S.ultimoLavoro=S.lavoro.nome;
@@ -190,7 +192,7 @@ function assumi(j){
   if(primo)momento('lavoro',{tit:S.lavoro.nome,sub:descrContratto(S.lavoro),txt:`Stipendio: ${eur(ralEff(S.lavoro)/12)} lordi al mese. Il primo lavoro vero.`});
 }
 /* vol: lo lasci tu (niente NASpI) */
-function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L)}}   // la partita IVA non ha la NASpI
+function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L);if(S.legami)bisognoAiuto('lavoro')}}   // la partita IVA non ha la NASpI
 function lavoroPerFiglio(p){
   if(p.studio&&p.studio.startsWith('laurea:')){const f=p.studio.slice(7);const ok=LAVORI.filter(j=>j.req&&j.req.lau&&j.req.lau.includes(f)&&!j.req.abil&&!j.req.liv);if(ok.length)return pick(ok).id;return 'imp'}
   if(p.studio==='diploma')return pick(['imp','tec','com','agi','rec','cam','ope','segr','cass','callc','post','agcom']);
@@ -223,6 +225,7 @@ function applicaPers(o){
   return sp.length?` Ti rende un po' più ${sp.slice(0,2).join(' e ')}.`:'';
 }
 function applica(b,d){
+  if(b.gen)cambiaGen(b.gen);
   if(b.x!==undefined)d.x=b.x;
   if(b.fx){const rv=b.fx(d);if(rv===null||rv===KEEP)return rv;if(Array.isArray(rv))return b.pers&&rv[1]!=='x'?[rv[0]+applicaPers(b.pers),rv[1]]:rv}
   if(b.e)eff(b.e,d);
@@ -349,6 +352,7 @@ function mese(silenzioso){
   if(S.mese===S.meseNascita){S.eta++;S.log[S.log.length-1].eta=S.eta;compleanno()}
   if(S.carcere>0)meseCarcere();
   meseNpc();
+  chiudiGruppi();meseSociale();
   meseFamiglia();
   meseAnimali();
   if(S.carcere===0)meseScuola();
@@ -404,6 +408,8 @@ function compleanno(){
     else if(!L&&!S.azienda)vaiInPensione(true);
   }
   if(S.eta>=6&&S.eta%5===0&&S.eta<=90&&!coda.length&&chance(.5))coda.push({e:EV.compleanno_tondo,d:{}});
+  if(S.carcere===0)presentaAmici(S.eta<14?'Alla tua festa':'Alla tua cena di compleanno');
+  if(S.eta>=30&&S.eta%10===0)auguriDalPassato();
   if(S.eta>=18&&S.eta<=60&&!S.aspir&&S.carcere===0)coda.push({e:EV.aspirazioni,d:{}});
 }
 function tappe(){
@@ -427,6 +433,9 @@ function mortePersona(p){
   mod('felicita',-r(lutto-4,lutto));if(lutto>=14||p.rapporto>=70)segnaVita('lutto');
   pesa(Math.round(lutto*.7*(.6+p.rapporto/250)),Math.round(lutto/3));
   log(`${cap(tuoR(p))} ${p.nome} è mort${gp(p,'o','a')} a ${p.eta} anni.`,'b');
+  if(S.legami)luttoPerChi(p);
+  if(S.legami&&vicino(p)){const m=ricordoDi(p,1,10);if(m&&chance(.6)){log(`${p.nome} non aveva mai dimenticato una cosa di ${quanto(m)}: ${m.s.charAt(0).toLowerCase()+m.s.slice(1)}. Lo raccontava a tutti.`,'h');ritorno(p,m,'addio')}}
+  if(lutto>=14&&S.legami)bisognoAiuto('lutto',p);
   if((p.ruolo==='Madre'||p.ruolo==='Padre')&&!genitoriVivi())ereditaGenitori();
   if(p.ruolo==='Nonno'&&chance(.4)){const q={umile:500,media:3000,agiata:15000}[S.classe]*r(1,4);soldi(q);log(`${cap(tuoR(p))} ti lascia ${eur(q)} in eredità.`,'g')}
   if(p.ruolo==='Coniuge'){log(`Rimani vedov${g('o','a')}.`,'b');avviaReversibilita(p)}
@@ -434,6 +443,7 @@ function mortePersona(p){
 }
 function annoFiglio(p){
   if(p.voto===undefined)p.voto=r(30,90);
+  crescitaFiglio(p);if(p.eta===18&&!p.conEx)bilancioFiglio(p);
   if(p.eta===6)log(`${p.nome} inizia le elementari.`,'h');
   if(p.eta>=6&&p.eta<=19)p.voto=clamp(p.voto+r(-6,6)+(p.rapporto>70?1:-1));
   if(p.eta===19){p.studio=p.voto>35?'diploma':'licenza';if(p.studio==='diploma'){log(`${p.nome} si diploma. Che orgoglio!`,'g');mod('felicita',4);if(chance(.15+p.voto/200))p.uni=pick(FACOLTA).n}}
@@ -609,7 +619,7 @@ function annoBeni(){
   if(S.veicoli.length)mod('felicita',1);
 }
 const haMal=n=>S.malattie.some(m=>m.n===n);
-function ammala(n,gr){if(haMal(n))return;S.malattie.push({n,g:gr,t:S.t});log(gr===1?`Ti ammali: ${n.toLowerCase()}.`:`Ti diagnosticano: ${n.toLowerCase()}.`,gr===1?'h':'b');if(gr>=2&&S.vivo&&S.eta>=1&&!coda.some(q=>q.e.id==='diagnosi'))coda.push({e:EV.diagnosi,d:{x:n}})}
+function ammala(n,gr){if(haMal(n))return;S.malattie.push({n,g:gr,t:S.t});if(gr>=4&&S.legami&&S.eta>=18)bisognoAiuto('malattia');log(gr===1?`Ti ammali: ${n.toLowerCase()}.`:`Ti diagnosticano: ${n.toLowerCase()}.`,gr===1?'h':'b');if(gr>=2&&S.vivo&&S.eta>=1&&!coda.some(q=>q.e.id==='diagnosi'))coda.push({e:EV.diagnosi,d:{x:n}})}
 function controllaMorte(){
   if(!chance(morteMese()))return false;
   muori(causaMorte());return true;
@@ -645,7 +655,7 @@ function entraCarcere(n){
   if(S.casa.tipo!=='proprieta')S.casa={tipo:'carcere'};
   if(iscritto()){S.scuola.stato='finita';log('Devi abbandonare gli studi.','b')}
   const pa=partnerAttuale();if(pa&&chance(.5)){pa.ruolo='Ex';pa.conv=false;log(`${pa.nome} ti lascia.`,'b')}
-  log(`Vieni condannat${g('o','a')} a ${n} ${n===1?'anno':'anni'} di carcere.`,'b');mod('felicita',-20);segnaVita('carcere');
+  log(`Vieni condannat${g('o','a')} a ${n} ${n===1?'anno':'anni'} di carcere.`,'b');if(S.legami)bisognoAiuto('carcere');mod('felicita',-20);segnaVita('carcere');
 }
 function meseCarcere(){const G=S.galera;if(G){G.mesi=(G.mesi||0)+1;if(G.mesi%12===0)annoCarcere()}else{S.fatti.mc=(S.fatti.mc||0)+1;if(S.fatti.mc%12===0)annoCarcere()}}
 function annoCarcere(){if(S.galera)S.galera.scontata++;S.carcere--;mod('felicita',-4);if(S.carcere>0)log(`Un altro anno in carcere. ${S.carcere===1?'Manca un anno':`Mancano ${S.carcere} anni`}.`,'h');else esciCarcere()}
@@ -712,6 +722,7 @@ function aggiornaStato(){
   if(S.lavoro&&!S.lavoro.contratto)S.lavoro.contratto=PIVA.includes(S.lavoro.id)?{t:'piva',da:S.t-60}:{t:'ind'};
   if(!S.orient)S.orient=S.attrazione?(S.attrazione==='E'?'bi':S.attrazione===S.sesso?'omo':'etero'):pesata([['etero',94],['omo',3],['bi',3]]);
   if(!S.fatti.cittaNascita){S.fatti.cittaNascita=S.citta;S.fatti.provNascita=S.prov}
+  iniziaLegami();
 }
 function migra3(){
   const X=S;

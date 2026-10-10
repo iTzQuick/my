@@ -122,6 +122,14 @@ main{flex:1;overflow-y:auto;padding:4px 16px 130px;min-height:0}
 .person{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left}
 .list>.person:last-child{border-bottom:0}
 .person .pa{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+.person .pa.volto-mini{background:var(--surface2);overflow:hidden;border-radius:12px;width:36px;height:43px}
+.volto-mini svg{width:100%;height:100%;display:block}
+.sh-v{float:right;width:58px;height:70px;border-radius:14px;overflow:hidden;margin:0 0 6px 12px;box-shadow:var(--shadow);background:var(--surface2)}
+.sh-v svg{width:100%;height:100%;display:block}
+.panel.gen{margin-bottom:8px}
+.funerale{width:100%;text-align:left;border-top:1px solid var(--line);padding-top:10px;margin-bottom:12px}
+.fun-p{display:flex;gap:10px;align-items:center;padding:6px 0}
+.fun-p .volto-mini{width:40px;height:48px;border-radius:12px;overflow:hidden;flex:none;background:var(--surface2)}
 .person .pa.obj{border-radius:10px;background:var(--surface2);color:var(--ink);font-size:16px}
 .person .pi{flex:1;min-width:0}
 .person .pn{display:block;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -436,6 +444,7 @@ main:has(.crea){padding-bottom:0}
 <div class="scrim" id="scrim" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="shT">
     <div class="sh-k" id="shK"></div>
+    <div class="sh-v" id="shV" hidden></div>
     <h2 id="shT"></h2>
     <p id="shP"></p>
     <div class="opts" id="shA"></div>

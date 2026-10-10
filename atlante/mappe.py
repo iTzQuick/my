@@ -239,3 +239,12 @@ PF.update({
 "d=>d.x==='prot'?.65+pz('E')*.15:.85":"65% da protagonista (di più se sei estroverso/a) · 85% con la parte piccola",
 "d=>d.x==='avvocato'?.9:.7":"90% con l'avvocato · 70% con la sola denuncia","d=>d.x==='cura'?.8:d.x==='vicino'?.7:.5":"80% con lo psicologo · 70% standogli vicino · 50% da solo",
 })
+
+# Fase 2 (ottobre 2026): persone vere
+PC.update({
+"p=>figlioCasa(9,14)(p)&&S.anno>=2010":"il figlio ha 9–14 anni e vive con te (dal 2010: i telefoni)",
+"p=>figlioCasa(4,12)(p)&&vivi(['Figlio']).filter(figlioCasa(3,14)).length>=2":"il figlio ha 4–12 anni e ha un fratello o una sorella piccoli in casa",
+"p=>p.conv&&p.pers&&Math.abs(p.pers.C-S.pers.C)>=25":"convivete e siete molto diversi su ordine e spese",
+"p=>p.nozze!==undefined&&S.t-p.nozze>=240":"siete sposati da almeno 20 anni",
+"p=>p.conv":"convivete",
+})

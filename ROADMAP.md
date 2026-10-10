@@ -23,6 +23,8 @@ Ogni fase ha una priorità (🔴 alta · 🟠 media · 🟢 bassa), una stima di
 
 > **10 ottobre 2026 — Fase 1 fatta:** calendario senza ripetizioni (Natale, ferie, Capodanno, elezioni), 14 modi di conoscere qualcuno, 36 eventi della vita del mese tra i 26 e i 65 anni, 62 eventi 1–6 anni e ~75 tra i 6 e i 17 (con sacramenti e pubertà), 22 catene nuove (29 in tutto), momenti chiave a tutto schermo e il film della vita. `tools/ritmo.py` dice «FASE 1: FATTA ✓».
 
+> **10 ottobre 2026 — Fase 2 fatta:** gruppi e legami tra le persone, ricordi con un segno che tornano anni dopo, conversazioni su quello che l'altro sta vivendo, stile da genitore che forma il carattere dei figli, crisi e terapia di coppia, volti dappertutto. `tools/persone.py` dice «FASE 2: FATTA ✓».
+
 ---
 
 ## Fase 0 — Zero errori (🔴, da fare per prima, M)
@@ -63,15 +65,17 @@ Prima una vita media aveva eventi che si ripetevano troppo (simulazione, volte p
 
 ---
 
-## Fase 2 — Persone vere (🔴, L) — il cuore del simulatore
-- 2.1 **Le persone si conoscono tra loro**: amici in comune, gruppi (la compagnia del liceo, i colleghi, i genitori della scuola), coppie tra persone del gioco, gelosie e conflitti tra loro.
-- 2.2 **Memoria che conta**: i ricordi (`ricordi[]`) cambiano davvero le reazioni (chi hai aiutato ti aiuta, chi hai tradito non si fida).
-- 2.3 **Conversazioni nel contesto**: argomenti che dipendono da quello che sta vivendo l'altro (lutto, nuovo lavoro, figlio appena nato, malattia).
-- 2.4 **Crescere i figli**: il tuo stile da genitore (presente, severo, permissivo) forma il loro carattere; adolescenza dei figli; figli che ti somigliano anche nel carattere.
-- 2.5 **La coppia matura**: decisioni condivise (dove vivere, figli, soldi), crisi, tradimenti, terapia di coppia, separazione con affidamento e assegno.
-- 2.6 **Volti per tutti**: nella scheda Persone, nella presentazione dei nuovi incontri e nel necrologio.
+## Fase 2 — Persone vere (🔴, L) — ✅ fatta il 10 ottobre 2026
+Misura: `python tools/persone.py 60` → amici stretti legati ad altre persone del gioco **100%** (obiettivo 95%), ricordi di almeno 10 anni prima che tornano **~10 per vita** (obiettivo 5).
 
-*Fatto quando*: in una vita simulata ogni amico stretto ha almeno un legame con un'altra persona del gioco, e le scelte di 10 anni prima tornano almeno 5 volte.
+- 2.1 ✅ **Le persone si conoscono tra loro** (c8_legami.js): ognuno entra nel gruppo in cui l'hai conosciuto (la classe delle elementari, la compagnia del liceo, i colleghi, i genitori della classe di tuo figlio, il corso, il quartiere…); frequentare un amico fa vedere anche il suo gruppo; alle tue feste gli amici si conoscono tra loro, al matrimonio tutti. Due amici si possono mettere insieme e lasciare (e tu scegli da che parte stare), due amici litigano (fai da paciere o scegli), tua madre e il partner non si sopportano, il partner è geloso del tuo migliore amico. Le cene del gruppo e, dieci anni dopo, le rimpatriate.
+- 2.2 ✅ **Memoria che conta**: ogni ricordo ha un segno (da −3 a +3). Nel gruppo le voci girano; nei momenti difficili (lutto, licenziamento, diagnosi, separazione, carcere) si fa avanti chi hai aiutato («Adesso tocca a me»); chi hai ferito ti nega un prestito ricordandoti perché; ai compleanni tondi, al matrimonio, ai funerali, nelle rimpatriate e nei vent'anni di nozze tornano ricordi di tanti anni prima.
+- 2.3 ✅ **Conversazioni nel contesto**: lutto, malattia, neonato, separazione, ricerca di lavoro, lavoro nuovo, nuovo amore, trasferimento, pensione aprono argomenti dedicati (sempre per primi); «Parlate di chi conoscete tutti e due» porta notizie sugli altri. La scheda di ogni persona dice cosa sta vivendo, in che gruppo è e chi conosce.
+- 2.4 ✅ **Crescere i figli**: lo stile da genitore (calore e regole: autorevole, permissivo, autoritario, distaccato) parte dal tuo carattere e dalle ore con i figli, si muove con 11 eventi di scelte educative (il capriccio, il mostro nell'armadio, i compiti, la bugia, lo sport, lo schermo, i fratelli, il cuore spezzato, la prima uscita, i capelli verdi, lo scooter) e ogni anno sposta il carattere dei figli; a 18 anni il bilancio: com'è diventato, quanto ti somiglia. Con il pilota automatico i figli di genitori autorevoli arrivano a 18 anni con coscienziosità ~65 ed emotività ~44, quelli di genitori permissivi ~45 e ~53.
+- 2.5 ✅ **La coppia matura**: decisioni insieme (il lavoro in un'altra città, la casa più grande, il conto comune, i pranzi dai suoceri), i soldi, la crisi (tre mesi sotto il 40%), la terapia di coppia vera (sei mesi, poi l'esito), i vent'anni insieme. La separazione con affidamento e assegno c'era già.
+- 2.6 ✅ **Volti per tutti**: nella lista delle persone, nei fogli degli eventi con una persona e degli incontri, al funerale nel necrologio.
+
+*Fatto quando*: in una vita simulata ogni amico stretto ha almeno un legame con un'altra persona del gioco, e le scelte di 10 anni prima tornano almeno 5 volte. Lo controlla `python tools/persone.py 40`.
 
 ---
 
@@ -132,7 +136,7 @@ Una **tabella di realismo** che la simulazione stampa a ogni build, confrontando
 ## Ordine consigliato
 1. **Fase 0 + Fase 7** (affidabilità e misura): sono le fondamenta, e ogni cosa dopo diventa più sicura.
 2. ✅ **Fase 1** (ritmo): fatta il 10 ottobre 2026.
-3. **Fase 2** (persone): la differenza tra un BitLife e un simulatore vero.
+3. ✅ **Fase 2** (persone): fatta il 10 ottobre 2026.
 4. Poi Fasi 5, 4, 3, 6, secondo quello che emerge dalle prove con Noemi.
 
 Ogni fase si chiude con: build → controlli → simulazione → prova sul telefono (Netlify) → feedback.

@@ -33,7 +33,8 @@ python tools/eta_azioni.py      # cosa si vede a 1, 4, 9, 15 e 17 anni in ogni s
 python tools/test_italia.py     # regole italiane: gravidanza, separazione e affido, adozione, eredità della casa, pensione, NASpI e TFR, storia vera, IRPEF, unione civile
 python tools/test_lavori.py     # lavori e contratti: requisiti raggiungibili, mestieri come in Italia, concorsi, elezioni, contratti a termine, partita IVA, part-time, divario, congedi
 python tools/ritmo.py 40        # Fase 1: eventi possibili per fascia d'età, catene di almeno 3 passi, eventi che si ripetono più di 10 volte per vita → «FASE 1: FATTA ✓»
-python tools/test_ritmo.py      # apre ogni evento cal_ e inc_ (o un altro prefisso: pic_ bim_ rag_ mez_ cat_) nella situazione giusta, M e F, e clicca ogni risposta (-v per leggere i testi)
+python tools/test_ritmo.py      # apre ogni evento cal_ e inc_ (o un altro prefisso: pic_ bim_ rag_ mez_ cat_ leg_ mem_ edu_ cop_) nella situazione giusta, M e F, e clicca ogni risposta (-v per leggere i testi)
+python tools/persone.py 40      # Fase 2: amici stretti legati ad altre persone (≥95%), ricordi di 10 anni prima che tornano (≥5 per vita), gruppi, stile da genitore → «FASE 2: FATTA ✓»
 ```
 
 **Dopo ogni modifica:** `build.py` → controllo sintassi → `fuzz.py` → `lint_testi.py` (se tocchi testi o prezzi) → `invarianti.py` (almeno 100 vite se tocchi persone, famiglia, coppia o soldi) → `archivio_salvataggi.py` (se tocchi lo stato o i salvataggi) → `sim.py` (almeno 40 vite se tocchi formule o probabilità; `realismo.py` con 400+ vite se tocchi salute, morte, lavoro o famiglia: con meno vite la media dell'età alla morte oscilla di ±1,5 anni).
@@ -57,6 +58,7 @@ VitaMia/
 │  ├─ c4_persone.js      vita degli NPC mese per mese, coppia (intimità/passione/impegno), contatti, richieste, incontri, genitori
 │  ├─ c5_aspetto.js      il VOLTO stilizzato: tavolozze, lookCasuale/lookFiglio (genetica), lookDi(p), volto(look,eta,sesso) → SVG che invecchia
 │  ├─ c6_famiglia.js     FAMIGLIA: fertilità per età, gravidanza (aborto spontaneo, gemelli, congedi), procreazione assistita, adozione (legge 184), separazione → divorzio, mantenimento, orientamento delle persone
+│  ├─ c8_legami.js       PERSONE VERE: gruppi (S.gruppi), legami tra le tue persone (S.legami), ricordi con un segno e ritorni, chi non dimentica (bisognoAiuto), contesto delle persone, stile da genitore (S.genit), vita sociale del mese (meseSociale)
 │  ├─ c7_italia.js       ITALIA: prezzi e storia vera fino al 2026, TFR, NASpI, ADI/SFL, pensione contributiva, assegno sociale, reversibilità, badante e RSA, eredità della casa
 │  ├─ d_eventi.js        eventi «classici» (definisce EV e ev())
 │  ├─ d2_eventi2.js      eventi aggiuntivi: catene, regionali, storici, rari
@@ -70,6 +72,7 @@ VitaMia/
 │  ├─ d10_ragazzi.js     eventi 6–17 anni (bim_, rag_): scuola, sacramenti (catechismo → comunione → cresima), pubertà, adolescenza
 │  ├─ d11_vita_adulta.js eventi 22–80 anni legati alla vita del mese (mez_): mutuo e casa, figli adolescenti, genitori anziani, colleghi, salute, stanchezza
 │  ├─ d12_catene.js      22 catene di 3–4 passi (cat_): la ristrutturazione, la vertenza, il figlio che torna a casa, il randagio, il romanzo…
+│  ├─ d13_persone.js     eventi della Fase 2: leg_ (gruppi, coppie e liti tra amici, tua madre e il partner, gelosia), mem_aiuto, edu_ (stile da genitore), cop_ (decisioni, soldi, crisi, terapia, vent'anni insieme)
 │  ├─ e_azioni.js        azioni del giocatore (studi, lavoro, azienda, persone, amore, case, auto, attività, carcere)
 │  ├─ e2_lusso.js        ricchezza e lascito (collezioni, beneficenza, onorificenze, fondazione, borse, esperienze, traguardi), cura degli animali, da amici a innamorati, attività per beni ed età
 │  ├─ f2_crea.js         schermata di creazione: certificato di nascita dal vivo + editor (Tu · Nascita · Famiglia · Aspetto), «Nasci» con timbro, battito e presentazione
@@ -90,6 +93,7 @@ VitaMia/
 │  ├─ realismo.py        tabella «my contro l'Italia» (vedi ANALISI.md)
 │  ├─ lint_testi.py  test_italia.py  test_lavori.py   controllo dei testi per età / regole italiane / lavori
 │  ├─ ritmo.py  test_ritmo.py   misura della Fase 1 (fasce d'età, catene, ripetizioni) / prova forzata degli eventi nuovi
+│  ├─ persone.py         misura della Fase 2 (legami degli amici stretti, ricordi che tornano, stile da genitore)
 │  ├─ galleria_volti.py  tutti i tagli × età × carnagioni → grafica/volti.png
 ├─ atlante/              generatore dell'«Atlante di VitaMia» (database + grafici di tutto il gioco)
 │  ├─ estrai.py          legge EV, lavori, dati… dal gioco compilato → atlante/dati.json
@@ -120,7 +124,7 @@ Una sola variabile globale `S` (salvata come JSON, chiave `vitamia_save_v4`; `lo
 1. `t++`, avanza mese/anno, pulisce le azioni scadute, nuovo blocco di diario
 2. **gennaio** → `inizioAnno()`: mondo/Borsa, fama, nemici, beni, azienda, clan, pensioni e stipendi rivalutati, bilancio dell'anno
 3. **mese di nascita** → `eta++`, `compleanno()`: tappe, maturazione del carattere, attaccamento a 4 anni, aspirazioni a 18, pensione
-4. carcere → `meseNpc()` (vita degli altri) → `meseFamiglia()` (tentativi, gravidanza, parto) → animali → scuola → `calendario()` (settembre inizio scuola, giugno fine anno; Natale, ferie, Capodanno in d8_ritmo.js) → `storiaMese()` (fatti veri fino al 2026)
+4. carcere → `meseNpc()` (vita degli altri) → `chiudiGruppi()` + `meseSociale()` (gruppi, coppie e liti tra le tue persone, scelte da genitore) → `meseFamiglia()` (tentativi, gravidanza, parto) → animali → scuola → `calendario()` (settembre inizio scuola, giugno fine anno; Natale, ferie, Capodanno in d8_ritmo.js) → `storiaMese()` (fatti veri fino al 2026)
 5. `meseLavoro()` → `meseItalia()` (TFR, contributi, NASpI, SFL) → `normalizzaRoutine()` → `meseRoutine()` (effetti delle ore) → `bisogni()` → `finanzeMese()` → `meseSalute()`
 6. conseguenze rimandate (`S.futuri`, in mesi) → `controllaMorte()` (rischio annuo diviso sui 12 mesi)
 7. eventi: `eventiMese()` (casuali: 16% sotto 13 anni, 13% fino a 17, 8,5% adulti; con persone 4,5%) → `emergenti()` → `impulsi()`; massimo 3 in coda
@@ -170,8 +174,17 @@ Il vecchio sistema era annuale: molte formule annuali sono rimaste e vengono **d
 ### Persone (c4_persone.js)
 Ogni persona ha `pers`, `tr` (tratto riassuntivo usato dai dialoghi), `mn` (mese di nascita), `stato` (lavora/disoccupato/studente/pensione…), `lavoro`, `coppia`, `pNome`, `figliN`, `malato`, `lontano`, `ricordi[]`, `ultimo` (ultimo contatto), `prestito`; i partner hanno `intim/pass/imp`.
 - `meseNpc()`: invecchiano nel loro mese, muoiono, i rapporti calano senza contatto, `vitaNpc()` fa succedere le cose (lavoro, amori, figli, malattie, traslochi) e può aprire **richieste** (`richiesta('r_prestito',p)`, max una ogni 2 mesi).
-- `ricorda(p,testo)` lascia un ricordo che la persona mostra nella sua scheda.
-- `affinita(p)` confronta i caratteri; `mesePartner(p)` gestisce la coppia.
+- `ricorda(p,testo,v)` lascia un ricordo che la persona mostra nella sua scheda; `v` (da −3 a +3) dice quanto conta: senza, lo deduce `valenza(testo)` dalle parole («Non…», «Hai rifiutato…», «litigato» sono negativi; «prestato», «ospitat…», «vicin…» sono forti). Il testo è dal tuo punto di vista («Gli hai prestato 300 €»).
+- `affinita(p)` confronta i caratteri; `mesePartner(p)` gestisce la coppia: tre mesi sotto il 40% aprono `cop_crisi`; la terapia di coppia (`S.terapia`, 6 mesi) aiuta mese dopo mese e finisce con `cop_terapia_fine`.
+
+### Persone vere (c8_legami.js, d13_persone.js — ROADMAP Fase 2)
+- **Gruppi** (`S.gruppi = [{id,k,n,m:[ids],dal,fine}]`): ogni amico o conoscente nuovo entra nel gruppo del posto in cui l'hai conosciuto (`assegnaGruppo`, da `nuovaPersona` con `x.dove`; senza, la tua vita di adesso: la classe, i colleghi, il quartiere). Chiavi: `elementari`, `superiori`, `lavoro:<id>:<da>`, `genitori:<figlio>`, `corso:<hobby>`, `quartiere:<città>`… `gruppoAttivo(G)` dice se ne fai ancora parte; quando non più, `G.fine` (servirà alla rimpatriata, `leg_rimpatriata`, 10+ anni dopo). Frequentare un amico porta un po' di tempo anche al suo gruppo (`contattoGruppo`).
+- **Legami** (`S.legami = [{a,b,t,f,dal}]`, t: amici, coppia, ex): tra persone del gioco, non con te. `siConoscono(a,b)`: legame, stesso gruppo, famiglia, partner che vive con te (dopo un anno conosce i tuoi amici stretti), amici d'infanzia (conoscono i tuoi genitori). Alle tue feste di compleanno gli amici ancora «soli» si conoscono (`presentaAmici`), al matrimonio tutti. Due amici single e compatibili si possono mettere insieme (`formaCoppiaNpc`: `p.pId` reciproco) e lasciare (`separaNpc`).
+- **I ricordi tornano**: nel gruppo le voci girano (`voci`: un ricordo forte cambia anche il rapporto con gli altri del gruppo); nei momenti difficili (lutto, licenziamento, diagnosi grave, separazione, carcere) si fa avanti chi hai aiutato (`bisognoAiuto` → `mem_aiuto`, al massimo ogni 2 anni); chiedendo soldi o prestiti contano i ricordi (`memoriaAiuto`, `rifiutoRicordo`); ai compleanni tondi, al matrimonio, quando una persona muore, nelle rimpatriate, nei 20 anni di nozze e quando un figlio compie 18 anni torna un ricordo vecchio. `ritorno(p,m)` lo conta in `S.fatti.ritorni` se è di almeno 10 anni prima.
+- **Contesto** (`contestoNpc(p)`: lutto, malattia, neonato, separazione, disoccupato, lavoro nuovo, nuovo amore, trasferimento, pensione; date in `p.luttoT`, `p.lavT`, `p.neoT`, `p.sepT`, `p.nuovoT`, `p.trasfT`, `p.pensT`): compare nella scheda della persona («In questo periodo…») e apre argomenti di conversazione dedicati (`TEMI` con `c:p=>…`, sempre per primi), compreso «Parlate di chi conoscete tutti e due».
+- **Stile da genitore** (`S.genit = {cal, reg, st}`): calore e regole (modello di Baumrind: autorevole, permissivo, autoritario, distaccato). Si muovono piano verso il tuo carattere e le ore con i figli, e con le scelte degli eventi `edu_` (`gen:{cal,reg}` sulla scelta, applicato da `applica()`; `eduMese()` ne propone una ogni tanto finché i figli vivono con te). Ogni anno `crescitaFiglio(p)` sposta il carattere dei figli secondo lo stile (`STILE_GEN`); a 18 anni `bilancioFiglio(p)` racconta com'è diventato e quanto ti somiglia. Nella scheda Persone: «Come genitore sei…».
+- **Volti per tutti**: nella lista delle persone, in alto a destra nei fogli che riguardano una persona (`d.p`) o chi stai conoscendo (`d.cand.look`), al funerale nel necrologio (`funerale()`: chi viene e il ricordo che ha di te).
+- Salvataggi vecchi: `iniziaLegami()` (in `aggiornaStato`) mette amici e conoscenti nei gruppi secondo `p.dove`.
 
 ### Eventi
 Definizione: `ev({id, min, max, w, once, rip, cond, chi, pc, link, auto, prig, t, x, k, c})`
@@ -208,6 +221,8 @@ Definizione: `ev({id, min, max, w, once, rip, cond, chi, pc, link, auto, prig, t
 - **Traslochi del giocatore:** dopo aver cambiato `S.citta` chiama `dopoTrasloco(vecchiaCitta)` (chi vive nella nuova città smette di essere «lontano», chi resta nella vecchia lo diventa).
 - **Crescite composte:** ogni cosa che si moltiplica ogni mese deve avere un tetto (vedi follower: `tettoFollower()`, massimo `CAP_FOLLOWER` = 40 milioni; prima arrivavano a milioni di miliardi e con le collaborazioni rendevano soldi infiniti).
 - Le funzioni dei sistemi sono pensate per il mese: se aggiungi qualcosa di annuale, mettilo in `inizioAnno()` o in `compleanno()`.
+- **Nomi e vocali:** «ad Arianna», «ed Elia»: usa `aNome(n)` ed `eNome(n)` quando una preposizione precede un nome.
+- **Prefissi degli eventi:** controlla che il prefisso nuovo non sia già usato (nel 2026 `soc_` era già dei social e `gen_` dei genitori: gli eventi della Fase 2 sono `leg_`, `mem_`, `edu_`, `cop_`).
 - **Nomi globali:** tutti i file condividono lo stesso spazio di nomi. Prima di creare una funzione o una costante nuova controlla che non esista già (`grep -n "const nome\|function nome" src/*.js`): nel 2026 `casaPropria` era già usata in e_azioni.js.
 - **Eventi che si ripetono:** un evento di calendario o di stato non deve arrivare più di ~10 volte in una vita (`ritmo.py` lo misura). Se succede spesso, trasformalo in una riga di diario con `varia()` e tieni l'evento per le novità.
 
@@ -283,13 +298,13 @@ Se aggiungi un file di eventi in `src/`, aggiungilo anche alla lettura delle sez
 ---
 
 ## Numeri attuali
-733 eventi, ~2.000 risposte (~1.170 con `pers`); eventi possibili per età (`ritmo.py`): 0–5 → 104, 6–12 → 190, 13–17 → 160, 18–25 → 224, 26–40 → 247, 41–65 → 252, 66+ → 189; 29 catene di almeno 3 passi; nessun evento oltre le 10 volte per vita (i più frequenti: propositi, Natale, ferie ~8). 81 lavori, 22 facoltà, 19 corsi, 9 attività in proprio, 48 attività, 7.904 comuni.
+757 eventi, ~2.100 risposte (~1.190 con `pers`); eventi possibili per età (`ritmo.py`): 0–5 → 104, 6–12 → 190, 13–17 → 160, 18–25 → 224, 26–40 → 247, 41–65 → 252, 66+ → 189; 29 catene di almeno 3 passi; nessun evento oltre le 10 volte per vita (i più frequenti: propositi, Natale, ferie ~8). 81 lavori, 22 facoltà, 19 corsi, 9 attività in proprio, 48 attività, 7.904 comuni.
 
 ## Idee e cose da fare
 La roadmap completa, con priorità e criteri di «fatto», è in **ROADMAP.md** (fasi 0–7: zero errori, ritmo, persone, Italia vera, corpo e mente, scopo, interfaccia, misura del realismo). La lista dettagliata di cosa manca e cosa non va (errori con il punto del codice, dati veri da usare, fonti) è in **ANALISI.md** (ottobre 2026): le correzioni del punto 3 sono fatte; restano le aggiunte del punto 4 (animali, viaggi, regioni, feste, sanità…); i nuovi lavori del punto 4.6, i contratti di lavoro e il divario uomo-donna sono fatti.
 - Carattere da adulti: fatto (d6_adulti.js, `pers` sulle richieste delle persone e su ~25 eventi adulti classici). Si potrebbe estendere ad altri eventi di d_eventi/d2 (per ora solo quelli dove la scelta dice chiaramente qualcosa del carattere).
-- Fase 1 (ritmo e varietà) fatta nell'ottobre 2026: calendario, incontri, eventi 26–65, infanzia e adolescenza, catene, momenti chiave. Prossima nella ROADMAP: Fase 2 (persone vere).
+- Fase 1 (ritmo e varietà) fatta nell'ottobre 2026: calendario, incontri, eventi 26–65, infanzia e adolescenza, catene, momenti chiave.
+- Fase 2 (persone vere) fatta nell'ottobre 2026: gruppi e legami tra le persone, ricordi che tornano, conversazioni nel contesto, stile da genitore, crisi e terapia di coppia, volti. Prossime nella ROADMAP: Fasi 5, 4, 3, 6.
 - Più eventi per la terza età legati alla vita del mese (nipoti, salute, solitudine, il circolo).
-- Le persone potrebbero conoscersi tra loro (amici in comune, gruppi).
 - Un «pilota automatico» giocabile: far vivere il personaggio da solo secondo il carattere (la base c'è in `tools/autopilota.js`).
 - Simulazione di «tutti i tipi di persona» (Big Five × attaccamento × interessi): l'idea di partenza del progetto, mai avviata.

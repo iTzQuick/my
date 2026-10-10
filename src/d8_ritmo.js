@@ -268,16 +268,16 @@ const INC={
 Object.assign(DOVE,{lavoro:['in pausa pranzo','alla macchinetta del caffè','a una riunione con un altro ufficio'],tramite:['a cena da un amico','alla festa di compleanno di un amico'],vicino:['sul pianerottolo','in ascensore','davanti alle cassette della posta'],treno:['sul treno del mattino','in fila alla stazione','sul regionale in ritardo'],cane:['al parco dei cani','durante la passeggiata con il cane'],genitori:['all\'uscita di scuola dei bambini','alla festa di compleanno di un compagno di classe dei bambini'],corso:['al corso','in palestra'],festa:['a una festa','in un locale','a un aperitivo','a un concerto'],online:['in un gruppo online sulla tua passione','in una partita online'],quartiere:['al bar sotto casa','al circolo','al mercato'],viaggio:['in vacanza','in un ostello','sul traghetto']});
 /* chi incontri: un possibile amico dell'età giusta per quel posto */
 function candInc(x){const c=candidatoAmico();const m=INC[x];if(m&&m.eta){c.eta=m.eta();c.nome=nomeLibero(c.sesso,S.anno-c.eta)}return c}
-function prepInc(d){const c=d.cand||(d.cand=candInc(d.x));if(d.af===undefined)d.af=affinita(c);return c}
+function prepInc(d){const c=d.cand||(d.cand=candInc(d.x));if(!c.look)c.look=lookCasuale(c.sesso);if(d.af===undefined)d.af=affinita(c);return c}
 const affTesto=d=>d.af>=62?' Vi trovate subito.':d.af<45?' Non siete molto simili.':'';
 function faiAmicizia(d,bonus,testo,extra){
   const c=d.cand;
   if(chance(.35+d.af/150+pz('E')*.12+(bonus||0))){
-    const p=nuovaPersona('Amico',c.sesso,c.eta,c.cognome,Object.assign({nome:c.nome,pers:c.pers,tr:c.tr,rapporto:r(42,58),dove:d.x},extra||{}));S.bis.soc=clamp(S.bis.soc+5);
-    return [(testo||'Tu e {N} diventate {amici}.').replace(/\{N\}/g,p.nome).replace('{amici}',S.sesso==='F'&&p.sesso==='F'?'amiche':'amici'),'g']}
+    const p=nuovaPersona('Amico',c.sesso,c.eta,c.cognome,Object.assign({nome:c.nome,pers:c.pers,tr:c.tr,look:c.look,rapporto:r(42,58),dove:d.x,via:d.x==='tramite'&&d.p?d.p.id:undefined},extra||{}));S.bis.soc=clamp(S.bis.soc+5);
+    return [(testo||'Tu {eN} diventate {amici}.').replace('{eN}',eNome(p.nome)).replace(/\{N\}/g,p.nome).replace('{amici}',S.sesso==='F'&&p.sesso==='F'?'amiche':'amici'),'g']}
   const n=nuovoConoscente(c,d.x);return [`Vi rivedete un paio di volte, ma per ora ${n.nome} resta tra i tuoi conoscenti.`,'']
 }
-const conosci=(testo)=>d=>{const n=nuovoConoscente(d.cand,d.x);return [(testo||'{N} entra tra i tuoi conoscenti.').replace(/\{N\}/g,n.nome),'']};
+const conosci=(testo)=>d=>{const n=nuovoConoscente(d.cand,d.x,d.x==='tramite'&&d.p?{via:d.p.id}:null);return [(testo||'{N} entra tra i tuoi conoscenti.').replace(/\{N\}/g,n.nome),'']};
 /* ---------- Incontri: tanti modi di conoscere qualcuno ---------- */
 ev({id:'inc_scuola',link:1,k:'Persone nuove',t:()=>['universita','magistrale','dottorato','master'].includes(S.scuola.stato)?'In aula studio':'All\'intervallo',x:d=>{const c=prepInc(d);
   if(['universita','magistrale','dottorato','master'].includes(S.scuola.stato))return `In aula studio ${c.nome}, ${c.eta} anni, ti chiede di tenere d'occhio le sue cose mentre prende un caffè. Prepara il tuo stesso esame.${affTesto(d)}`;
