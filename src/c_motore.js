@@ -261,6 +261,20 @@ function statoBase(o){
 }
 /* o: {sesso,nome,cognome,citta,prov} e, dalla schermata di creazione, anche
    anno, meseN, giorno, look, note {ora,peso,segno}, fam {classe, madre{nome,cognome,eta,look}, padre{nome,eta,look}, fratelli[{sesso,nome,eta}]} */
+/* Fratelli più grandi scelti nella creazione (età in anni): mesi di vita di ciascuno alla tua nascita, o null se le età non vanno.
+   Le regole sono quelle di tools/invarianti.js: ognuno ad almeno 15 mesi dagli altri e da te (niente gemelli). Con casuale=true i mesi
+   dentro l'anno sono a caso (l'ultimo tentativo è il più stretto possibile, che riesce se le età vanno). */
+function mesiFratelli(ages,casuale){
+  const ord=ages.map((a,i)=>i).sort((x,y)=>ages[x]-ages[y]);
+  for(let t=0;t<40;t++){
+    const out=[];let prima=0,ok=true;
+    for(const i of ord){const lo=Math.max(12*ages[i],prima+15),hi=12*ages[i]+11;if(lo>hi){ok=false;break}
+      out[i]=casuale&&t<39?r(lo,hi):lo;prima=out[i]}
+    if(ok)return out;
+    if(!casuale)break;
+  }
+  return null;
+}
 function nuovaVita(o){
   const F=o.fam||{};
   const classe=F.classe||pesata([['umile',30],['media',55],['agiata',15]]);
@@ -277,7 +291,8 @@ function nuovaVita(o){
   madre.coppia=padre.coppia='sposato';
   S.fatti.intesaGenitori=clamp(70-Math.abs(madre.pers.A-padre.pers.A)*.2-(madre.pers.N+padre.pers.N-100)*.3+(madre.pers.A+padre.pers.A-100)*.25+r(-15,15));
   const fr=[];
-  if(F.fratelli)for(const x of F.fratelli)fr.push(nuovaPersona('Fratello',x.sesso,x.eta,S.cognome,{nome:x.nome,rapporto:r(50,85),genitori:[madre,padre]}));
+  if(F.fratelli){const mm=mesiFratelli(F.fratelli.map(x=>x.eta),true);   // mese di nascita dei fratelli scelti: ≥15 mesi di distanza
+    F.fratelli.forEach((x,i)=>fr.push(nuovaPersona('Fratello',x.sesso,x.eta,S.cognome,Object.assign({nome:x.nome,rapporto:r(50,85),genitori:[madre,padre]},mm?{mn:(S.mese-mm[i]%12+12)%12}:{}))))}
   else{const nFr=pesata([[0,40],[1,40],[2,15],[3,5]]),maxM=Math.min(12,madre.eta-19)*12+11,usati=[0];
     for(let i=0;i<nFr&&maxM>=15;i++){let m=0;for(let g=0;g<30&&!m;g++){const x=r(15,maxM);if(usati.every(u=>Math.abs(u-x)>=15))m=x}if(!m)break;   // mesi di vita del fratello
       usati.push(m);fr.push(nuovaPersona('Fratello',pick(['M','F']),Math.floor(m/12),S.cognome,{rapporto:r(50,85),genitori:[madre,padre],mn:(S.mese-m%12+12)%12}))}}

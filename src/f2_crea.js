@@ -10,13 +10,33 @@ const giorniMese=(a,m)=>new Date(a,m+1,0).getDate();
 /* nomi della generazione giusta: annoN = anno di nascita della persona */
 const nomeGen=(ses,annoN)=>pick(nomiPer(ses,annoN));
 function nomeNuovo(ses,usati,annoN){const L=nomiPer(ses,annoN);for(let i=0;i<10;i++){const n=pick(L);if(!usati.includes(n))return n}return pick(L)}
-function fratelloNuovo(){const ses=pick(['M','F']);const usati=[C.nome,C.fam.madre.nome,C.fam.padre.nome,...C.fam.fratelli.map(f=>f.nome)];const eta=r(1,Math.max(1,Math.min(12,C.fam.madre.eta-18)));return {sesso:ses,nome:nomeNuovo(ses,usati,C.anno-eta),eta}}
+/* Età dei fratelli più grandi, con le regole degli invarianti (tools/invarianti.js): almeno 15 mesi tra loro e da te (mesiFratelli),
+   la madre aveva almeno 15 anni e il padre almeno 16 alla loro nascita (con i mesi la soglia vera è 14 e 15: qui si resta larghi). */
+const maxEtaFr=()=>Math.max(0,Math.min(12,C.fam.madre.eta-15,C.fam.padre.eta-16));
+const etaFrOk=ages=>ages.every(a=>a>=1&&a<=maxEtaFr())&&!!mesiFratelli(ages,false);
+function fratelloNuovo(){
+  const F=C.fam,ok=[];for(let a=1;a<=maxEtaFr();a++)if(etaFrOk(F.fratelli.map(f=>f.eta).concat(a)))ok.push(a);
+  if(!ok.length)return null;
+  const ses=pick(['M','F']),usati=[C.nome,F.madre.nome,F.padre.nome,...F.fratelli.map(f=>f.nome)],eta=pick(ok);
+  return {sesso:ses,nome:nomeNuovo(ses,usati,C.anno-eta),eta};
+}
+/* dopo aver cambiato l'età di un genitore: ogni fratello va portato a un'età valida (la più vicina), se non ce n'è esce */
+function adattaFratelli(){
+  const F=C.fam,tenuti=[];
+  for(const f of F.fratelli){
+    const a0=Math.min(f.eta,maxEtaFr()),prova=a=>etaFrOk(tenuti.map(x=>x.eta).concat(a));let trovata=0;
+    for(let k=a0;k>=1&&!trovata;k--)if(prova(k)){f.eta=k;trovata=1}
+    for(let k=a0+1;k<=maxEtaFr()&&!trovata;k++)if(prova(k)){f.eta=k;trovata=1}
+    if(trovata)tenuti.push(f);
+  }
+  F.fratelli=tenuti;
+}
 function famCasuale(){
   const me=r(21,40);
   const F={classe:pesata([['umile',30],['media',55],['agiata',15]]),madre:{nome:nomeGen('F',C.anno-me),cognome:pick(COGNOMI),eta:me,look:lookCasuale('F')},padre:null,fratelli:[]};
   const pe=clamp(me+r(-3,7),20,60);F.padre={nome:nomeGen('M',C.anno-pe),eta:pe,look:lookCasuale('M')};
   C.fam=F;const n=pesata([[0,40],[1,40],[2,15],[3,5]]);
-  for(let i=0;i<n&&me>=20;i++)F.fratelli.push(fratelloNuovo());
+  for(let i=0;i<n&&me>=20;i++){const f=fratelloNuovo();if(!f)break;F.fratelli.push(f)}
 }
 function noteCasuali(){C.note={ora:`${String(r(0,23)).padStart(2,'0')}:${String(r(0,59)).padStart(2,'0')}`,peso:(r(26,42)/10).toFixed(1).replace('.',','),lung:r(47,54),segno:pick(SEGNI)}}
 function bozzaCasuale(){
@@ -83,7 +103,7 @@ function htmlEditor(){
     <div class="field"><label>Papà</label><input id="iPN" value="${esc(F.padre.nome)}" maxlength="20" aria-label="Nome del papà">
       <div class="rrow"><span class="jm">Età alla tua nascita</span>${stepper('ep',F.padre.eta,' anni')}</div></div>
     <div class="field"><label>Fratelli e sorelle più grandi</label><div class="rrow"><span class="jm">${F.fratelli.length?'Quanti (a destra la loro età)':'Nessuno: sei il primo figlio'.replace('il primo figlio',gC('il primo figlio','la prima figlia'))}</span>${stepper('nf',F.fratelli.length)}</div>
-      ${F.fratelli.map((f,i)=>`<div class="fr-riga"><input data-frn="${i}" value="${esc(f.nome)}" maxlength="20" aria-label="Nome"><button class="chip" data-frs="${i}">${f.sesso==='M'?'Fratello':'Sorella'}</button>${stepper('fe'+i,f.eta)}</div>`).join('')}</div>
+      ${F.fratelli.map((f,i)=>`<div class="fr-riga"><input data-frn="${i}" value="${esc(f.nome)}" maxlength="20" aria-label="Nome"><button class="chip" data-frs="${i}">${f.sesso==='M'?'Fratello':'Sorella'}</button>${stepper('fe'+i,f.eta)}</div>`).join('')}${F.fratelli.length?'<div class="note">Tra un fratello e l\'altro, e tra loro e te, passa almeno un anno e tre mesi; le età dipendono anche da quelle dei tuoi genitori.</div>':''}</div>
     <button class="btn ghost" id="dFam">${ICO_DADO} Un'altra famiglia</button>`;
   // aspetto
   const L=C.look;
@@ -151,11 +171,13 @@ function disegnaEd(){
   P.querySelectorAll('[data-frn]').forEach(x=>x.oninput=()=>{F.fratelli[+x.dataset.frn].nome=x.value;su()});
   P.querySelectorAll('[data-frs]').forEach(x=>x.onclick=()=>{const f=F.fratelli[+x.dataset.frs];f.sesso=f.sesso==='M'?'F':'M';f.nome=nomeNuovo(f.sesso,[]);tutto()});
   P.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{
-    const id=b.dataset.st,d=+b.dataset.d,maxFr=()=>Math.max(1,Math.min(12,F.madre.eta-18));
-    if(id==='em'){F.madre.eta=clamp(F.madre.eta+d,18,46);F.fratelli.forEach(f=>f.eta=Math.min(f.eta,maxFr()))}
-    else if(id==='ep')F.padre.eta=clamp(F.padre.eta+d,18,65);
-    else if(id==='nf'){if(d>0&&F.fratelli.length<4)F.fratelli.push(fratelloNuovo());if(d<0)F.fratelli.pop()}
-    else if(id.startsWith('fe')){const f=F.fratelli[+id.slice(2)];f.eta=clamp(f.eta+d,1,maxFr())}
+    const id=b.dataset.st,d=+b.dataset.d;
+    if(id==='em'){F.madre.eta=clamp(F.madre.eta+d,18,46);adattaFratelli()}
+    else if(id==='ep'){F.padre.eta=clamp(F.padre.eta+d,18,65);adattaFratelli()}
+    else if(id==='nf'){if(d>0&&F.fratelli.length<4){const f=fratelloNuovo();if(f)F.fratelli.push(f)}if(d<0)F.fratelli.pop()}
+    else if(id.startsWith('fe')){   // salta le età non valide (già prese da un altro fratello o troppo vicine)
+      const i=+id.slice(2),f=F.fratelli[i],altri=F.fratelli.filter((_,j)=>j!==i).map(x=>x.eta);
+      for(let a=f.eta+d;a>=1&&a<=maxEtaFr();a+=d)if(etaFrOk(altri.concat(a))){f.eta=a;break}}
     tutto()});
   on('#dFam','onclick',()=>{famCasuale();C.look=lookFiglio(F.madre.look,F.padre.look,C.ses);tutto()});
   // Aspetto
