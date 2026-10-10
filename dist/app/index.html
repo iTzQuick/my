@@ -3571,10 +3571,10 @@ function tassoMutuo(tipo){
   const v=B[0]===a||i===0?B[k]:A[k]+(B[k]-A[k])*(a-A[0])/(B[0]-A[0]);
   return Math.round(v*10)/1000;
 }
-/* dopo il 2026 i tassi si muovono da soli (un po' di più nelle crisi) */
+/* dopo il 2026 i tassi si muovono da soli intorno al 3–4% (salgono nelle crisi) */
 function annoTassi(){
   if(S.anno<=ANNO_OGGI)return;const M=S.mondo;if(!M.tassi)M.tassi={f:3.1,v:3.4};
-  M.tassi.v=Math.round(Math.max(.5,Math.min(8,M.tassi.v+r(-6,6)/10+(M.crisi?.4:0)))*10)/10;
+  M.tassi.v=Math.round(Math.max(.5,Math.min(8,M.tassi.v+(3.4-M.tassi.v)*.2+r(-6,6)/10+(M.crisi?.4:0)))*10)/10;   // tornano piano verso il 3-4%
   M.tassi.f=Math.round(Math.max(1,Math.min(8,M.tassi.f*.6+(M.tassi.v+.4)*.4+r(-2,2)/10))*10)/10;
 }
 const pctStr=x=>(Math.round(x*1000)/10).toString().replace('.',',')+'%';
@@ -8102,7 +8102,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='fff91e0c';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='f244a939';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 
