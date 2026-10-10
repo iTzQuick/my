@@ -14,7 +14,9 @@ function showSheet(o){
     V0.innerHTML=fp?volto(lookDi(fp),fp.eta,fp.sesso):fc?volto(fc.look,fc.eta,fc.sesso):'';V0.hidden=!fp&&!fc}
   const P=$('#shP');P.textContent=prezzi(o.p)||'';P.className='';P.hidden=!o.p;
   const A=$('#shA');A.innerHTML='';
-  const sc=(o.scelte||[]).filter(c=>!c.cond||c.cond(d));
+  let sc=(o.scelte||[]).filter(c=>!c.cond||c.cond(d));
+  // niente scelte fuori epoca (telefonini nel 1970, euro nel 1990…), purché ne resti almeno una
+  if(S&&S.vivo&&!o.meta){const ok=sc.filter(c=>annoScelta(c)<=S.anno&&!fuoriEpoca(typeof c.l==='function'?T(c.l,d):''));if(ok.length)sc=ok}
   let attivi=0;
   const clic=c=>{
     const res=o.d?conCausa(o.t,()=>scegli(c,d)):scegli(c,d);
@@ -59,6 +61,7 @@ function next(){
     if(d.p&&!d.p.vivo)return next();
     if(e.cond&&!d._fut&&e.id!=='processo'&&!e.cond(d))return next();
     const scelte=typeof e.c==='function'?e.c(d):(e.c||[]);
+    if(!e.link&&(fuoriEpoca(T(e.t,d))||fuoriEpoca(T(e.x,d))))return next();   // un evento casuale fuori epoca si salta
     showSheet({k:`${dataStr()} · ${S.eta} ${S.eta===1?'anno':'anni'}`+(e.k?' · '+T(e.k,d):''),t:T(e.t,d),p:T(e.x,d),scelte,d});
     return;
   }
@@ -102,7 +105,7 @@ function renderTop(){
     <div class="stats${S.fama>0?' cinque':''}">${stat('Salute','salute','--salute')}${stat('Felicità','felicita','--felicita')}${stat(S.fama>0?'Intell.':'Intelletto','intelligenza','--intel')}${stat('Aspetto','aspetto','--aspetto')}${S.fama>0?stat('Fama','fama','--accent'):''}</div>`;
   $('#btnCarattere').onclick=mostraCarattere;
   $('#btnSalva').onclick=apriSalvataggi;
-  $('#btnNuova').onclick=()=>showSheet({k:'Nuova vita',t:'Vuoi ricominciare?',p:S.vivo?'La vita attuale andrà persa.':'Inizi una vita completamente nuova.',chiudi:true,scelte:[{l:'Sì, ricomincia da zero',fx:()=>{S=null;coda=[];save();sheetOpen=false;$('#scrim').hidden=true;render();return KEEP}}]});
+  $('#btnNuova').onclick=()=>showSheet({meta:1,k:'Nuova vita',t:'Vuoi ricominciare?',p:S.vivo?'La vita attuale andrà persa.':'Inizi una vita completamente nuova.',chiudi:true,scelte:[{l:'Sì, ricomincia da zero',fx:()=>{S=null;coda=[];save();sheetOpen=false;$('#scrim').hidden=true;render();return KEEP}}]});
 }
 
 /* ---------- Vita ---------- */
@@ -225,7 +228,7 @@ function renderScuola(V){
   const es=ABILITAZIONI.map(A=>[A,abilitazioneDisponibile(A)]).filter(([,x])=>x!==null);
   if(es.length&&!iscritto())h+=`<div class="sec">Esami di Stato</div><div class="list">${es.map(([A,x])=>`<div class="job"><div><div class="jn">${A.desc}</div><div class="${x?'jr':'jm'}">${x||eur(P(400))+' · serve per esercitare la professione'}</div></div><button class="chip pri" data-es="${A.n}" ${x||fatto('esame_'+A.n)?'disabled':''}>${fatto('esame_'+A.n)?'Fatto':'Sostieni'}</button></div>`).join('')}</div>`;
   if(S.eta>=6){
-    h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const manca=c.req?mancanti(c.req):[];const lock=S.eta<c.min||manca.length>0;const f=fatto('corso_'+c.id);
+    h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.filter(c=>S.anno>=(DAL_CORSO[c.id]||0)).map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const manca=c.req?mancanti(c.req):[];const lock=S.eta<c.min||manca.length>0;const f=fatto('corso_'+c.id);
       return `<div class="job"><div><div class="jn">${c.n}</div><div class="jm">${eur(P(c.costo))}${c.cert?` · ${c.cert}`:''}${c.sk?` · +${ABIL[Object.keys(c.sk)[0]]}`:''}${S.eta<c.min?` · dai ${c.min} anni`:manca.length?` · serve: ${esc(manca.join(', '))}`:''}</div></div><button class="chip" data-corso="${c.id}" ${ho||lock||f?'disabled':''}>${ho?'Ottenuto':f?'Fatto':'Iscriviti'}</button></div>`}).join('')}</div>`;
   }
   const hb=HOBBY.find(x=>x.id===S.hobby);
@@ -249,7 +252,7 @@ function renderLavoro(V){
   if(L){const j=JOB[L.id];const nx=L.liv<j.liv.length-1?nomeJob(j,L.liv+1):null;
     const nm=nx?mancanti(j.promo&&j.promo[L.liv+1]):[];
     h+=`<div class="panel"><h3>${esc(L.nome)}</h3><div class="meta">${j.pt?'Part-time · ':''}${L.anni} ${L.anni===1?'anno':'anni'} in azienda · livello ${L.liv+1} di ${j.liv.length}</div>
-    ${isPiva(L)?`${kv(j.var?'Compensi medi (lordi annui)':'Compensi (lordi annui)',eur(ralEff(L)))}${kv('Netto al mese',eur(nettoPiva(ralEff(L),L)/12))}${kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">regime forfettario: contributi INPS e imposta sostitutiva · niente tredicesima, TFR e NASpI</span>`)}`
+    ${isPiva(L)?`${kv(j.var?'Compensi medi (lordi annui)':'Compensi (lordi annui)',eur(ralEff(L)))}${kv('Netto al mese',eur(nettoPiva(ralEff(L),L)/12))}${kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">regime forfettario: contributi INPS e imposta sostitutiva · niente tredicesima, ${S.anno>=1982?'TFR':'liquidazione'} e ${S.anno>=2015?'NASpI':'sussidio di disoccupazione'}</span>`)}`
      :`${kv(j.var?'Guadagno medio (lordo annuo)':L.ptv?'RAL in part-time (lordo annuo)':'RAL (lordo annuo)',eur(ralEff(L)))}${kv('Netto al mese (13 mensilità)',eur(netto(ralEff(L))/13))}${(()=>{const t=tasseDettaglio(ralEff(L));return kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">IRPEF ${eur(t.irpef)} · INPS ${eur(t.inps)} · addizionali ${eur(t.addiz)}</span>`)})()}`}
     ${nx?kv('Prossimo livello',esc(nx)+(nm.length?` <span style="color:var(--bad);font-weight:400">· serve ${esc(nm.join(', '))}</span>`:'')):''}
     ${kv('Contratto',descrContratto(L))}${kv('Rendimento',L.perf+'%')}${bar(L.perf,'--salute')}${kv('Soddisfazione',soddLavoro()+'%')}${bar(soddLavoro(),'--felicita')}<div class="meta">Affinità con i tuoi interessi: ${matchLavoro(L.id)}% · ${oreLavoro()} ore a settimana</div>
@@ -263,7 +266,7 @@ function renderLavoro(V){
       <button class="chip warn" data-lv="licenziati">Licenziati</button>
     </div></div>`;
   }else if(S.pensione)h+=`<div class="panel"><h3>In pensione</h3>${kv('Pensione netta al mese',eur(S.pensione/13)+' × 13')}${kv('Anni di contributi',Math.floor(S.contributi))}</div>`;
-  else h+=`<div class="panel"><div class="meta">Non hai un lavoro. Le offerte sono qui sotto: i requisiti dipendono da studi, certificazioni e abilità.</div>${S.contributi?kv('Anni di contributi',Math.floor(S.contributi)):''}${S.naspi?kv('NASpI',`${eur(naspiMese())} al mese · ancora ${S.naspi.mesi-S.naspi.m} mesi`):''}${S.sfl?kv('Supporto formazione e lavoro',`${eur(P(500))} al mese · ancora ${S.sfl.mesi-S.sfl.m} mesi`):''}</div>`;
+  else h+=`<div class="panel"><div class="meta">Non hai un lavoro. Le offerte sono qui sotto: i requisiti dipendono da studi, certificazioni e abilità.</div>${S.contributi?kv('Anni di contributi',Math.floor(S.contributi)):''}${S.naspi?kv(cap(S.naspi.nome||'NASpI'),`${eur(naspiMese())} al mese · ancora ${S.naspi.mesi-S.naspi.m} mesi`):''}${S.sfl?kv('Supporto formazione e lavoro',`${eur(P(500))} al mese · ancora ${S.sfl.mesi-S.sfl.m} mesi`):''}</div>`;
   if(S.eta>=18){
     h+='<div class="sec">Attività in proprio</div>';
     if(S.azienda){const A=S.azienda,T0=AZ(A.id),u=A.ultimo,pv=calcolaAzienda(A,true);
@@ -280,7 +283,7 @@ function renderLavoro(V){
     else h+=`<div class="panel"><div class="meta">Apri un bar, una pizzeria, una palestra o una startup. Decidi prezzi, qualità, pubblicità, dipendenti e sedi.</div><button class="btn ghost" id="btnImpresa">Apri un'attività</button></div>`;
   }
   if(!S.pensione){
-    const vis=LAVORI.filter(j=>!j.nascosto||S.fatti[j.nascosto]);
+    const vis=LAVORI.filter(j=>(!j.nascosto||S.fatti[j.nascosto])&&lavoroInEpoca(j));
     const righe=vis.map(j=>({j,m:requisitiJob(j)})).filter(x=>!soloDisponibili||!x.m.length);
     h+=`<div class="sec"><span>Offerte di lavoro</span><button class="chip" id="btnFiltro" style="padding:2px 10px;font-size:11px;font-family:var(--f-body);letter-spacing:0;text-transform:none">${soloDisponibili?'Mostra tutte':'Solo disponibili'}</button></div><div class="list">`;
     h+=righe.length?righe.map(({j,m})=>{const mio=L&&L.id===j.id,f=fatto('job_'+j.id);
@@ -345,7 +348,7 @@ function renderPersone(V){
 /* ---------- Beni ---------- */
 function renderBeni(V){
   const v=bilancioMese(true);const sv=costoRoutineMese();if(sv)v.push(['Svago e attività della settimana',-sv]);if(S.fatti.extraMese)v.push(['Lavoro extra (ultimo mese)',S.fatti.extraMese]);const tot=v.reduce((s,x)=>s+x[1],0);
-  let h=`<div class="sec">Finanze</div><div class="panel">${kv('Conto corrente',eur(S.soldi),S.soldi<0?'neg':'')}${kv('Patrimonio netto',eur(patrimonio()))}${kv('Prezzi rispetto alla tua nascita','×'+S.mondo.ip.toFixed(2).replace('.',','))}`;
+  let h=`<div class="sec">Finanze</div><div class="panel">${kv('Conto corrente',eur(S.soldi),S.soldi<0?'neg':'')}${kv('Patrimonio netto',eur(patrimonio()))}${kv('Prezzi rispetto alla tua nascita','×'+S.mondo.ip.toFixed(2).replace('.',','))}${S.eta>=18&&S.anno>=1998?kv('ISEE (stima)',eur(iseeStima())):''}`;
   if(v.length){h+=`<div class="meta" style="margin-top:4px">Bilancio previsto per ${MESI[(S.mese+1)%12]}</div>${v.map(([n,x])=>kv(esc(n),(x>0?'+':'')+eur(x),x>0?'pos':'neg')).join('')}<div class="kv tot"><span>Totale</span><b class="${tot>=0?'pos':'neg'}">${tot>=0?'+':''}${eur(tot)}</b></div>`}
   h+='</div>';
   const ab=S.casa,mia=casaMia();
@@ -424,14 +427,15 @@ function renderAttivita(V){
   if(attTab==='svago'){
     const sez=[...new Set(ATTIVITA.map(a=>a.sez))];
     for(const s0 of sez){
-      const acts=ATTIVITA.filter(a=>a.sez===s0&&(!a.max||S.eta<=a.max)&&(!a.cond||a.cond()));
+      const acts=ATTIVITA.filter(a=>a.sez===s0&&(!a.max||S.eta<=a.max)&&(!a.cond||a.cond())&&!fuoriEpoca(a.n+' '+(a.d||'')));
       if(!acts.length)continue;
       h+=`<div class="sec">${s0}</div><div class="grid2">${acts.map(a=>card(a,S.eta<a.min,!a.ripeti&&fatto('att_'+a.id),`data-att="${a.id}"`,P(a.costo),'att_'+a.id)).join('')}</div>`;
     }
   }
   if(attTab==='social'){
     const so=S.social;
-    if(S.eta<14)h+='<div class="panel"><div class="meta">Potrai aprire un profilo social a 14 anni: in Italia prima serve il consenso dei genitori.</div></div>';
+    if(S.anno<2008)h+='<div class="panel"><div class="meta">I social network in Italia arrivano verso il 2008. Per ora la fama si conquista in TV, sui giornali o in piazza.</div></div>';
+    else if(S.eta<14)h+='<div class="panel"><div class="meta">Potrai aprire un profilo social a 14 anni: in Italia prima serve il consenso dei genitori.</div></div>';
     else if(!so.attivo)h+=`<div class="panel"><h3>Non hai un profilo</h3><div class="meta">Con tanti follower arrivano sponsor, fama e qualche guaio. Da 5.000 follower i marchi iniziano a pagarti.</div><button class="btn" id="btnApriSocial">Apri un profilo</button></div>`;
     else{
       h+=`<div class="panel"><div class="big">${nf(so.follower)}</div><div class="meta">follower · fama ${S.fama}/100${redditoSocial()?` · circa ${eur(redditoSocial())} l'anno dalle collaborazioni`:''}</div></div>
@@ -500,6 +504,7 @@ function renderMorte(V){
    ${kv('Titolo di studio',esc(titoloLabel()))}
    ${kv('Ultimo lavoro',esc(S.ultimoLavoro||'Nessuno'))}
    ${kv('Patrimonio',eur(patrimonio()))}
+   ${patrimonio()>0?kv('Eredità',esc(testoSuccessione())):''}
    ${kv('Coniuge',con?esc(con.nome):'—')}
    ${kv('Figli',figli.length)}${nip?kv('Nipoti',nip):''}
    ${kv('Fedina penale',S.fedina.length?'Sporca':'Pulita')}

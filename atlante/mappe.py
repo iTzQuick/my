@@ -248,3 +248,14 @@ PC.update({
 "p=>p.nozze!==undefined&&S.t-p.nozze>=240":"siete sposati da almeno 20 anni",
 "p=>p.conv":"convivete",
 })
+# Fase 3 (Italia vera): epoche, territorio, mutui, sanità
+COND.update({
+"()=>!!mutuoVar()&&!!S.fatti.rataSu&&S.t-S.fatti.rataSu.t<=12":"Hai un mutuo a tasso variabile e quest'anno la rata è salita di più del 10%",
+"()=>!!S.fatti.emigrato&&!S.fatti.ritornato":"Sei partito/a dal Sud per il Centro-Nord o l'estero e non sei ancora tornato/a",
+"()=>S.anno>=1972":"Dal 1972 (legge sull'obiezione di coscienza)",
+"()=>S.anno!==2020&&!!S.lavoro":"Hai ancora il lavoro e non è il 2020 (nel 2020 i licenziamenti erano bloccati)",
+"()=>S.anno>=2020&&!!S.lavoro&&REMOTO.includes(S.lavoro.id)":"Dal 2020, con un lavoro che si può fare da remoto (impiegato, programmatore, grafico…)",
+"()=>S.anno>=1999":"Dal 1999 (visite in intramoenia)",
+"()=>S.anno>=1980&&['Centro','Sud','Isole'].includes(zonaMia())":"Dal 1980, se vivi al Centro, al Sud o nelle Isole",
+})
+PC.update({"p=>p.rapporto>=62&&(p.sesso!==S.sesso||unioneCivilePossibile())":"il rapporto è almeno 62 e, se è dello stesso sesso, c'è già l'unione civile (da giugno 2016)"})

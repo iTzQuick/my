@@ -6,7 +6,11 @@ const r=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const chance=p=>Math.random()<p;
 const clamp=(v,lo=0,hi=100)=>Math.max(lo,Math.min(hi,Math.round(v)));
-const eur=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Math.round(n||0));
+const fmtEuro=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+/* fino al 2001 si paga in lire: 1 euro = 1.936,27 lire (gli importi del gioco sono sempre euro dell'anno, qui si convertono) */
+const LIRE=1936.27,migliaia=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+function lire(n){let x=Math.round((n||0)*LIRE);const a=Math.abs(x);x=a>=1e6?Math.round(x/1e4)*1e4:a>=1e4?Math.round(x/1e3)*1e3:Math.round(x/50)*50;return (x<0?'-':'')+migliaia(Math.abs(x))+'\u00a0lire'}
+const eur=n=>S&&S.anno<2002?lire(n):fmtEuro.format(Math.round(n||0));
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cap=s=>s?s[0].toUpperCase()+s.slice(1):s;
 function pesata(arr){const t=arr.reduce((s,x)=>s+x[1],0);let x=Math.random()*t;for(const [it,w] of arr){x-=w;if(x<=0)return it}return arr.length?arr[arr.length-1][0]:null}
@@ -184,7 +188,7 @@ function assumi(j){
   if(S.lavoro){pagaTFR();S.storico.push(S.lavoro.nome)}
   S.naspi=null;S.sfl=null;
   let liv=0;if(j.boost&&S.istr.cert.includes(j.boost.cert))liv=j.boost.liv;
-  S.lavoro={id:j.id,da:S.t,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)*fattoreGenere()),nome:nomeJob(j,liv),contratto:contrattoIniziale(j,liv)};
+  S.lavoro={id:j.id,da:S.t,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)*fattoreGenere()*fattoreZona(j)),nome:nomeJob(j,liv),contratto:contrattoIniziale(j,liv)};
   if(chance(ptIniziale(j)))S.lavoro.ptv=true;
   if(S.vivo)log(`Contratto: ${descrContratto(S.lavoro).toLowerCase()}${S.lavoro.ptv&&S.lavoro.contratto.t!=='piva'&&!/part-time/.test(descrContratto(S.lavoro))?' · part-time':''}.`,'h');
   S.ultimoLavoro=S.lavoro.nome;
@@ -309,7 +313,8 @@ function patrimonio(X){
 function continuaCome(pid){
   const old=S,f=old.relazioni.find(p=>p.id===pid);if(!f)return;
   const figli=old.relazioni.filter(p=>p.vivo&&p.ruolo==='Figlio');
-  const quota=Math.max(0,Math.round(patrimonio(old)*.96/Math.max(1,figli.length)));
+  const qs=quoteSuccessione(old).find(x=>x[0]===f),lordo=Math.max(0,patrimonio(old)*.96*(qs?qs[1]:1/Math.max(1,figli.length)));   // successione legittima
+  const quota=Math.round(lordo-impostaSucc(lordo));
   const classe=quota>300000?'agiata':quota>40000?'media':'umile';
   const look=lookDi(f);
   S=statoBase({nome:f.nome,cognome:f.cognome,sesso:f.sesso,citta:old.citta,prov:old.prov,mondo:old.mondo,eta:f.eta,annoNascita:old.anno-f.eta-(old.mese<(f.mn||0)?1:0),anno:old.anno,mese:old.mese,meseNascita:f.mn||0,t:f.eta*12,pers:f.pers,look,gen:old.gen+1,soldi:quota,classe,
@@ -337,7 +342,7 @@ function continuaCome(pid){
   S.fatti.hobbyChiesto=e>6;
   S.routine=routineDefault();if(S.eta>=4)formaAttaccamento();
   log(`Continui la storia della famiglia come ${S.nome}, ${g('figlio','figlia')} di ${old.nome}. Generazione ${S.gen}.`,'g');
-  if(quota>0)log(`Erediti ${eur(quota)}.`,'g');
+  if(quota>0)log(`Erediti ${eur(quota)}${qs&&qs[1]<1?`: la tua parte (${Math.round(qs[1]*100)}%) secondo la legge`:''}.`,'g');
   tab='vita';coda=[];save();render();
 }
 
@@ -384,7 +389,8 @@ function mese(silenzioso){
   save();render();next();
 }
 function inizioAnno(){
-  annoMondo();if(S.montante)S.montante=Math.round(S.montante*(1+S.mondo.infl+.005));annoFama();annoNemici();annoBeni();annoLusso();
+  annoMondo();if(S.montante){const k=1+S.mondo.infl+.005;S.montante=Math.round(S.montante*k);if(S.montRetr)S.montRetr=Math.round(S.montRetr*k)}
+  if(S.anno===1996&&S.contrib95===undefined)S.contrib95=S.contributi||0;annoFama();annoNemici();annoBeni();annoLusso();
   if(S.azienda)annoAzienda();
   if(S.crim.clan)annoClan();
   if(S.pensione)S.pensione=Math.round(S.pensione*(1+S.mondo.infl*.9));
@@ -411,6 +417,7 @@ function compleanno(){
   if(S.carcere===0)presentaAmici(S.eta<14?'Alla tua festa':'Alla tua cena di compleanno');
   if(S.eta>=30&&S.eta%10===0)auguriDalPassato();
   if(S.eta>=18&&S.eta<=60&&!S.aspir&&S.carcere===0)coda.push({e:EV.aspirazioni,d:{}});
+  controllaNaja();
 }
 function tappe(){
   const e=S.eta;
@@ -515,14 +522,17 @@ function meseLavoro(){
   L.mesi=(L.mesi||0)+1;if(L.mesi%12===0){L.anni++;L.anniLiv++}
   S.contributi+=(j.pt?.5:1)/12;
   if(j.elez){L.mandato=(L.mandato||0)+1;if(L.mandato>=60){L.mandato=0;if(chance(.5+L.perf/250+S.fama/400))log(`Alle elezioni vieni rielett${g('o','a')}: altri cinque anni.`,'g');else{licenzia(`Alle elezioni non vieni rielett${g('o','a')}: il mandato finisce.`,true);mod('felicita',-8);return}}}
-  if(S.mondo.crisi&&!j.conc&&!j.var&&chance(.011)){licenzia('La crisi colpisce la tua azienda: sei tra i licenziati.');segnaVita('licenziato');return}
+  if(L.cig>0){meseCIG(L);return}   // in cassa integrazione: niente valutazioni né promozioni
+  if((S.anno===2020&&S.mese>=2&&S.mese<=4||S.anno>ANNO_OGGI&&S.mondo.pandemia)&&puoCIG()&&chance(.25))chiediCIG(true);
+  else if(puoCIG()&&chance(S.mondo.crisi?.008:.001))chiediCIG();
+  if(S.mondo.crisi&&!j.conc&&!j.var&&chance(.011)){if(puoCIG()&&chance(.5))chiediCIG();else{licenzia('La crisi colpisce la tua azienda: sei tra i licenziati.');segnaVita('licenziato');return}}
   if(S.mondo.pandemia&&['cam','bpt','cuoco','parr','pt','este','anim','guida','hostess','bagn'].includes(L.id)&&chance(.02)){licenzia('Con la pandemia il locale chiude e perdi il lavoro.');segnaVita('licenziato');return}
   if(meseContratto())return;
   if(S.fatti.congedo>S.t)return;   // in congedo: niente valutazioni né promozioni
   const sod=soddLavoro();
   L.perf=clamp(L.perf+(r(-7,5)+(S.felicita<30?-4:0)+(S.dip.alcol?-6:0)+(S.salute<30?-4:0))/3.5+pz('C')*.7+(S.bis.energia<30?-1:0)+(S.bis.stress>80?-1:0)+(sod-50)/90);
   if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100)/12*fattoreCarriera(L))&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
-    L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100)*fattoreGenere());if(PIVA_LIV[j.id]===L.liv&&!isPiva(L)){L.contratto={t:'piva',da:S.t};log('Ti metti in proprio: apri la partita IVA.','h')}L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
+    L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L)){L.contratto={t:'piva',da:S.t};log('Ti metti in proprio: apri la partita IVA.','h')}L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
     mod('felicita',8);segnaVita('promozione');log(`Promozione! Ora sei ${L.nome.toLowerCase()}, con una RAL di ${eur(L.stip)}.`,'g');
   }
   if(L.perf<20&&chance(.04)){licenzia(`Sei stat${g('o','a')} licenziat${g('o','a')}: il tuo rendimento era troppo basso.`);segnaVita('licenziato');return}
@@ -537,7 +547,7 @@ function costoFiglio(){
 function bilancio(simula){
   const v=[];const add=(n,x)=>{x=Math.round(x||0);if(x)v.push([n,x])};
   const conv=convivente(),L=S.lavoro;
-  if(L){const j=JOB[L.id],pv=isPiva(L);let l=ralEff(L);if(j.var&&!simula)l=l*r(40,170)/100;add(pv?'Compensi da partita IVA (netti)':j.var?'Guadagni (variabili)':'Stipendio netto',pv?nettoPiva(l,L):netto(l))}
+  if(L){const j=JOB[L.id],pv=isPiva(L);let l=ralEff(L);if(j.var&&!simula)l=l*r(40,170)/100;if(L.cig>0&&!pv&&!j.var)add('Cassa integrazione (INPS)',nettoCIG(L));else add(pv?'Compensi da partita IVA (netti)':j.var?'Guadagni (variabili)':'Stipendio netto',pv?nettoPiva(l,L):netto(l))}
   if(S.pensione)add('Pensione',S.pensione);
   if(S.scuola.stato==='dottorato')add('Borsa di dottorato',P(16000));
   if(S.scuola.stato==='spec')add('Contratto di specializzazione',P(23000));
@@ -557,7 +567,7 @@ function bilancio(simula){
   if(S.carcere>0)return v;
   const ab=S.casa;
   if(ab.tipo==='affitto')add(`Affitto: ${ab.n}`,-ab.costo*(conv?.5:1));
-  if(['affitto','proprieta'].includes(ab.tipo))add('Spesa e bollette',-P(8400)*(conv?.6:1));
+  if(['affitto','proprieta'].includes(ab.tipo))add('Spesa e bollette',-P(8400)*costoZona()*(conv?.6:1));
   if(S.eta>=18)add('Spese personali',-P(ab.tipo==='genitori'||ab.tipo==='figlio'?1500:3600));
   if(ab.tipo==='genitori'&&S.eta>=25&&S.lavoro&&!JOB[S.lavoro.id].pt)add('Contributo a casa dei genitori',-P(1800));
   for(const c of S.veicoli){add(`${c.n}: assicurazione e bollo`,-c.costo);if(c.prestito)add(`Rata ${c.n}`,-c.prestito.rata)}
@@ -603,9 +613,10 @@ function finanzeMese(){
 function casaMia(){return S.casa.tipo==='proprieta'?S.prop.find(p=>p.id===S.casa.pid):null}
 function affittoBase(t,citta,prov){const a=AFFITTI.find(x=>x.t===t)||AFFITTI[1];const c=citta?cittaInfo(citta,prov):luogo();return {tipo:'affitto',n:a.t,costo:Math.round(a.mq*c.mq*.075*(a.k||1)*ip()/100)*100}}
 function annoBeni(){
+  annoTassi();
   for(const p of S.prop){
     const M=S.mondo;p.valore=Math.round(p.valore*(1+M.infl+(M.bolla?.06:0)-(M.crisi?.05:0)+r(-3,3)/100));p.stato=clamp(p.stato-r(1,4));
-    if(p.mutuo){p.mutuo.residuo=Math.round(p.mutuo.residuo*1.035-p.mutuo.rata);p.mutuo.anni--;
+    if(p.mutuo){annoMutuo(p);p.mutuo.residuo=Math.round(p.mutuo.residuo*(1+p.mutuo.tasso)-p.mutuo.rata);p.mutuo.anni--;
       if(p.mutuo.anni<=0||p.mutuo.residuo<=0){p.mutuo=null;log(`Hai finito di pagare il mutuo (${p.tipo.toLowerCase()})!`,'g');mod('felicita',8)}}
     if(p.affittata&&chance(.08)){soldi(-Math.round(p.valore*.03));log(`L'inquilino del ${p.tipo.toLowerCase()} non paga da mesi.`,'b')}
   }
@@ -674,6 +685,7 @@ function eleggibile(e){
   const u=S.ultimi[e.id];if(u!==undefined&&S.eta-u<(e.rip||6))return false;
   if(coda.some(q=>q.e===e))return false;
   if(e.cond&&!e.cond({}))return false;
+  if(annoEvento(e)>S.anno)return false;      // niente anacronismi (c9_epoca.js)
   return true;
 }
 function segna(e){S.ultimi[e.id]=S.eta;if(e.once)S.fatti['ev_'+e.id]=true}
@@ -686,6 +698,7 @@ function aggiungiPersona(){
     if(e.once&&S.fatti['ev_'+e.id])continue;
     const u=S.ultimi[e.id];if(u!==undefined&&S.eta-u<(e.rip||4))continue;
     if(e.cond&&!e.cond({}))continue;
+    if(annoEvento(e)>S.anno)continue;
     const ps=S.relazioni.filter(p=>p.vivo&&e.chi.includes(p.ruolo)&&(!e.pc||e.pc(p)));
     if(ps.length)opz.push([{e,ps},e.w||1]);
   }

@@ -503,7 +503,7 @@ ev({id:'par_gelosia',min:18,max:80,chi:['Partner','Coniuge'],pc:p=>p.tr===TR.GEL
 ev({id:'par_convivenza',min:18,max:55,chi:['Partner'],pc:p=>!p.conv&&p.rapporto>=55,t:'Vivere insieme',x:'{P} ti chiede di andare a vivere insieme.',c:[
   {l:'Sì!',fx:d=>{convivi(d.p)},e:{rel:12,f:7},r:'Scatoloni, IKEA e la prima litigata per l\'armadio.'},
   {l:'È troppo presto',e:{rel:-8},r:'{P} accetta, ma ci resta male.'}]});
-ev({id:'par_proposta',min:20,max:65,chi:['Partner'],pc:p=>p.rapporto>=62,t:'La proposta',x:'A cena, {P} si inginocchia con un anello: «Vuoi sposarmi?»',c:[
+ev({id:'par_proposta',min:20,max:65,chi:['Partner'],pc:p=>p.rapporto>=62&&(p.sesso!==S.sesso||unioneCivilePossibile()),t:'La proposta',x:'A cena, {P} si inginocchia con un anello: «Vuoi sposarmi?»',c:[
   {l:'Sì!',fx:d=>{coda.unshift({e:EV.matrimonio,d});return null}},
   {l:'Ho bisogno di tempo',e:{rel:-15},r:'Un silenzio imbarazzante. Il ristorante intero vi guarda.'},
   {l:'No',fx:d=>chiudiRelazione(d.p,'Dici di no. {P} se ne va in lacrime.')}]});

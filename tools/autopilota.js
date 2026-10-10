@@ -52,7 +52,7 @@ window.AP={
   if(S.scuola.stato==='superiori'&&e>=16&&S.scuola.voto<55&&chance(.01-pz('C')*.005)){S.scuola.stato='finita';log('Lasci la scuola.','b');return}
   if(['universita','magistrale'].includes(S.scuola.stato)&&S.scuola.voto<55&&chance(.01-pz('C')*.005)){S.scuola.stato='finita';log('Lasci l\'università.','b');return}
   // non tutti cercano lavoro: c'è chi resta a casa con i figli piccoli e chi smette di cercare (in Italia un terzo tra 15 e 64 anni è inattivo)
-  if(F.apAttivo===undefined)F.apAttivo=chance(.7);
+  if(F.apAttivo===undefined)F.apAttivo=chance(alSud(zonaMia())?.55:.72);   // al Sud gli inattivi sono di più (ISTAT: 44% contro 28% al Nord)
   const piccoli=vivi(['Figlio']).some(f=>f.eta<6&&!f.conEx)&&convivente();
   if(e>=18&&!S.lavoro&&!iscritto()&&!S.pensione&&e<64&&chance((.25+pz('C')*.1)*(F.apAttivo?1:.04)*(piccoli?.35:1))){
     const L=LAVORI.filter(j=>!requisitiJob(j).length&&!fatto('job_'+j.id)&&!j.nascosto);

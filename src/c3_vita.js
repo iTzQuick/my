@@ -2,7 +2,8 @@
 const MESE=i=>cap(MESI[i]);
 /* Testi vari: evita di ripetere le ultime frasi usate per la stessa situazione */
 function varia(k,L){
-  if(!S)return pick(L);const V=S.fatti._v||(S.fatti._v={});const u=V[k]||[];
+  if(!S)return pick(L);
+  L=soloEpoca(L);const V=S.fatti._v||(S.fatti._v={});const u=V[k]||[];
   const lib=L.map((_,i)=>i).filter(i=>!u.includes(i));const i=lib.length?pick(lib):r(0,L.length-1);
   u.push(i);while(u.length>Math.min(L.length-1,Math.ceil(L.length*.7)))u.shift();V[k]=u;return L[i];
 }
@@ -160,7 +161,7 @@ function nomeAttR(a){
   if(a.id==='extra')return S.lavoro&&!JOB[S.lavoro.id].pt?'Straordinari':'Lavoretti';
   return a.n;
 }
-function attDisponibile(a){return S.eta>=a.min&&(!a.cond||a.cond())&&S.carcere===0}
+function attDisponibile(a){return S.eta>=a.min&&(!a.cond||a.cond())&&S.carcere===0&&!fuoriEpoca(a.n||'')}
 function sonnoDefault(e){return e<6?11:e<13?10:e<18?8.5:e<65?7.5:7.5}
 function routineDefault(){
   const e=S.eta,R={};
@@ -489,7 +490,7 @@ function impulsi(){
   }
   if(B.stress>75&&pz('N')>.2&&chance(.05)){S.tensione=(S.tensione||0)+4;log('Una notte d\'ansia: il cuore che batte forte e mille pensieri.','b');return}
   if(S.eta>=14&&S.soldi>P(150)&&chance(.035-pz('C')*.03)){
-    const L=ACQUISTI.filter(a=>(!a.min||S.eta>=a.min)&&(!a.c||a.c())&&P(a.p[1])<=S.soldi*.25+P(a.p[0]));
+    const L=ACQUISTI.filter(a=>(!a.min||S.eta>=a.min)&&(!a.c||a.c())&&!fuoriEpoca(a.t)&&P(a.p[1])<=S.soldi*.25+P(a.p[0]));
     if(L.length){const a=pick(L);const x=P(r(a.p[0],a.p[1]));soldi(-x);log(`Acquisto d'impulso: ${a.t} (${eur(x)}).`,'');return}
   }
   if(B.soc<35&&pz('E')>.2&&chance(.08)){const a=pick(vivi(['Amico','Fratello','Cugino']));if(a){a.rapporto=clamp(a.rapporto+r(4,8));log(`Ti manca la gente: chiami ${a.nome} e passate ore al telefono.`,'g');B.soc=clamp(B.soc+8);return}}

@@ -980,7 +980,11 @@ const r=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const chance=p=>Math.random()<p;
 const clamp=(v,lo=0,hi=100)=>Math.max(lo,Math.min(hi,Math.round(v)));
-const eur=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Math.round(n||0));
+const fmtEuro=new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+/* fino al 2001 si paga in lire: 1 euro = 1.936,27 lire (gli importi del gioco sono sempre euro dell'anno, qui si convertono) */
+const LIRE=1936.27,migliaia=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+function lire(n){let x=Math.round((n||0)*LIRE);const a=Math.abs(x);x=a>=1e6?Math.round(x/1e4)*1e4:a>=1e4?Math.round(x/1e3)*1e3:Math.round(x/50)*50;return (x<0?'-':'')+migliaia(Math.abs(x))+'\u00a0lire'}
+const eur=n=>S&&S.anno<2002?lire(n):fmtEuro.format(Math.round(n||0));
 const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const cap=s=>s?s[0].toUpperCase()+s.slice(1):s;
 function pesata(arr){const t=arr.reduce((s,x)=>s+x[1],0);let x=Math.random()*t;for(const [it,w] of arr){x-=w;if(x<=0)return it}return arr.length?arr[arr.length-1][0]:null}
@@ -1158,7 +1162,7 @@ function assumi(j){
   if(S.lavoro){pagaTFR();S.storico.push(S.lavoro.nome)}
   S.naspi=null;S.sfl=null;
   let liv=0;if(j.boost&&S.istr.cert.includes(j.boost.cert))liv=j.boost.liv;
-  S.lavoro={id:j.id,da:S.t,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)*fattoreGenere()),nome:nomeJob(j,liv),contratto:contrattoIniziale(j,liv)};
+  S.lavoro={id:j.id,da:S.t,liv,anniLiv:0,anni:0,perf:60,stip:Math.round(stipLiv(j,liv)*(1+r(-3,6)/100)*fattoreGenere()*fattoreZona(j)),nome:nomeJob(j,liv),contratto:contrattoIniziale(j,liv)};
   if(chance(ptIniziale(j)))S.lavoro.ptv=true;
   if(S.vivo)log(`Contratto: ${descrContratto(S.lavoro).toLowerCase()}${S.lavoro.ptv&&S.lavoro.contratto.t!=='piva'&&!/part-time/.test(descrContratto(S.lavoro))?' · part-time':''}.`,'h');
   S.ultimoLavoro=S.lavoro.nome;
@@ -1283,7 +1287,8 @@ function patrimonio(X){
 function continuaCome(pid){
   const old=S,f=old.relazioni.find(p=>p.id===pid);if(!f)return;
   const figli=old.relazioni.filter(p=>p.vivo&&p.ruolo==='Figlio');
-  const quota=Math.max(0,Math.round(patrimonio(old)*.96/Math.max(1,figli.length)));
+  const qs=quoteSuccessione(old).find(x=>x[0]===f),lordo=Math.max(0,patrimonio(old)*.96*(qs?qs[1]:1/Math.max(1,figli.length)));   // successione legittima
+  const quota=Math.round(lordo-impostaSucc(lordo));
   const classe=quota>300000?'agiata':quota>40000?'media':'umile';
   const look=lookDi(f);
   S=statoBase({nome:f.nome,cognome:f.cognome,sesso:f.sesso,citta:old.citta,prov:old.prov,mondo:old.mondo,eta:f.eta,annoNascita:old.anno-f.eta-(old.mese<(f.mn||0)?1:0),anno:old.anno,mese:old.mese,meseNascita:f.mn||0,t:f.eta*12,pers:f.pers,look,gen:old.gen+1,soldi:quota,classe,
@@ -1311,7 +1316,7 @@ function continuaCome(pid){
   S.fatti.hobbyChiesto=e>6;
   S.routine=routineDefault();if(S.eta>=4)formaAttaccamento();
   log(`Continui la storia della famiglia come ${S.nome}, ${g('figlio','figlia')} di ${old.nome}. Generazione ${S.gen}.`,'g');
-  if(quota>0)log(`Erediti ${eur(quota)}.`,'g');
+  if(quota>0)log(`Erediti ${eur(quota)}${qs&&qs[1]<1?`: la tua parte (${Math.round(qs[1]*100)}%) secondo la legge`:''}.`,'g');
   tab='vita';coda=[];save();render();
 }
 
@@ -1358,7 +1363,8 @@ function mese(silenzioso){
   save();render();next();
 }
 function inizioAnno(){
-  annoMondo();if(S.montante)S.montante=Math.round(S.montante*(1+S.mondo.infl+.005));annoFama();annoNemici();annoBeni();annoLusso();
+  annoMondo();if(S.montante){const k=1+S.mondo.infl+.005;S.montante=Math.round(S.montante*k);if(S.montRetr)S.montRetr=Math.round(S.montRetr*k)}
+  if(S.anno===1996&&S.contrib95===undefined)S.contrib95=S.contributi||0;annoFama();annoNemici();annoBeni();annoLusso();
   if(S.azienda)annoAzienda();
   if(S.crim.clan)annoClan();
   if(S.pensione)S.pensione=Math.round(S.pensione*(1+S.mondo.infl*.9));
@@ -1385,6 +1391,7 @@ function compleanno(){
   if(S.carcere===0)presentaAmici(S.eta<14?'Alla tua festa':'Alla tua cena di compleanno');
   if(S.eta>=30&&S.eta%10===0)auguriDalPassato();
   if(S.eta>=18&&S.eta<=60&&!S.aspir&&S.carcere===0)coda.push({e:EV.aspirazioni,d:{}});
+  controllaNaja();
 }
 function tappe(){
   const e=S.eta;
@@ -1489,14 +1496,17 @@ function meseLavoro(){
   L.mesi=(L.mesi||0)+1;if(L.mesi%12===0){L.anni++;L.anniLiv++}
   S.contributi+=(j.pt?.5:1)/12;
   if(j.elez){L.mandato=(L.mandato||0)+1;if(L.mandato>=60){L.mandato=0;if(chance(.5+L.perf/250+S.fama/400))log(`Alle elezioni vieni rielett${g('o','a')}: altri cinque anni.`,'g');else{licenzia(`Alle elezioni non vieni rielett${g('o','a')}: il mandato finisce.`,true);mod('felicita',-8);return}}}
-  if(S.mondo.crisi&&!j.conc&&!j.var&&chance(.011)){licenzia('La crisi colpisce la tua azienda: sei tra i licenziati.');segnaVita('licenziato');return}
+  if(L.cig>0){meseCIG(L);return}   // in cassa integrazione: niente valutazioni né promozioni
+  if((S.anno===2020&&S.mese>=2&&S.mese<=4||S.anno>ANNO_OGGI&&S.mondo.pandemia)&&puoCIG()&&chance(.25))chiediCIG(true);
+  else if(puoCIG()&&chance(S.mondo.crisi?.008:.001))chiediCIG();
+  if(S.mondo.crisi&&!j.conc&&!j.var&&chance(.011)){if(puoCIG()&&chance(.5))chiediCIG();else{licenzia('La crisi colpisce la tua azienda: sei tra i licenziati.');segnaVita('licenziato');return}}
   if(S.mondo.pandemia&&['cam','bpt','cuoco','parr','pt','este','anim','guida','hostess','bagn'].includes(L.id)&&chance(.02)){licenzia('Con la pandemia il locale chiude e perdi il lavoro.');segnaVita('licenziato');return}
   if(meseContratto())return;
   if(S.fatti.congedo>S.t)return;   // in congedo: niente valutazioni né promozioni
   const sod=soddLavoro();
   L.perf=clamp(L.perf+(r(-7,5)+(S.felicita<30?-4:0)+(S.dip.alcol?-6:0)+(S.salute<30?-4:0))/3.5+pz('C')*.7+(S.bis.energia<30?-1:0)+(S.bis.stress>80?-1:0)+(sod-50)/90);
   if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100)/12*fattoreCarriera(L))&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
-    L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100)*fattoreGenere());if(PIVA_LIV[j.id]===L.liv&&!isPiva(L)){L.contratto={t:'piva',da:S.t};log('Ti metti in proprio: apri la partita IVA.','h')}L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
+    L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L)){L.contratto={t:'piva',da:S.t};log('Ti metti in proprio: apri la partita IVA.','h')}L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
     mod('felicita',8);segnaVita('promozione');log(`Promozione! Ora sei ${L.nome.toLowerCase()}, con una RAL di ${eur(L.stip)}.`,'g');
   }
   if(L.perf<20&&chance(.04)){licenzia(`Sei stat${g('o','a')} licenziat${g('o','a')}: il tuo rendimento era troppo basso.`);segnaVita('licenziato');return}
@@ -1511,7 +1521,7 @@ function costoFiglio(){
 function bilancio(simula){
   const v=[];const add=(n,x)=>{x=Math.round(x||0);if(x)v.push([n,x])};
   const conv=convivente(),L=S.lavoro;
-  if(L){const j=JOB[L.id],pv=isPiva(L);let l=ralEff(L);if(j.var&&!simula)l=l*r(40,170)/100;add(pv?'Compensi da partita IVA (netti)':j.var?'Guadagni (variabili)':'Stipendio netto',pv?nettoPiva(l,L):netto(l))}
+  if(L){const j=JOB[L.id],pv=isPiva(L);let l=ralEff(L);if(j.var&&!simula)l=l*r(40,170)/100;if(L.cig>0&&!pv&&!j.var)add('Cassa integrazione (INPS)',nettoCIG(L));else add(pv?'Compensi da partita IVA (netti)':j.var?'Guadagni (variabili)':'Stipendio netto',pv?nettoPiva(l,L):netto(l))}
   if(S.pensione)add('Pensione',S.pensione);
   if(S.scuola.stato==='dottorato')add('Borsa di dottorato',P(16000));
   if(S.scuola.stato==='spec')add('Contratto di specializzazione',P(23000));
@@ -1531,7 +1541,7 @@ function bilancio(simula){
   if(S.carcere>0)return v;
   const ab=S.casa;
   if(ab.tipo==='affitto')add(`Affitto: ${ab.n}`,-ab.costo*(conv?.5:1));
-  if(['affitto','proprieta'].includes(ab.tipo))add('Spesa e bollette',-P(8400)*(conv?.6:1));
+  if(['affitto','proprieta'].includes(ab.tipo))add('Spesa e bollette',-P(8400)*costoZona()*(conv?.6:1));
   if(S.eta>=18)add('Spese personali',-P(ab.tipo==='genitori'||ab.tipo==='figlio'?1500:3600));
   if(ab.tipo==='genitori'&&S.eta>=25&&S.lavoro&&!JOB[S.lavoro.id].pt)add('Contributo a casa dei genitori',-P(1800));
   for(const c of S.veicoli){add(`${c.n}: assicurazione e bollo`,-c.costo);if(c.prestito)add(`Rata ${c.n}`,-c.prestito.rata)}
@@ -1577,9 +1587,10 @@ function finanzeMese(){
 function casaMia(){return S.casa.tipo==='proprieta'?S.prop.find(p=>p.id===S.casa.pid):null}
 function affittoBase(t,citta,prov){const a=AFFITTI.find(x=>x.t===t)||AFFITTI[1];const c=citta?cittaInfo(citta,prov):luogo();return {tipo:'affitto',n:a.t,costo:Math.round(a.mq*c.mq*.075*(a.k||1)*ip()/100)*100}}
 function annoBeni(){
+  annoTassi();
   for(const p of S.prop){
     const M=S.mondo;p.valore=Math.round(p.valore*(1+M.infl+(M.bolla?.06:0)-(M.crisi?.05:0)+r(-3,3)/100));p.stato=clamp(p.stato-r(1,4));
-    if(p.mutuo){p.mutuo.residuo=Math.round(p.mutuo.residuo*1.035-p.mutuo.rata);p.mutuo.anni--;
+    if(p.mutuo){annoMutuo(p);p.mutuo.residuo=Math.round(p.mutuo.residuo*(1+p.mutuo.tasso)-p.mutuo.rata);p.mutuo.anni--;
       if(p.mutuo.anni<=0||p.mutuo.residuo<=0){p.mutuo=null;log(`Hai finito di pagare il mutuo (${p.tipo.toLowerCase()})!`,'g');mod('felicita',8)}}
     if(p.affittata&&chance(.08)){soldi(-Math.round(p.valore*.03));log(`L'inquilino del ${p.tipo.toLowerCase()} non paga da mesi.`,'b')}
   }
@@ -1648,6 +1659,7 @@ function eleggibile(e){
   const u=S.ultimi[e.id];if(u!==undefined&&S.eta-u<(e.rip||6))return false;
   if(coda.some(q=>q.e===e))return false;
   if(e.cond&&!e.cond({}))return false;
+  if(annoEvento(e)>S.anno)return false;      // niente anacronismi (c9_epoca.js)
   return true;
 }
 function segna(e){S.ultimi[e.id]=S.eta;if(e.once)S.fatti['ev_'+e.id]=true}
@@ -1660,6 +1672,7 @@ function aggiungiPersona(){
     if(e.once&&S.fatti['ev_'+e.id])continue;
     const u=S.ultimi[e.id];if(u!==undefined&&S.eta-u<(e.rip||4))continue;
     if(e.cond&&!e.cond({}))continue;
+    if(annoEvento(e)>S.anno)continue;
     const ps=S.relazioni.filter(p=>p.vivo&&e.chi.includes(p.ruolo)&&(!e.pc||e.pc(p)));
     if(ps.length)opz.push([{e,ps},e.w||1]);
   }
@@ -1727,7 +1740,10 @@ const ip=()=>(S&&S.mondo?S.mondo.ip:1);
 const P=x=>Math.round(x*ip());
 /* Gli importi scritti nei testi («400 €», «1.800 €», con lo spazio normale) sono ai prezzi del 2026: prezzi() li porta all'anno del gioco.
    eur() scrive con lo spazio non separabile, quindi un testo già convertito non cambia. Usato da fogli, esiti, diario e attività. */
-const prezzi=s=>typeof s==='string'&&S&&S.mondo?s.replace(/(\d{1,3}(?:\.\d{3})+|\d+) €/g,(m,n)=>eur(P(+n.replace(/\./g,'')))):s;
+const prezzi=s=>typeof s==='string'&&S&&S.mondo?mutua(s.replace(/(\d{1,3}(?:\.\d{3})+|\d+) €/g,(m,n)=>eur(P(+n.replace(/\./g,''))))):s;
+/* prima del Servizio sanitario nazionale (dicembre 1978) ci si curava con la mutua */
+const MUTUA=[[/\bil Servizio sanitario(?! nazionale)/g,'la mutua'],[/\bIl Servizio sanitario(?! nazionale)/g,'La mutua'],[/\bdel Servizio sanitario(?! nazionale)/g,'della mutua'],[/\bdella sanità pubblica\b/g,'della mutua'],[/\b([Mm])edico di base\b/g,'$1edico della mutua']];
+const mutua=s=>S.anno>=1979?s:MUTUA.reduce((x,[a,b])=>x.replace(a,b),s);
 function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
 
 /* ---------- Mondo ---------- */
@@ -1748,7 +1764,7 @@ function annoMondo(){
     if(!M.bolla&&chance(.02)){M.bolla=r(3,5);notizia('Il mercato immobiliare impazzisce: i prezzi delle case salgono alle stelle.')}
     if(M.pensEta<71&&chance(.015)){M.pensEta++;notizia(`Riforma delle pensioni: ora ci si va a ${M.pensEta} anni.`)}
   }
-  M.infl=vero&&INFL_VERA[anno-1]!==undefined?INFL_VERA[anno-1]/100:(M.crisi?r(4,8):M.boom?r(2,4):r(1,3))/100+(M.pandemia?.01:0);
+  M.infl=vero&&(INFL_VERA[anno-1]??INFL_PRIMA[anno-1])!==undefined?(INFL_VERA[anno-1]??INFL_PRIMA[anno-1])/100:(M.crisi?r(4,8):M.boom?r(2,4):r(1,3))/100+(M.pandemia?.01:0);
   M.ip*=1+M.infl;
   M.mattone*=1+M.infl+(M.bolla?.06:0)-(M.crisi?.05:0)+r(-2,2)/100;
   for(const t of TITOLI){
@@ -1775,8 +1791,8 @@ function irpef(i){
   return t;
 }
 function detrazione(r0){const f=fattoreFisco();r0/=f;let d;if(r0<=15000)d=1955;else if(r0<=28000)d=1910+1190*(28000-r0)/13000;else if(r0<=50000)d=1910*(50000-r0)/22000;else d=0;return d*f}
-function netto(l){if(l<=0)return 0;const inps=l*.0919,imp=l-inps;const t=Math.max(0,irpef(imp)-detrazione(imp))+imp*.02;return Math.round(l-inps-t)}
-function tasseDettaglio(l){const inps=l*.0919,imp=l-inps;const ir=Math.max(0,irpef(imp)-detrazione(imp)),add=imp*.02;return {inps:Math.round(inps),irpef:Math.round(ir),addiz:Math.round(add),netto:Math.round(l-inps-ir-add)}}
+function netto(l){if(l<=0)return 0;const inps=l*.0919,imp=l-inps;const t=Math.max(0,irpef(imp)-detrazione(imp))+imp*aliqAddiz();return Math.round(l-inps-t)}
+function tasseDettaglio(l){const inps=l*.0919,imp=l-inps;const ir=Math.max(0,irpef(imp)-detrazione(imp)),add=imp*aliqAddiz();return {inps:Math.round(inps),irpef:Math.round(ir),addiz:Math.round(add),netto:Math.round(l-inps-ir-add)}}
 
 /* ---------- Borsa ---------- */
 function valoreBorsa(X){X=X||S;let t=0;for(const id in X.borsa)t+=X.borsa[id]*X.mondo.prezzi[id];return Math.round(t)}
@@ -1995,7 +2011,7 @@ function rimuoviSuoceri(p){S.relazioni=S.relazioni.filter(x=>x.famDi!==p.id||!['
 
 /* ---------- Dialoghi ---------- */
 function parla(p){
-  const temi=TEMI.filter(t=>!t.c&&(!t.min||S.eta>=t.min)&&(!t.max||S.eta<=t.max)&&(!t.pmin||p.eta>=t.pmin)&&(!t.solo||t.solo.includes(p.ruolo))&&(!t.etaMax||p.eta<=t.etaMax)&&(!t.basso||p.rapporto<60)&&(t.id!=='scuola_fig'||p.eta>=6));
+  const temi=TEMI.filter(t=>!t.c&&!fuoriEpoca(typeof t.l==='string'?t.l:'')&&(!t.min||S.eta>=t.min)&&(!t.max||S.eta<=t.max)&&(!t.pmin||p.eta>=t.pmin)&&(!t.solo||t.solo.includes(p.ruolo))&&(!t.etaMax||p.eta<=t.etaMax)&&(!t.basso||p.rapporto<60)&&(t.id!=='scuola_fig'||p.eta>=6));
   // gli argomenti legati a quello che sta vivendo (lutto, neonato, lavoro nuovo…) vengono per primi
   const ctx=TEMI.filter(t=>t.c&&(!t.min||S.eta>=t.min)&&t.c(p)).slice(0,2);
   const scelte=ctx.concat(shuffle(temi.filter(t=>!t.solo&&!t.basso)).slice(0,5-ctx.length)).concat(temi.filter(t=>t.solo||t.basso));
@@ -2021,7 +2037,8 @@ function colloquio(j){
   let score=0,i=0,mstip=1;
   const finale=()=>{
     const z=luogo().zona,M0=S.mondo;
-    const mercato=({'Nord-ovest':.03,'Nord-est':.04,Centro:-.03,Sud:-.12,Isole:-.13}[z]||0)-(S.eta<25?.05:0)-(S.eta>50?.1:0)-(S.eta>58?.1:0)-(M0.crisi?.12:0)+(M0.boom?.08:0);
+    const mercato=({'Nord-ovest':.03,'Nord-est':.04,Centro:-.04,Sud:-.2,Isole:-.22}[z]||0)   // al Sud si trova lavoro con meno della metà della facilità del Nord (disoccupazione 14% contro 5%)
+     -(S.eta<25?.05:0)-(S.eta>50?.1:0)-(S.eta>58?.1:0)-(M0.crisi?.12:0)+(M0.boom?.08:0);
     let p=.42+mercato+(S.intelligenza-50)/200+(S.aspetto-50)/400+Math.min(S.contributi,10)/40-(j.stip>40000?.15:0)-(S.fedina.length?.2:0)+(S.fatti.esperienza?.05:0)+S.fama/400+score*.06;
     p=Math.max(.04,Math.min(.92,p));
     let res;
@@ -2051,7 +2068,7 @@ function elezione(j){
     {l:'Candidati',costo:()=>P(5000),_incl:0,fx:()=>{if(chance(p)){assumi(j);mod('felicita',10);return [`Elett${g('o','a')}! Ora sei ${S.lavoro.nome.toLowerCase()}.`,'g']}mod('felicita',-6);pesa(5,2);return ['Pochi voti: questa volta non ce la fai.','b']}}]});
 }
 function concorso(j){
-  const qs=shuffle(QUIZ).slice(0,3);let giuste=0,i=0;
+  const qs=shuffle(QUIZ.filter(q=>!fuoriEpoca(JSON.stringify(q)))).slice(0,3);let giuste=0,i=0;
   const finale=()=>{
     const p=Math.max(.02,Math.min(.9,(.06+giuste*.24+(S.istr.liv>=3?.05:0)+(S.intelligenza-50)/500)*(j.cdiff||1)));   // notaio e magistrato: concorsi molto più difficili
     let res;
@@ -2071,7 +2088,8 @@ function concorso(j){
 const MESE=i=>cap(MESI[i]);
 /* Testi vari: evita di ripetere le ultime frasi usate per la stessa situazione */
 function varia(k,L){
-  if(!S)return pick(L);const V=S.fatti._v||(S.fatti._v={});const u=V[k]||[];
+  if(!S)return pick(L);
+  L=soloEpoca(L);const V=S.fatti._v||(S.fatti._v={});const u=V[k]||[];
   const lib=L.map((_,i)=>i).filter(i=>!u.includes(i));const i=lib.length?pick(lib):r(0,L.length-1);
   u.push(i);while(u.length>Math.min(L.length-1,Math.ceil(L.length*.7)))u.shift();V[k]=u;return L[i];
 }
@@ -2229,7 +2247,7 @@ function nomeAttR(a){
   if(a.id==='extra')return S.lavoro&&!JOB[S.lavoro.id].pt?'Straordinari':'Lavoretti';
   return a.n;
 }
-function attDisponibile(a){return S.eta>=a.min&&(!a.cond||a.cond())&&S.carcere===0}
+function attDisponibile(a){return S.eta>=a.min&&(!a.cond||a.cond())&&S.carcere===0&&!fuoriEpoca(a.n||'')}
 function sonnoDefault(e){return e<6?11:e<13?10:e<18?8.5:e<65?7.5:7.5}
 function routineDefault(){
   const e=S.eta,R={};
@@ -2558,7 +2576,7 @@ function impulsi(){
   }
   if(B.stress>75&&pz('N')>.2&&chance(.05)){S.tensione=(S.tensione||0)+4;log('Una notte d\'ansia: il cuore che batte forte e mille pensieri.','b');return}
   if(S.eta>=14&&S.soldi>P(150)&&chance(.035-pz('C')*.03)){
-    const L=ACQUISTI.filter(a=>(!a.min||S.eta>=a.min)&&(!a.c||a.c())&&P(a.p[1])<=S.soldi*.25+P(a.p[0]));
+    const L=ACQUISTI.filter(a=>(!a.min||S.eta>=a.min)&&(!a.c||a.c())&&!fuoriEpoca(a.t)&&P(a.p[1])<=S.soldi*.25+P(a.p[0]));
     if(L.length){const a=pick(L);const x=P(r(a.p[0],a.p[1]));soldi(-x);log(`Acquisto d'impulso: ${a.t} (${eur(x)}).`,'');return}
   }
   if(B.soc<35&&pz('E')>.2&&chance(.08)){const a=pick(vivi(['Amico','Fratello','Cugino']));if(a){a.rapporto=clamp(a.rapporto+r(4,8));log(`Ti manca la gente: chiami ${a.nome} e passate ore al telefono.`,'g');B.soc=clamp(B.soc+8);return}}
@@ -2640,7 +2658,7 @@ function initNpc(p){
   if(!p.ricordi)p.ricordi=[];
   if(p.stato===undefined){
     const e=p.eta;
-    p.stato=e<6?'bambino':e<19?'studente':e<25?(chance(.4)?'studente':chance(.8)?'lavora':'disoccupato'):e<67?(chance(.82)?'lavora':chance(.5)?'disoccupato':'casa'):'pensione';
+    p.stato=e<6?'bambino':e<19?'studente':e<25?(chance(.4)?'studente':chance(.8)?'lavora':'disoccupato'):e<67?(chance(occZona().occ)?'lavora':chance(.5)?'disoccupato':'casa'):'pensione';
     if(p.stato==='lavora'&&!p.lavoro)p.lavoro=lavoroPerNpc(p);
   }
   if(p.coppia===undefined){
@@ -2656,7 +2674,7 @@ function initNpc(p){
 }
 /* Un lavoro per una persona del gioco: diffuso come in Italia (DIFFUSIONE), con la quota di donne di ogni mestiere (DONNE) */
 function lavoroPerNpc(p){
-  const L=LAVORI.filter(j=>!j.pt&&!j.nascosto&&DIFFUSIONE[j.id]);
+  const L=LAVORI.filter(j=>!j.pt&&!j.nascosto&&DIFFUSIONE[j.id]&&lavoroInEpoca(j));
   const pesi=L.map(j=>{const f=DONNE[j.id]!==undefined?DONNE[j.id]:.42;const ses=p.sesso==='F'?f/.42:(1-f)/.58;return [j.id,DIFFUSIONE[j.id]*ses*(j.req&&j.req.lau?(p.pers&&p.pers.C>55?1.4:.6):1)]});
   return pesata(pesi);
 }
@@ -2729,7 +2747,7 @@ function mesePartner(p){
   if(conflitto>4.5&&chance(.12)&&!coda.length)coda.push({e:EV.lite_coppia,d:{p}});
   else if(h<3&&prima>40&&chance(.08)&&!coda.length)coda.push({e:EV.trascurato,d:{p}});
   if(p.ruolo==='Partner'&&!p.conv&&anni>=1.5&&p.rapporto>=65&&p.imp>=60&&chance(.03)&&S.eta>=19&&!coda.length&&S.carcere===0)coda.push({e:EV.proposta_conv,d:{p}});
-  if(p.ruolo==='Partner'&&p.conv&&anni>=2&&p.rapporto>=70&&p.imp>=70&&chance(.025)&&!coda.length)coda.push({e:EV.proposta_nozze,d:{p}});
+  if(p.ruolo==='Partner'&&p.conv&&anni>=2&&p.rapporto>=70&&p.imp>=70&&(p.sesso!==S.sesso||unioneCivilePossibile())&&chance(.025)&&!coda.length)coda.push({e:EV.proposta_nozze,d:{p}});
   if(p.ruolo==='Partner'&&p.rapporto<18&&chance(.25)){p.ruolo='Ex';p.conv=false;mod('felicita',-12);pesa(Math.round(8+prima/8),5);ricorda(p,'Vi siete lasciati');log(`${p.nome} ti lascia: «Non funziona più tra noi».`,'b');if(S.att==='ansioso')segnaVita('divorzio')}
   if(p.ruolo==='Coniuge'&&(p.rapporto<12&&chance(.05)||chance(.0011*(1+pz('N')*.5)*(1+ppz(p,'N')*.5)*(1.5-affinita(p)/100)))&&!coda.some(q=>q.e.id==='div_richiesta'))coda.push({e:EV.div_richiesta,d:{p}});
 }
@@ -2840,9 +2858,9 @@ function vitaNpc(p){
   if(e<18||p.ruolo==='Figlio'&&e<19)return;
   // lavoro
   if(p.stato==='casa'&&p.tornaLav&&S.t>=p.tornaLav){p.stato='lavora';p.tornaLav=0;if(!p.lavoro)p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} torna a lavorare.`,'h')}
-  if(p.stato==='lavora'&&chance(.003+(M.crisi?.012:0)+(A.C<35?.002:0))){p.stato='disoccupato';p.umore=clamp(p.umore-20);
+  if(p.stato==='lavora'&&chance((.003+(M.crisi?.012:0)+(A.C<35?.002:0))*occZona().perdi)){p.stato='disoccupato';p.umore=clamp(p.umore-20);
     p.lavT=0;if(!(p.rapporto>=50&&chance(.3)&&richiesta('r_lavoro_perso',p)))annuncia(p,`${p.nome} ha perso il lavoro.`,'b')}
-  else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1))){p.stato='lavora';p.lavoro=lavoroPerNpc(p);p.lavT=S.t;annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
+  else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1)*occZona().trova)){p.stato='lavora';p.lavoro=lavoroPerNpc(p);p.lavT=S.t;annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
   else if(p.stato==='lavora'&&chance(.002*(A.C/50))){annuncia(p,`${p.nome} ha avuto una promozione.`,'g');p.umore=clamp(p.umore+10)}
   // amore
   if(['Partner','Coniuge','Ex'].includes(p.ruolo))return;
@@ -2853,7 +2871,7 @@ function vitaNpc(p){
     return;
   }
   if(['single','separato','vedovo'].includes(p.coppia)&&e<65&&chance(.01*(.5+A.E/100))){nuovoCompagnoNpc(p);annuncia(p,`${cap(tuoR(p))} ${p.nome} ha una nuova relazione con ${p.pNome}.`,'h')}
-  else if(p.coppia==='coppia'&&S.t-(p.dalC||0)>=20&&e>=23&&e<60&&chance(.012)){p.coppia='sposato';if(p.pId){const q=persona(p.pId);if(q&&q.vivo)q.coppia='sposato'}
+  else if(p.coppia==='coppia'&&S.t-(p.dalC||0)>=20&&e>=23&&e<60&&(!coppiaStessoSesso(p)||unioneCivilePossibile())&&chance(.012)){p.coppia='sposato';if(p.pId){const q=persona(p.pId);if(q&&q.vivo)q.coppia='sposato'}
     if(vicino(p)&&!richiesta('r_matrimonio',p))annuncia(p,`${cap(tuoR(p))} ${p.nome} ${coppiaStessoSesso(p)?'celebra l\'unione civile con':'si sposa con'} ${p.pNome||'la persona che ama'}.`,'g');
     if(p.ruolo==='Fratello'&&!S.relazioni.some(x=>x.famDi===p.id))nuovaPersona('Cognato',p.pSesso||(p.sesso==='M'?'F':'M'),p.eta+r(-3,3),null,{rapporto:r(40,70),famDi:p.id,nome:p.pNome||undefined})}
   else if(['coppia','sposato'].includes(p.coppia)&&chance(.003*(1+(A.N-50)/60-(A.A-50)/80))){const sp=p.coppia==='sposato';p.coppia='separato';p.umore=clamp(p.umore-25);p.sepT=S.t;if(p.pId)separaNpc(p);
@@ -3133,14 +3151,50 @@ const coppiaStessoSesso=p=>!!p.pSesso&&p.pSesso===p.sesso;
 const ANNO_OGGI=2026;
 
 /* ---------- Prezzi: inflazione vera (ISTAT, indice NIC, media annua) ---------- */
+/* 1950–1954: coefficienti FOI (Camera di commercio di Cremona); 1955–1999: ISTAT, indice NIC, media annua (rivaluta.it) */
+const INFL_PRIMA={1950:-1.3,1951:9.7,1952:4.2,1953:1.9,1954:2.7,1955:2.3,1956:3.4,1957:1.3,1958:2.9,1959:-.5,1960:2.4,1961:2.1,1962:4.7,1963:7.5,1964:5.9,1965:4.5,1966:2.3,1967:3.7,1968:1.3,1969:2.7,1970:5,1971:4.8,1972:5.7,1973:10.8,1974:19.2,1975:17,1976:16.7,1977:17,1978:12.1,1979:14.8,1980:21.2,1981:17.8,1982:16.5,1983:14.7,1984:10.8,1985:9.2,1986:5.8,1987:4.7,1988:5.1,1989:6.3,1990:6.5,1991:6.3,1992:5.3,1993:4.6,1994:4.1,1995:5.2,1996:4,1997:2,1998:2,1999:1.7};
 const INFL_VERA={2000:2.5,2001:2.7,2002:2.5,2003:2.7,2004:2.2,2005:1.9,2006:2.1,2007:1.8,2008:3.3,2009:.8,2010:1.5,2011:2.8,2012:3.0,2013:1.2,2014:.2,2015:.1,2016:-.1,2017:1.2,2018:1.2,2019:.6,2020:-.2,2021:1.9,2022:8.1,2023:5.7,2024:1.0,2025:1.5};
 /* Livello dei prezzi a gennaio di un anno rispetto a oggi (2026 = 1). Tutti gli importi del gioco sono scritti ai prezzi di oggi. */
-function ipAnno(a){let x=1;for(let y=Math.max(2000,a);y<ANNO_OGGI;y++)x/=1+(INFL_VERA[y]||0)/100;return x}
+function ipAnno(a){let x=1;for(let y=Math.max(1950,a);y<ANNO_OGGI;y++)x/=1+(INFL_VERA[y]??INFL_PRIMA[y]??0)/100;return x}
 const passato=()=>S.anno<=ANNO_OGGI;
 
 /* ---------- La storia vera, mese per mese ---------- */
 const inReg0=(...rr)=>()=>rr.includes(luogo().reg);
 const STORIA=[
+  {a:1951,m:10,t:'Il Po rompe gli argini: il Polesine finisce sott\'acqua.',ev:'alluvione',dove:inReg0('Veneto')},
+  {a:1954,m:0,t:'Nasce la televisione italiana: la RAI trasmette il primo programma. Chi ha un televisore invita i vicini.'},
+  {a:1956,m:0,t:'Olimpiadi invernali a Cortina d\'Ampezzo.'},
+  {a:1957,m:1,t:'Arriva Carosello: dopo la pubblicità, tutti i bambini a letto.'},
+  {a:1957,m:6,t:'Esce la Fiat Nuova 500: l\'automobile diventa per tutti.'},
+  {a:1960,m:7,t:'Olimpiadi di Roma: Abebe Bikila vince la maratona a piedi nudi sull\'Appia Antica.'},
+  {a:1963,m:9,t:'Il disastro del Vajont: una frana nel lago della diga e l\'onda cancella Longarone.'},
+  {a:1964,m:9,t:'Inaugurata l\'Autostrada del Sole: da Milano a Napoli senza un semaforo.'},
+  {a:1966,m:10,t:'L\'Arno esonda: Firenze sott\'acqua. Da tutto il mondo arrivano gli «angeli del fango».',ev:'alluvione',dove:inReg0('Toscana')},
+  {a:1968,m:2,t:'Il Sessantotto: occupazioni nelle università e nei licei, cortei in tutte le città.'},
+  {a:1969,m:6,t:'L\'uomo sbarca sulla Luna: mezza Italia resta sveglia davanti alla televisione.'},
+  {a:1969,m:11,t:'Una bomba in piazza Fontana, a Milano: comincia la stagione degli «anni di piombo».'},
+  {a:1970,m:4,t:'Approvato lo Statuto dei lavoratori.'},
+  {a:1970,m:5,t:'Italia-Germania 4-3 ai Mondiali in Messico: la «partita del secolo».',fx:()=>{if(S.eta>=6)mod('felicita',3)}},
+  {a:1970,m:11,t:'Approvata la legge sul divorzio.'},
+  {a:1973,m:11,t:'Crisi del petrolio: austerità e domeniche a piedi, le strade sono delle biciclette.',fx:()=>{S.mondo.crisi=2}},
+  {a:1974,m:4,t:'Referendum sul divorzio: vince il «no» all\'abrogazione. Il divorzio resta.'},
+  {a:1976,m:4,t:'Il terremoto del Friuli: quasi mille morti, paesi interi da ricostruire.',ev:'terremoto',dove:inReg0('Friuli-Venezia Giulia')},
+  {a:1978,m:2,t:'Le Brigate Rosse rapiscono Aldo Moro in via Fani.'},
+  {a:1978,m:4,t:'Aldo Moro viene ucciso. Lo stesso mese il Parlamento approva la legge 194.'},
+  {a:1978,m:11,t:'Nasce il Servizio sanitario nazionale: cure per tutti, non più le mutue.'},
+  {a:1980,m:7,t:'Una bomba nella sala d\'aspetto della stazione di Bologna: 85 morti.'},
+  {a:1980,m:10,t:'Il terremoto dell\'Irpinia.',ev:'terremoto',dove:inReg0('Campania','Basilicata')},
+  {a:1982,m:6,t:'L\'Italia è campione del mondo in Spagna! Pertini esulta in tribuna, Tardelli urla dopo il gol.',fx:()=>{if(S.eta>=4)mod('felicita',5)}},
+  {a:1986,m:3,t:'Il disastro di Chernobyl: per settimane niente verdura a foglia e latte fresco.'},
+  {a:1989,m:10,t:'Cade il muro di Berlino.'},
+  {a:1990,m:5,t:'I Mondiali si giocano in Italia: le «notti magiche» e i gol di Totò Schillaci.',fx:()=>{if(S.eta>=4)mod('felicita',2)}},
+  {a:1992,m:1,t:'Arrestato Mario Chiesa: comincia Mani pulite, l\'inchiesta su Tangentopoli.'},
+  {a:1992,m:4,t:'Strage di Capaci: la mafia uccide Giovanni Falcone, la moglie e la scorta.'},
+  {a:1992,m:6,t:'Strage di via D\'Amelio: ucciso Paolo Borsellino.'},
+  {a:1992,m:8,t:'La lira esce dallo SME e si svaluta: arriva una manovra «lacrime e sangue».',fx:()=>{S.mondo.crisi=2}},
+  {a:1994,m:6,t:'Mondiali negli Stati Uniti: l\'Italia perde la finale ai rigori, Baggio sbaglia l\'ultimo.'},
+  {a:1997,m:8,t:'Terremoto in Umbria e nelle Marche: crolla parte della volta della basilica di Assisi.',ev:'terremoto',dove:inReg0('Umbria','Marche')},
+  {a:1999,m:0,t:'Nasce l\'euro, per ora solo nelle banche: in tasca restano le lire fino al 2002.'},
   {a:2002,m:0,t:'Arriva l\'euro: un euro vale 1.936,27 lire. Per mesi tutti rifanno i conti a mente.'},
   {a:2005,m:0,t:'Il servizio militare non è più obbligatorio: niente più naja.'},
   {a:2006,m:6,t:'L\'Italia è campione del mondo! Finale ai rigori a Berlino, notte di festa in tutte le piazze.',fx:()=>{if(S.eta>=4)mod('felicita',5)}},
@@ -3161,7 +3215,7 @@ const STORIA=[
   {a:2024,m:0,t:'Il reddito di cittadinanza lascia il posto all\'Assegno di inclusione.'},
   {a:2026,m:1,t:'Olimpiadi invernali a Milano e Cortina.'}
 ];
-const ELEZIONI_VERE=[[2001,4],[2006,3],[2008,3],[2013,1],[2018,2],[2022,8]];
+const ELEZIONI_VERE=[[1953,5],[1958,4],[1963,3],[1968,4],[1972,4],[1976,5],[1979,5],[1983,5],[1987,5],[1992,3],[1994,2],[1996,3],[2001,4],[2006,3],[2008,3],[2013,1],[2018,2],[2022,8]];
 function storiaMese(){
   if(!passato())return;
   for(const s of STORIA){
@@ -3195,7 +3249,8 @@ function contrattoIniziale(j,liv){
   if(x<pA+pD)return {t:'det',fine:S.t+pick([3,6,6,12,12,24]),mesi:0,pror:0};
   return {t:'ind'};
 }
-function descrContratto(L){
+function descrContratto(L){const s=descrContratto0(L);return L&&L.cig>0?s+` · in cassa integrazione (${L.cig} ${L.cig===1?'mese':'mesi'})`:s}
+function descrContratto0(L){
   const c=L&&L.contratto;if(!c)return 'Tempo indeterminato';
   const quando=t=>{const k=S.mese+(t-S.t);return `${MESI[((k%12)+12)%12]} ${S.anno+Math.floor(k/12)}`};
   const pt=L.ptv?' · part-time':'';
@@ -3216,7 +3271,7 @@ function meseContratto(){
       if(chance(.9)){c.fine=S.t+12;c.pror=(c.pror||0)+1;log('Anche quest\'anno arriva la supplenza: altro contratto fino a giugno, poi si vedrà.','h');return false}
       licenzia('Quest\'anno la supplenza non arriva.');return true}
     if(c.sport){if(chance(.7+(L.perf-60)/300)){c.fine=S.t+24;log('La squadra ti rinnova il contratto per altri due anni.','g');return false}licenzia('La squadra non ti rinnova il contratto.');return true}
-    const pInd=Math.max(.03,Math.min(.8,(c.mesi>=24?.25:.05)+(L.perf-60)/250+(M.crisi?-.1:0)+(M.boom?.08:0)));
+    const pInd=Math.max(.03,Math.min(.8,(c.mesi>=24?.25:.05)+(L.perf-60)/250+(M.crisi?-.1:0)+(M.boom?.08:0)))*occZona().stab;
     if(!STAGIONALI.includes(L.id)&&!JOB[L.id].pt&&chance(pInd)){L.contratto={t:'ind'};mod('felicita',8);S.bis.stress=clamp(S.bis.stress-6);log('Ti trasformano il contratto: tempo indeterminato! Finalmente.','g');return false}
     if(c.mesi<24&&(c.pror||0)<4&&chance(.6)){const n=pick([6,12]);c.fine=S.t+n;c.pror=(c.pror||0)+1;log(`Il contratto a termine viene prorogato di ${n} mesi.`,'h');return false}
     licenzia(STAGIONALI.includes(L.id)?'Finisce la stagione, e con lei il contratto.':'Il contratto a termine scade e non viene rinnovato.');return true;
@@ -3225,8 +3280,8 @@ function meseContratto(){
     if(chance(.75+(L.perf-60)/200)){L.contratto={t:'ind'};log('Finisce l\'apprendistato: ti confermano a tempo indeterminato.','g');mod('felicita',6);return false}
     licenzia('Finisce l\'apprendistato e non ti confermano.');return true;
   }
-  if(c.t==='ind'&&!JOB[L.id].conc&&chance(.0035*(M.crisi?2:1)*(S.eta<35?1.8:1)))   // licenziamenti e chiusure: circa 4% l'anno
-{licenzia(pick(['L\'azienda chiude e resti senza lavoro.','Riorganizzazione: il tuo posto viene tagliato.']));return true}
+  if(c.t==='ind'&&!JOB[L.id].conc&&chance(.0035*(M.crisi?2:1)*(S.eta<35?1.8:1)*occZona().perdi))   // licenziamenti e chiusure: circa 4% l'anno
+{if(puoCIG()&&chance(.4)){chiediCIG();return false}licenzia(pick(['L\'azienda chiude e resti senza lavoro.','Riorganizzazione: il tuo posto viene tagliato.']));return true}
   return false;
 }
 /* Netto della partita IVA: regime forfettario (78% di redditività, 26% di contributi, imposta al 5% per 5 anni, poi 15%) fino a 85.000 € */
@@ -3255,45 +3310,56 @@ const fattoreCarriera=L=>(L.ptv?.5:1)*(S.sesso==='F'&&L.liv>=1?.85:1)*(S.fatti.c
 function meseItalia(){
   S.lav48=(S.lav48||[]).concat(S.lavoro?1:0).slice(-48);
   const L=S.lavoro;
-  if(L){if(isPiva(L))S.montante=(S.montante||0)+ralEff(L)*.78*.26/12;else{L.tfr=(L.tfr||0)+ralEff(L)/13.5/12;S.montante=(S.montante||0)+ralEff(L)*.33/12}}
+  if(L){const m0=S.montante||0;if(isPiva(L))S.montante=m0+ralEff(L)*.78*.26/12;else{L.tfr=(L.tfr||0)+ralEff(L)/13.5/12;S.montante=m0+ralEff(L)*.33/12}
+    S.fatti.ultimaRAL=ralEff(L);
+    if(retributivo()&&!isPiva(L)){S.anniRetr=(S.anniRetr||0)+(JOB[L.id].pt?.5:1)/12;S.montRetr=(S.montRetr||0)+(S.montante-m0)}}
   if(S.azienda&&S.azienda.compenso)S.montante=(S.montante||0)+S.azienda.compenso*.24/12;
-  if(S.naspi){S.naspi.m++;if(S.naspi.m>S.naspi.mesi||S.lavoro){if(!S.lavoro)log('Finisce la NASpI.','h');S.naspi=null}}
+  if(S.naspi){S.naspi.m++;if(S.naspi.m>S.naspi.mesi||S.lavoro){if(!S.lavoro)log(`Finisce ${S.naspi.nome&&S.naspi.nome!=='NASpI'?(S.naspi.nome==='ASpI'?'l\'ASpI':'l\'indennità di disoccupazione'):'la NASpI'}.`,'h');S.naspi=null}}
   if(S.sfl){S.sfl.m++;if(S.sfl.m>S.sfl.mesi||S.lavoro){if(!S.lavoro)log('Finisce il corso, e con lui il Supporto formazione e lavoro.','h');S.sfl=null}}
   if(S.fatti.congedo&&S.fatti.congedo===S.t+1&&S.sesso==='F'&&S.lavoro&&!JOB[S.lavoro.id].pt&&S.t-(S.fatti.rientroT||-99)>12){S.fatti.rientroT=S.t;coda.push({e:EV.rientro_lavoro,d:{}})}
   if(S.fatti.congedo&&S.fatti.congedo===S.t){S.fatti.congedo=0;S.fatti.congedoQuota=0;log('Finisce il congedo: si torna al lavoro.','h')}
+  meseScreening();controllaRitorno();
 }
 /* La liquidazione (TFR) quando un lavoro finisce, per qualsiasi motivo */
 function pagaTFR(){
   const L=S.lavoro;if(!L||!L.tfr)return;
   const x=Math.round(L.tfr*.77);L.tfr=0;if(x<50)return;
-  soldi(x);log(`Ricevi il TFR, la liquidazione: ${eur(x)} netti.`,'g');
+  soldi(x);log(`Ricevi ${S.anno>=1982?'il TFR, la liquidazione':'la liquidazione'}: ${eur(x)} netti.`,'g');
 }
 /* NASpI: a chi perde il lavoro senza averlo lasciato. Il 75% dello stipendio (con un tetto), per metà dei mesi lavorati negli ultimi 4 anni */
+/* prima della NASpI (2015): ASpI nel 2013–2014, prima ancora l'indennità di disoccupazione ordinaria, molto più bassa e più corta
+   (circa: fino al 1987 poche lire al giorno, poi il 7,5% e il 20–30% dello stipendio, il 40% dal 2001, il 50–60% dal 2005–2008) */
+const nomeDisoccupazione=()=>S.anno>=2015?'NASpI':S.anno>=2013?'ASpI':'indennità di disoccupazione';
 function avviaNaspi(L){
   const n=(S.lav48||[]).reduce((s,x)=>s+x,0);
   if(n<3||!L)return;
-  const lordo=ralEff(L)/12,soglia=P(1460),cap=P(1585);
-  const imp=Math.min(cap,lordo<=soglia?lordo*.75:soglia*.75+(lordo-soglia)*.25);
-  S.naspi={mesi:Math.min(24,Math.floor(n/2)),imp:Math.round(imp*.88),m:0,over55:S.eta>=55};
-  log(`Fai domanda di NASpI: circa ${eur(S.naspi.imp)} netti al mese per ${S.naspi.mesi} mesi (dal sesto mese cala del 3% ogni mese).`,'h');
+  const lordo=ralEff(L)/12,soglia=P(1460),cap=P(1585),a=S.anno;
+  let imp,mesi;
+  if(a>=2013){imp=Math.min(cap,lordo<=soglia?lordo*.75:soglia*.75+(lordo-soglia)*.25);mesi=a>=2015?Math.min(24,Math.floor(n/2)):Math.min(S.eta>=55?14:12,Math.floor(n/2))}
+  else{const q=a<1988?.05:a<2001?.25:a<2005?.4:a<2008?.5:.6;imp=Math.min(cap,lordo*q);mesi=S.eta>=50?(a<2001?9:12):(a<2001?6:8)}
+  S.naspi={mesi,imp:Math.round(imp*.88),m:0,over55:S.eta>=55,nome:nomeDisoccupazione()};
+  log(`Fai domanda ${a>=2013?'di '+S.naspi.nome:"per l'indennità di disoccupazione"}: circa ${eur(S.naspi.imp)} netti al mese per ${S.naspi.mesi} mesi${a>=2015?' (dal sesto mese cala del 3% ogni mese)':''}.`,'h');
 }
-const naspiMese=()=>S.naspi?Math.round(S.naspi.imp*Math.pow(.97,Math.max(0,S.naspi.m-(S.naspi.over55?7:5)))):0;
+const naspiMese=()=>S.naspi?Math.round(S.naspi.imp*(S.naspi.nome&&S.naspi.nome!=='NASpI'?1:Math.pow(.97,Math.max(0,S.naspi.m-(S.naspi.over55?7:5))))):0;
 
 /* ---------- Pensioni (sistema contributivo, chi nasce dal 2000) ----------
    Vecchiaia a 67 anni con 20 di contributi; anticipata con 42 anni e 10 mesi (41 e 10 le donne) a qualsiasi età;
    a 71 anni bastano 5 anni. Importo = montante × coefficiente di trasformazione (biennio 2025–2026). */
 const COEFF_TRASF={57:4.204,58:4.308,59:4.419,60:4.536,61:4.661,62:4.795,63:4.936,64:5.088,65:5.250,66:5.423,67:5.608,68:5.808,69:6.024,70:6.258,71:6.510};
 function pensioneMaturata(){
-  const c=S.contributi||0,e=S.eta;
-  if(e>=S.mondo.pensEta&&c>=20)return 'vecchiaia';
-  if(c>=(S.sesso==='F'?41.83:42.83))return 'anticipata';
-  if(e>=S.mondo.pensEta+4&&c>=5)return 'vecchiaia';
+  const c=S.contributi||0,e=S.eta,R=requisitiPensione();
+  if(e>=R.vec&&c>=R.vecC)return 'vecchiaia';
+  if(c>=R.ant)return 'anticipata';
+  if(R.quota&&c>=R.quota[0]&&e>=R.quota[1])return 'anticipata';
+  if(e>=Math.max(R.vec,67)+4&&c>=5)return 'vecchiaia';
   return '';
 }
 function nettoPensione(l){if(l<=0)return 0;const t=Math.max(0,irpef(l)-detrazione(l))+l*.02;return Math.round(l-t)}
 function pensioneCalcolata(){
   const k=COEFF_TRASF[Math.max(57,Math.min(71,S.eta))]/100;
-  return nettoPensione((S.montante||0)*k);
+  // gli anni nel retributivo valgono il 2% dell'ultimo stipendio l'uno; il resto è contributivo
+  const retr=(S.anniRetr||0)*.02*(S.fatti.ultimaRAL||0);
+  return nettoPensione(Math.max(0,(S.montante||0)-(S.montRetr||0))*k+retr);
 }
 function vaiInPensione(auto){
   const tipo=pensioneMaturata();
@@ -3352,10 +3418,11 @@ function sussidio(){
 function puoSFL(){return S.anno>=2023&&S.eta>=18&&S.eta<=59&&!S.lavoro&&!S.naspi&&!S.sfl&&!iscritto()&&minoriConTe()===0&&iseeStima()<=P(10140)&&S.t-(S.fatti.sflT||-99)>=24}
 /* Tutte le voci di welfare nel bilancio dell'anno (importi annui) */
 function vociWelfare(add){
-  if(S.naspi)add('NASpI (disoccupazione)',naspiMese()*12);
+  if(S.naspi)add(S.naspi.nome&&S.naspi.nome!=='NASpI'?(S.naspi.nome==='ASpI'?'ASpI (disoccupazione)':'Indennità di disoccupazione'):'NASpI (disoccupazione)',naspiMese()*12);
   if(S.sfl)add('Supporto formazione e lavoro',P(500)*12);
   if(S.reversibilita)add('Pensione di reversibilità',S.reversibilita);
   const su=sussidio();if(su)add(su.n,su.x);
+  const af=assegnoFigli();if(af)add(af.n,af.x);
   if(S.eta>=S.mondo.pensEta&&S.carcere===0){
     const red=(S.pensione||0)+(S.reversibilita||0)+(S.lavoro?netto(ralEff(S.lavoro)):0)+S.prop.filter(p=>p.affittata).reduce((s,p)=>s+p.valore*.045*.79,0)+(S.azienda?netto(S.azienda.compenso||0):0);
     if(red<P(ASSEGNO_SOCIALE))add('Assegno sociale',P(ASSEGNO_SOCIALE)-red);
@@ -3388,6 +3455,163 @@ function ereditaGenitori(){
 }
 /* Imposta di successione: franchigia di 1 milione a testa per coniuge e figli, poi il 4% */
 const tassaSuccessione=quota=>Math.max(0,quota-P(1e6))*.04;
+
+/* ================= ITALIA VERA: TERRITORIO, LAVORO, TASSE, CASA, SANITÀ (ROADMAP, Fase 3.2–3.6) ================= */
+/* il luogo in cui vivi, ricordato finché non cambi città (luogo() cerca tra 7.904 comuni) */
+let _luogoC=null;
+function luogoC(){const k=S.citta+'|'+S.prov;if(!_luogoC||_luogoC.k!==k)_luogoC={k,v:luogo()};return _luogoC.v}
+const zonaMia=()=>S&&S.citta?luogoC().zona:'Centro';
+const alSud=z=>z==='Sud'||z==='Isole';
+
+/* ---------- 3.6 Differenze regionali ---------- */
+/* Stipendi a parità di lavoro (Banca d'Italia, ISTAT: al Sud e nelle Isole circa il 9% in meno, al Nord-ovest il 6% in più).
+   I concorsi pubblici e le cariche elettive hanno contratti nazionali: uguali ovunque. */
+const ZONA_STIP={'Nord-ovest':1.06,'Nord-est':1.03,Centro:1,Sud:.92,Isole:.91};
+const CONTR_NAZ=['ins','maes','ric','inf','med','post'];   // scuola, sanità pubblica, Poste: contratti nazionali anche senza concorso nel gioco
+function fattoreZona(j){return j&&(j.conc||j.elez||CONTR_NAZ.includes(j.id))?1:(ZONA_STIP[zonaMia()]||1)}
+/* Occupazione (ISTAT 2023, 20–64 anni: Nord ~76%, Centro ~72%, Mezzogiorno ~52%): quota di chi lavora tra le persone
+   del gioco, rischio di perdere il lavoro, facilità di trovarlo, stabilizzazione dei contratti a termine */
+const OCC_ZONA={'Nord-ovest':{occ:.86,perdi:.85,trova:1.15,stab:1.1},'Nord-est':{occ:.88,perdi:.8,trova:1.2,stab:1.15},Centro:{occ:.82,perdi:1,trova:1,stab:1},
+  Sud:{occ:.62,perdi:1.4,trova:.55,stab:.75},Isole:{occ:.6,perdi:1.5,trova:.5,stab:.7}};
+const occZona=()=>OCC_ZONA[zonaMia()]||OCC_ZONA.Centro;
+/* costo della vita (spesa e bollette): al Sud i prezzi sono più bassi di circa il 10% (ISTAT, parità di potere d'acquisto regionali) */
+const COSTO_ZONA={'Nord-ovest':1.05,'Nord-est':1.04,Centro:1,Sud:.9,Isole:.91};
+const costoZona=()=>COSTO_ZONA[zonaMia()]||1;
+/* chi lascia il Sud per il Centro-Nord o l'estero tra i 18 e i 45 anni è emigrato; se torna giù, è tornato (da dopoTrasloco) */
+function marcaEmigrazione(da){
+  if(!S||!da)return;const c0=cittaInfo(da),z1=zonaMia();
+  if(!S.fatti.emigrato&&alSud(c0.zona)&&!alSud(z1)&&S.eta>=18&&S.eta<=45)S.fatti.emigrato={t:S.t,da,prov:c0.s||null};
+  else if(S.fatti.emigrato&&!S.fatti.ritornato&&alSud(z1))S.fatti.ritornato=S.t;
+}
+/* dopo almeno 5 anni lontano, la domanda: tornare giù? (e di nuovo, una volta, da pensionato) */
+function controllaRitorno(){
+  const em=S.fatti.emigrato;if(!em||S.fatti.ritornato||S.carcere>0||alSud(zonaMia()))return;
+  const prima=!S.fatti.ritornoChiesto&&S.t-em.t>=60,pens=S.fatti.ritornoChiesto===1&&S.pensione&&!S.fatti.ritornoPens;
+  if((prima||pens)&&chance(1/36)){if(pens)S.fatti.ritornoPens=1;S.fatti.ritornoChiesto=1;coda.push({e:EV.ita_ritorno,d:{}})}
+}
+/* i lavori che si possono fare da remoto (dal 2020) */
+const REMOTO=['imp','pro','tec','ds','mkt','gra','gio','cons','comm','segr','callc','ing','arc'];
+
+/* ---------- 3.2 Cassa integrazione: l'azienda in difficoltà sospende il lavoro e l'INPS paga circa l'80% dello stipendio, con un tetto ---------- */
+const CIG_NO=['colf','badante','taxi','guida','bagn','anim','rider','post','avv','comm','cons','psi','notaio','magis','agcom','crea'];
+function puoCIG(){
+  const L=S.lavoro;if(!L||L.cig>0||S.t-(L.cigT===undefined?-99:L.cigT)<24)return false;
+  const j=JOB[L.id],c=L.contratto||{t:'ind'};
+  return !j.conc&&!j.elez&&!j.pt&&!j.var&&['ind','app'].includes(c.t)&&!CIG_NO.includes(L.id)&&['fisico','tech','vendita','ristorazione','legale'].includes(SETTORE_JOB[L.id]);
+}
+function chiediCIG(covid){S.lavoro.cigT=S.t;coda.push({e:EV.ita_cig,d:{covid:covid?1:0}})}
+function avviaCIG(m){const L=S.lavoro;if(!L)return;L.cig=m;L.cigT=S.t}
+/* massimale 2025: circa 1.390 € lordi al mese */
+function nettoCIG(L){return netto(Math.min(ralEff(L)/13*.8,P(1393))*12)}
+function meseCIG(L){
+  L.cig--;S.fatti.cigN=(S.fatti.cigN||0)+1;S.bis.stress=clamp(S.bis.stress+1);
+  if(L.cig>0)return;
+  if(chance(S.mondo.crisi?.35:.2)){licenzia('Finita la cassa integrazione, l\'azienda chiude: resti senza lavoro.');segnaVita('licenziato');return}
+  log('Finisce la cassa integrazione: si torna al lavoro a orario pieno.','g');mod('felicita',4);
+}
+
+/* ---------- 3.3 Tasse, assegni per i figli, successione ---------- */
+/* Addizionali IRPEF: la regionale dal 1998 (aliquote medie per un reddito medio, MEF 2025: più alte dove c'è il debito della
+   sanità), la comunale dal 1999 (0,6–0,8%). Prima del 2012 la regionale base era 0,9% invece di 1,23%. */
+const ADD_REG={"Valle d'Aosta":1.23,Piemonte:2.3,Liguria:1.8,Lombardia:1.5,'Trentino-Alto Adige':1.23,Veneto:1.23,'Friuli-Venezia Giulia':1,'Emilia-Romagna':1.9,Toscana:1.9,
+  Umbria:1.9,Marche:1.5,Lazio:2.6,Abruzzo:1.9,Molise:2.6,Campania:2.4,Puglia:1.8,Basilicata:1.4,Calabria:2.4,Sicilia:1.23,Sardegna:1.23};
+function aliqAddiz(){
+  if(!S||!S.anno||!S.citta)return .02;
+  const L=luogoC();if(L.estero||S.anno<1998)return 0;
+  return (ADD_REG[L.reg]||1.5)/100*(S.anno<2012?.75:1)+(S.anno<1999?0:L.p>=100000?.008:.006);
+}
+/* Assegno unico (da marzo 2022): per ogni figlio minorenne da 57,5 € (ISEE alto o assente) a 201 € al mese (ISEE fino a 17.227 €).
+   Prima gli assegni familiari, solo a dipendenti e pensionati, più bassi con i redditi più alti.
+   Con il partner in casa se ne conta metà, come il costo dei figli. */
+function assegnoFigli(){
+  const n=minoriConTe();if(!n||S.carcere>0)return null;
+  const meta=convivente()?.5:1,isee=iseeStima();
+  if(S.anno>2022||S.anno===2022&&S.mese>=2){const lo=P(17227),hi=P(45939),m=isee<=lo?201:isee>=hi?57.5:201-(isee-lo)/(hi-lo)*143.5;return {n:'Assegno unico per i figli',x:Math.round(P(m)*12*n*meta)}}
+  const L=S.lavoro;if(!(L&&!isPiva(L)&&!JOB[L.id].pt||S.pensione))return null;
+  const q=Math.max(0,Math.min(1,(P(35000)-isee)/P(23000)));
+  return q>0?{n:'Assegni familiari',x:Math.round(P(110)*q*12*n*meta)}:null;
+}
+/* Successione legittima (codice civile, artt. 565–586), senza testamento: coniuge (o unito civilmente) e un figlio metà a testa;
+   coniuge e più figli: un terzo al coniuge e il resto ai figli; solo il coniuge: due terzi a lui e un terzo ai genitori o ai fratelli;
+   né coniuge né figli: genitori e fratelli. Chi convive senza essere sposato non eredita. */
+function quoteSuccessione(X){
+  X=X||S;const v=R=>X.relazioni.filter(p=>p.vivo&&R.includes(p.ruolo));
+  const con=v(['Coniuge'])[0],figli=v(['Figlio']),gen=v(['Madre','Padre']),fr=v(['Fratello']),q=[];
+  if(figli.length){const qc=con?(figli.length===1?1/2:1/3):0;if(con)q.push([con,qc]);for(const f of figli)q.push([f,(1-qc)/figli.length])}
+  else if(con){const a=gen.length?gen:fr;q.push([con,a.length?2/3:1]);for(const x of a)q.push([x,1/3/a.length])}
+  else if(gen.length&&fr.length){for(const x of gen)q.push([x,.5/gen.length]);for(const x of fr)q.push([x,.5/fr.length])}
+  else{const a=gen.length?gen:fr;for(const x of a)q.push([x,1/a.length])}
+  return q;
+}
+function testoSuccessione(){
+  const q=quoteSuccessione();if(!q.length)return 'ad altri parenti o, se non ce ne sono, allo Stato';
+  const rel=p=>({Coniuge:gp(p,'marito','moglie'),Figlio:gp(p,'figlio','figlia'),Madre:'madre',Padre:'padre',Fratello:gp(p,'fratello','sorella')})[p.ruolo]||'';
+  return q.map(([p,x])=>`${p.nome} (${rel(p)}) ${Math.round(x*100)}%`).join(' · ');
+}
+/* imposta di successione per coniuge e figli: 4% oltre un milione a testa (abolita dal 2001 al 2006) */
+const impostaSucc=x=>S.anno>=2001&&S.anno<2007?0:Math.round(Math.max(0,x-P(1e6))*.04);
+
+/* ---------- 3.4 Mutui: tassi medi dei nuovi mutui per anno (Banca d'Italia; prima del 1999 indicativi) [anno, fisso, variabile] ---------- */
+const TASSI_MUTUO=[[1950,7,7],[1960,7,7],[1970,9,9],[1975,14,14],[1980,18,18],[1985,15,14],[1990,13.5,13],[1993,12.5,12],[1995,11.5,11],[1997,8,7.5],[1998,6.5,5.5],[1999,5.5,4.2],
+  [2000,6.2,5.6],[2002,5.4,4.5],[2003,4.8,3.6],[2005,4.2,3.4],[2006,4.6,4.3],[2007,5.4,5.4],[2008,5.8,5.6],[2009,5,2.6],[2010,4.4,2.2],[2011,5,3],[2012,5.2,3.4],[2013,4.6,3.2],
+  [2014,3.8,2.8],[2015,2.9,2.1],[2016,2.2,1.7],[2017,2.2,1.6],[2018,2,1.5],[2019,1.6,1.3],[2020,1.3,1.2],[2021,1.3,1.1],[2022,2.5,1.9],[2023,4,4.9],[2024,3.3,4.6],[2025,3,3.6],[2026,3.1,3.4]];
+function tassoMutuo(tipo){
+  const a=S.anno,k=tipo==='var'?2:1;
+  if(a>ANNO_OGGI){const M=S.mondo;if(!M.tassi)M.tassi={f:3.1,v:3.4};return (tipo==='var'?M.tassi.v:M.tassi.f)/100}
+  let i=TASSI_MUTUO.findIndex(x=>x[0]>=a);if(i<0)i=TASSI_MUTUO.length-1;
+  const B=TASSI_MUTUO[i],A=TASSI_MUTUO[Math.max(0,i-1)];
+  const v=B[0]===a||i===0?B[k]:A[k]+(B[k]-A[k])*(a-A[0])/(B[0]-A[0]);
+  return Math.round(v*10)/1000;
+}
+/* dopo il 2026 i tassi si muovono da soli (un po' di più nelle crisi) */
+function annoTassi(){
+  if(S.anno<=ANNO_OGGI)return;const M=S.mondo;if(!M.tassi)M.tassi={f:3.1,v:3.4};
+  M.tassi.v=Math.round(Math.max(.5,Math.min(8,M.tassi.v+r(-6,6)/10+(M.crisi?.4:0)))*10)/10;
+  M.tassi.f=Math.round(Math.max(1,Math.min(8,M.tassi.f*.6+(M.tassi.v+.4)*.4+r(-2,2)/10))*10)/10;
+}
+const pctStr=x=>(Math.round(x*1000)/10).toString().replace('.',',')+'%';
+const mutuoVar=()=>S.prop.find(p=>p.mutuo&&p.mutuo.residuo>0&&p.mutuo.tipo==='var');
+/* ogni gennaio: il variabile segue i tassi e la rata si ricalcola (se sale di più del 10%, la lettera della banca) */
+function annoMutuo(p){
+  const m=p.mutuo;if(m.tasso===undefined){m.tasso=.035;m.tipo='fisso'}
+  if(m.tipo!=='var'||m.anni<=0)return;
+  const r0=m.rata;m.tasso=tassoMutuo('var');m.rata=rataMutuo(m.residuo,m.anni,m.tasso);
+  if(m.rata>r0*1.1&&S.t-(S.fatti.rataSu?S.fatti.rataSu.t:-99)>=24){S.fatti.rataSu={t:S.t,da:r0,a:m.rata};coda.push({e:EV.mez_tassi,d:{}})}
+  else if(Math.abs(m.rata-r0)>r0*.03)log(`Mutuo variabile: con il tasso al ${pctStr(m.tasso)} la rata ${m.rata>r0?'sale':'scende'} a ${eur(m.rata/12)} al mese.`,m.rata>r0?'b':'g');
+}
+
+/* ---------- 3.5 Sanità: medico di base, screening dell'ASL, liste d'attesa ---------- */
+/* screening organizzati (Ministero della Salute): mammografia 50–69 anni ogni 2, Pap test 25–64 ogni 3 (test HPV dai 30 anni),
+   colon-retto 50–69 ogni 2. Gli inviti arrivano meno al Sud (copertura più bassa). */
+const SCREEN=[{id:'mx',n:'alla mammografia',s:'F',min:50,max:69,ogni:24,dal:1999,tum:'Tumore al seno'},{id:'pap',n:'al Pap test',s:'F',min:25,max:64,ogni:36,dal:1996},
+  {id:'colon',n:'all\'esame per il tumore del colon',min:50,max:69,ogni:24,dal:2005,tum:'Tumore al colon'}];
+const INVITO_ZONA={'Nord-ovest':.9,'Nord-est':.95,Centro:.8,Sud:.5,Isole:.5};
+function faiScreening(id){
+  const sc=S.fatti.scr||(S.fatti.scr={}),x=SCREEN.find(s=>s.id===id);sc[id]=S.t;S.fatti.screenT=S.t;S.fatti.screening=(S.fatti.screening||0)+1;
+  const tm=x&&x.tum&&S.malattie.find(m=>m.n===x.tum&&!m.cura);
+  if(tm){tm.screen=1;coda.unshift({e:EV.diagnosi,d:{x:tm.n}});return true}
+  return false;
+}
+function meseScreening(){
+  if(!S.vivo||S.carcere>0)return;
+  if(S.eta===14&&S.mese===S.meseNascita&&!S.fatti.medico){const dott=chance(.45)?'la dottoressa':'il dottor';S.fatti.medico=1;
+    log(S.anno<1979?`Da quest'anno ti visita il medico della mutua: ${dott} ${pick(COGNOMI)}.`:`Lasci il pediatra: il tuo medico di base ora è ${dott} ${pick(COGNOMI)}.`,'h')}
+  const sc=S.fatti.scr||(S.fatti.scr={});
+  for(const x of SCREEN){
+    if(x.s&&x.s!==S.sesso||S.eta<x.min||S.eta>x.max||S.anno<x.dal)continue;
+    if(S.t-(sc[x.id]===undefined?-999:sc[x.id])<x.ogni)continue;
+    if(!chance((INVITO_ZONA[zonaMia()]||.8)/6))continue;
+    sc[x.id]=S.t;
+    const n=x.id==='pap'&&S.anno>=2016&&S.eta>=30?'al test HPV':x.n;
+    if(S.fatti.scrAbit===undefined||S.fatti.scrAbit===0&&S.t-(S.fatti.scrChiesto||0)>=60){coda.push({e:EV.ita_screening,d:{id:x.id,n}});return}
+    if(S.fatti.scrAbit&&chance(.92)){if(!faiScreening(x.id))log(`Arriva la lettera dell'ASL e vai ${n}. ${pick(['Tutto a posto.','Esito negativo: ci si rivede al prossimo invito.','Nessuna sorpresa, per fortuna.'])}`,'h')}
+    else log(`Arriva la lettera dell'ASL per l'invito ${n}: la lasci sul mobile dell'ingresso e te ne dimentichi.`,'');
+    return;
+  }
+}
+/* liste d'attesa per una visita specialistica con il Servizio sanitario, in mesi */
+const ATTESA_ZONA={'Nord-ovest':[1,3],'Nord-est':[1,2],Centro:[2,4],Sud:[3,7],Isole:[3,8]};
+function mesiAttesa(){const a=ATTESA_ZONA[zonaMia()]||[2,4];return r(a[0],a[1])}
 
 /* ================= PERSONE VERE (ROADMAP, Fase 2) =================
    - GRUPPI (S.gruppi): le cerchie in cui conosci le persone (la classe, i colleghi, i genitori della scuola, il corso…).
@@ -3680,6 +3904,85 @@ function auguriDalPassato(){
 const contestoId=p=>{const c=contestoNpc(p);return c?c.id:null};
 /* un'altra persona che conosci e che conosce anche p: per parlare di amici in comune */
 function inComune(p){return conoscentiDi(p).filter(x=>!['Partner','Coniuge'].includes(x.ruolo)||x.ruolo!==p.ruolo)}
+
+/* ================= ITALIA VERA: OGNI EPOCA CON LE SUE COSE (ROADMAP, Fase 3.1) =================
+   Si può nascere dal 1950. Fino al 2001 i soldi si contano in lire (eur() in c_motore.js), i prezzi seguono l'inflazione
+   vera dal 1950 (INFL_VERA in c7_italia.js), la storia porta i fatti veri (STORIA) e le leggi hanno il loro anno:
+   divorzio dal dicembre 1970, unioni civili dal 2016, naja per i ragazzi nati fino al 1985, pensioni con le regole
+   dell'anno in cui ci si va (retributivo prima del 1996).
+   ANACRONISMI: i testi che nominano cose non ancora inventate (telefonini, social, euro…) non compaiono negli anni
+   sbagliati: eventi casuali, scelte, frasi del diario (varia), acquisti, attività, argomenti di conversazione.
+   La tabella EPOCA dice da che anno ogni parola ha senso; tools/italia_vera.py controlla che non ne scappino. */
+const EPOCA=[
+  [/intelligenza artificiale/i,2023],
+  [/\b(lockdown|didattica a distanza|green pass|smart working)\b/i,2020],
+  [/\b(tik ?tok|reddito di cittadinanza|monopattin[oi] elettric[oi]|pcto)\b/i,2018],
+  [/\b(unione civile|unioni civili|spid|stories)\b/i,2016],
+  [/\b(naspi|rider|influencer|podcast|netflix|airbnb|bitcoin|criptovalut\w*|smartwatch|scooter elettric\w*)\b/i,2015],
+  [/\b(spotify|selfie|emoji|instagram|tablet|startup|drone|droni)\b/i,2012],
+  [/\b(whatsapp|smartphone|app|videochiamat\w*|streaming|youtuber|meme|hashtag|follower|like|wireless|e-book|vocale|vocali)\b/i,2010],
+  [/\b(social|facebook|gruppo della classe|chat di gruppo|gps|navigatore)\b/i,2008],
+  [/\b(youtube|wi-?fi|low cost|blog|patentino)\b/i,2004],
+  [/\b(euro|centesim\w*)\b/i,2002],
+  [/\b(email|e-mail|mail|internet|online|chat|dvd|mp3|ipod|google|sito web|home banking)\b/i,1999],
+  [/\b(isee)\b/i,1998],
+  [/\b(cellulare|cellulari|telefonin[oi]|sms|messaggin[oi]|playstation)\b/i,1995],
+  [/\b(il|al|del|nel|un|modello) 730\b|\bcaf\b/i,1993],
+  [/\b(game ?boy|karaoke)\b/i,1990],
+  [/\b(erasmus)\b/i,1988],
+  [/\b(computer|videogioc\w*|console|bancomat|cd|fax|personal computer)\b/i,1985],
+  [/\b(tfr)\b/i,1982],
+  [/\b(walkman|videocassett\w*|vhs|telecomando|serie tv)\b/i,1980],
+  [/\b(divorzi\w*|divorziat\w*)\b/i,1971],
+  [/\b(interrail)\b/i,1972],
+  [/\b(tv|televisione|televisor\w*|carosello)\b/i,1956]
+];
+/* da che anno un testo ha senso (0 = sempre) */
+function annoTesto(s){if(!s||typeof s!=='string')return 0;let m=0;for(const [rx,a] of EPOCA)if(a>m&&rx.test(s))m=a;return m}
+const fuoriEpoca=s=>!!S&&annoTesto(s)>S.anno;
+/* evento: si guardano titolo e testo scritti (le funzioni si controllano quando l'evento si apre, in next()) */
+function annoEvento(e){if(e._dal===undefined)e._dal=Math.max(annoTesto(typeof e.t==='string'?e.t:''),annoTesto(typeof e.x==='string'?e.x:''),e.dal||0);return e._dal}
+/* scelta: etichetta, sottotitolo ed esiti scritti */
+function annoScelta(c){if(c._dal===undefined){let m=c.dal||0;for(const s of [c.l,c.sub,c.r,c.si&&c.si.r,c.no&&c.no.r])if(typeof s==='string')m=Math.max(m,annoTesto(s));c._dal=m}return c._dal}
+/* lista di frasi: solo quelle che hanno senso quest'anno (se nessuna, tutte) */
+function soloEpoca(L){if(!S||!Array.isArray(L))return L;const ok=L.filter(s=>typeof s!=='string'||!fuoriEpoca(s));return ok.length?ok:L}
+
+/* ---------- Lavori, corsi, attività che non esistevano ---------- */
+const DAL_LAVORO={rider:2015,crea:2010,ds:2012,pro:1980,tec:1985,callc:1995,mkt:1970,pt:1990,agi:1960};
+const lavoroInEpoca=j=>!S||S.anno>=(DAL_LAVORO[j.id]||0);
+const DAL_CORSO={coding:2012,pt:1990,b2:1975,volo:1960};
+
+/* ---------- Pensioni: le regole dell'anno in cui ci si va ----------
+   prima del 1993: vecchiaia a 60 anni (55 le donne) con 15 anni di contributi, anzianità con 35;
+   1993–2000 (riforma Amato): l'età sale di un anno ogni due, fino a 65/60;
+   2001–2011: 65/60 con 20 anni, anzianità con 40 anni o 35 + 59 anni d'età (quote);
+   2012–2018 (Fornero): 66 anni (le donne salgono da 62), anticipata con 42 anni e 1–10 mesi (un anno meno le donne);
+   dal 2019: 67 anni, 42 anni e 10 mesi (41 e 10 le donne); quota 100 (62 + 38) nel 2019–2021, 102 (64 + 38) nel 2022, 103 (62 + 41) nel 2023–2025. */
+function requisitiPensione(){
+  const a=S.anno,F=S.sesso==='F';
+  if(a<1993)return {vec:F?55:60,vecC:15,ant:35};
+  if(a<2001){const inc=Math.min(4,Math.floor((a-1992)/2));return {vec:(F?55:60)+inc,vecC:20,ant:40,quota:[35,57]}}
+  if(a<2012)return {vec:F?60:65,vecC:20,ant:40,quota:[35,59]};
+  if(a<2019)return {vec:F?Math.min(66.6,62+(a-2012)*.8):66+(a>=2016?.6:0),vecC:20,ant:(F?41:42)+Math.min(.83,(a-2011)*.15)};
+  const q=a<=2021?[38,62]:a===2022?[38,64]:a<=2025?[41,62]:null;
+  return {vec:S.mondo.pensEta,vecC:20,ant:F?41.83:42.83,quota:q};
+}
+/* il sistema retributivo: per chi aveva contributi prima del 1996 una parte della pensione è il 2% dell'ultimo stipendio per ogni anno */
+const retributivo=()=>S.anno<1996||(S.anno<2012&&(S.contrib95||0)>=18);
+
+/* ---------- Le leggi con il loro anno ---------- */
+const divorzioPossibile=()=>S.anno>=1971;
+const unioneCivilePossibile=()=>S.anno>2016||(S.anno===2016&&S.mese>=5);
+/* chi vota: dai 21 anni fino al 1975, poi dai 18 */
+const etaVoto=()=>S.anno<1975?21:18;
+
+/* ---------- La naja: il servizio militare obbligatorio, per i ragazzi nati fino al 1985 ---------- */
+function controllaNaja(){
+  if(S.sesso!=='M'||S.annoNascita>1985||S.fatti.naja||S.carcere>0||S.anno>=2005)return;
+  const uni=['universita','magistrale'].includes(S.scuola.stato);
+  if((S.eta===19&&!uni)||(S.eta===26)||(S.eta===24&&uni)){S.fatti.naja='chiamato';coda.push({e:EV.naja,d:{}})}
+}
+const mesiNaja=()=>S.anno<1975?15:S.anno<1997?12:10;
 
 /* ================= EVENTI =================
  Campi evento: id, min, max, w (peso), once, rip (anni prima di ripetersi), cond(d), chi (ruoli persona), pc(p), link (solo come conseguenza), prig (in carcere), auto (conseguenza silenziosa)
@@ -4186,7 +4489,7 @@ ev({id:'par_gelosia',min:18,max:80,chi:['Partner','Coniuge'],pc:p=>p.tr===TR.GEL
 ev({id:'par_convivenza',min:18,max:55,chi:['Partner'],pc:p=>!p.conv&&p.rapporto>=55,t:'Vivere insieme',x:'{P} ti chiede di andare a vivere insieme.',c:[
   {l:'Sì!',fx:d=>{convivi(d.p)},e:{rel:12,f:7},r:'Scatoloni, IKEA e la prima litigata per l\'armadio.'},
   {l:'È troppo presto',e:{rel:-8},r:'{P} accetta, ma ci resta male.'}]});
-ev({id:'par_proposta',min:20,max:65,chi:['Partner'],pc:p=>p.rapporto>=62,t:'La proposta',x:'A cena, {P} si inginocchia con un anello: «Vuoi sposarmi?»',c:[
+ev({id:'par_proposta',min:20,max:65,chi:['Partner'],pc:p=>p.rapporto>=62&&(p.sesso!==S.sesso||unioneCivilePossibile()),t:'La proposta',x:'A cena, {P} si inginocchia con un anello: «Vuoi sposarmi?»',c:[
   {l:'Sì!',fx:d=>{coda.unshift({e:EV.matrimonio,d});return null}},
   {l:'Ho bisogno di tempo',e:{rel:-15},r:'Un silenzio imbarazzante. Il ristorante intero vi guarda.'},
   {l:'No',fx:d=>chiudiRelazione(d.p,'Dici di no. {P} se ne va in lacrime.')}]});
@@ -4803,7 +5106,7 @@ ev({id:'r_separazione',link:1,k:'Amici e famiglia',t:'{P} si è lasciat{po}',x:d
   {l:'Ospita{lo} da te per qualche settimana',pers:{A:3},cond:()=>!['genitori','carcere','figlio'].includes(S.casa.tipo),fx:d=>{d.p.rapporto=clamp(d.p.rapporto+14);ricorda(d.p,'L\'hai ospitat'+gp(d.p,'o','a')+' quando si è lasciat'+gp(d.p,'o','a'));S.tensione=(S.tensione||0)+3;const pa=partnerAttuale();if(pa&&pa.conv)pa.intim=clamp(pa.intim-4);return ['Il divano diventa il suo letto per un mese. Ti sarà grat'+gp(d.p,'o','a')+' per sempre.','g']}},
   {l:'Un messaggio di conforto',fx:d=>{d.p.rapporto=clamp(d.p.rapporto+1);return ['«Se ti serve qualcosa, ci sono.»','']}}]});
 ev({id:'r_trasloco',link:1,k:'Amici e famiglia',t:'{P} se ne va',x:d=>`${d.p.nome} ti annuncia che si trasferisce a ${d.p.dove||'un\'altra città'} per lavoro.`,c:[
-  {l:'Organizza una cena d\'addio',pers:{E:1},sub:()=>eur(P(60)),costo:()=>P(60),fx:d=>{d.p.rapporto=clamp(d.p.rapporto+8);return ['Brindisi, abbracci e promesse di videochiamate.','g']}},
+  {l:'Organizza una cena d\'addio',pers:{E:1},sub:()=>eur(P(60)),costo:()=>P(60),fx:d=>{d.p.rapporto=clamp(d.p.rapporto+8);return [`Brindisi, abbracci e promesse di ${S.anno>=2010?'videochiamate':S.anno>=1995?'telefonate':'lettere'}.`,'g']}},
   {l:'Prometti di andar{lo} a trovare',fx:d=>{d.p.rapporto=clamp(d.p.rapporto+3);d.p.promessa=S.t;return ['Lo segni in agenda. A matita.','']}},
   {l:'Ci rimani male e non dici niente',pers:{N:1,E:-1},fx:d=>{d.p.rapporto=clamp(d.p.rapporto-4);mod('felicita',-3);return ['Il saluto è più freddo di quanto vorresti.','b']}}]});
 ev({id:'r_sfogo',link:1,k:'Amici e famiglia',t:'{P} ha bisogno di parlare',x:d=>`${d.p.nome} ti scrive alle undici di sera: «Sei sveglio? Ho bisogno di parlare.»`.replace('sveglio',g('sveglio','sveglia')),c:[
@@ -4851,9 +5154,9 @@ ev({id:'conto_rosso',link:1,k:'Soldi',t:'Il conto è in rosso',x:()=>`Da tre mes
   {l:'Taglia uscite e svago',fx:()=>{S.routine.uscite=0;S.routine.amici=Math.min(S.routine.amici||0,3);mod('felicita',-3);return ['Niente aperitivi per un po\'. Il conto ringrazia.','']}},
   {l:'Fai ore extra',sub:'+6 ore di lavoro extra a settimana',cond:()=>S.eta>=16,fx:()=>{const x=aggiungiOre('extra',6);return [x?'Più lavoro, meno tempo libero.':'Non hai ore libere da dedicare al lavoro extra.','']}},
   {l:'Chiedi aiuto ai genitori',cond:()=>genitoriVivi(),fx:()=>{const g0=pick(vivi(['Madre','Padre']));if(chance(.3+g0.rapporto/200)&&S.classe!=='umile'){const x=P(r(5,20)*100);soldi(x);g0.rapporto=clamp(g0.rapporto-3);return [`${g0.nome} ti fa un bonifico di ${eur(x)}. Con la predica inclusa.`,'']}g0.rapporto=clamp(g0.rapporto-5);return [`${g0.nome} dice che è ora che impari a gestirti.`,'b']}},
-  {l:'Fai finta di niente',fx:()=>{S.tensione=(S.tensione||0)+5;return ['Non apri l\'app della banca.','b']}}]});
+  {l:'Fai finta di niente',fx:()=>{S.tensione=(S.tensione||0)+5;return [S.anno>=2010?'Non apri l\'app della banca.':'Non apri gli estratti conto che arrivano per posta.','b']}}]});
 ev({id:'medico_forma',link:1,k:'Salute',t:'Il medico è chiaro',x:'Alla visita il medico ti misura la pressione e scuote la testa: «Lei si muove troppo poco.»',c:[
-  {l:'Cammina mezz\'ora al giorno',sub:'+3 ore di sport',fx:()=>{const x=aggiungiOre('sport',3);return [x?'Scarpe comode e podcast nelle orecchie.':'Non trovi il tempo. Per ora.','']}},
+  {l:'Cammina mezz\'ora al giorno',sub:'+3 ore di sport',fx:()=>{const x=aggiungiOre('sport',3);return [x?`Scarpe comode e ${S.anno>=2015?'podcast':'musica'} nelle orecchie.`:'Non trovi il tempo. Per ora.','']}},
   {l:'Iscriviti in palestra',sub:'+5 ore di sport',fx:()=>{const x=aggiungiOre('sport',5);return [x?'Abbonamento annuale. Stavolta ci vai davvero.':'La settimana è piena: niente palestra.','']}},
   {l:'Annuisci e non cambi niente',fx:()=>{mod('salute',-2);return ['«Sì sì, dottore.»','']}}]});
 ev({id:'console',link:1,k:'Famiglia',t:'Niente console',x:'I tuoi genitori hanno visto la pagella: troppe ore davanti allo schermo. Vogliono toglierti la console.',c:[
@@ -4879,7 +5182,7 @@ function emergenti(){
   if(F.soloN>=4&&S.t-(F.soloT||-99)>=12){F.soloT=S.t;coda.push({e:EV.solitudine,d:{}});return}
   if(F.rossoN>=3&&S.t-(F.rossoT||-99)>=Math.min(48,12*(1+(F.rossoV||0)))){F.rossoT=S.t;F.rossoV=(F.rossoV||0)+1;coda.push({e:EV.conto_rosso,d:{}});return}   // la seconda volta dopo 2 anni, poi 3, poi 4: nel frattempo resta la riga nel bilancio
   if(S.eta>=30&&B.forma<30&&chance(.02)&&S.t-(F.medT||-99)>=24){F.medT=S.t;coda.push({e:EV.medico_forma,d:{}});return}
-  if(S.eta>=9&&S.eta<17&&rOre('schermi')>=14&&iscritto()&&S.scuola.voto<48&&genitoriVivi()&&S.casa.tipo==='genitori'&&chance(.15)&&S.t-(F.consT||-99)>=12){F.consT=S.t;coda.push({e:EV.console,d:{}});return}
+  if(S.anno>=1985&&S.eta>=9&&S.eta<17&&rOre('schermi')>=14&&iscritto()&&S.scuola.voto<48&&genitoriVivi()&&S.casa.tipo==='genitori'&&chance(.15)&&S.t-(F.consT||-99)>=12){F.consT=S.t;coda.push({e:EV.console,d:{}});return}
   if(S.lavoro&&!JOB[S.lavoro.id].pt&&soddLavoro()<38&&chance(.04)&&S.t-(F.pesaT||-99)>=18){F.pesaT=S.t;coda.push({e:EV.lavoro_pesa,d:{}});return}
   if(S.lavoro&&!JOB[S.lavoro.id].pt&&S.lavoro.perf>=70&&chance(.012+pz('C')*.008)&&S.t-(F.progT||-99)>=24){F.progT=S.t;coda.push({e:EV.capo_progetto,d:{}});return}
   if(S.sonno<6.5&&B.energia<35&&chance(.15))log('Dormi troppo poco: ti trascini per tutta la giornata.','b');
@@ -5223,7 +5526,7 @@ ev({id:'ado_corpo',min:13,max:15,once:1,t:'Lo spogliatoio',x:'Nello spogliatoio 
 
 /* ---------- Amicizie e amori ---------- */
 ev({id:'ado_compagnia',min:13,max:15,once:1,w:1.3,t:'La compagnia',x:'All\'inizio delle superiori si formano i gruppi. Due ti vogliono.',c:[
-  {l:'I ragazzi popolari',fx:()=>{nuovoAmico();cambiaPers('E',2);cambiaPers('A',-1);mod('felicita',3);return ['Feste, chat di gruppo e sabati in centro. Devi sempre essere all\'altezza.','g']}},
+  {l:'I ragazzi popolari',fx:()=>{nuovoAmico();cambiaPers('E',2);cambiaPers('A',-1);mod('felicita',3);return [`Feste, ${S.anno>=2008?'chat di gruppo':'telefonate interminabili'} e sabati in centro. Devi sempre essere all'altezza.`,'g']}},
   {l:'Il gruppo dei nerd',fx:()=>{nuovoAmico();cambiaPers('O',2);S.abil.tech=clamp(S.abil.tech+3);return ['Giochi di ruolo, film di fantascienza e battute che capite solo voi.','g']}},
   {l:'Un paio di amici veri, fuori dai gruppi',fx:()=>{const p=nuovoAmico();if(p)p.rapporto=clamp(p.rapporto+15);cambiaPers('A',1);cambiaPers('E',-1);return ['Pochi, ma buoni. Ci sarete gli uni per gli altri per anni.','g']}}]});
 ev({id:'ado_bacio',min:13,max:16,once:1,w:1.2,t:'Il primo bacio',x:'A una festa, una persona che ti piace si avvicina sempre di più.',c:[
@@ -5268,7 +5571,7 @@ ev({id:'ado_lavoro_genitori',min:13,max:17,once:1,t:'I soldi in casa',cond:()=>S
 ev({id:'ado_fratello_grande',min:13,max:17,once:1,t:'Tuo fratello',cond:()=>vivi(['Fratello']).some(f=>f.eta>S.eta),x:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);return `${f.nome} ti chiede di coprirl${gp(f,'o','a')} con i vostri genitori: stasera non dorme a casa.`},c:[
   {l:'Lo copri',fx:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);f.rapporto=clamp(f.rapporto+10);ricorda(f,'L\'hai copert'+gp(f,'o','a')+' con i genitori');cambiaPers('A',1);return ['Vi siete alleati. D\'ora in poi siete una squadra.','g']}},
   {l:'Lo dici ai tuoi',fx:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);f.rapporto=clamp(f.rapporto-15);ricorda(f,'L\'hai tradit'+gp(f,'o','a')+' con i genitori');cambiaPers('C',1);cambiaPers('A',-2);return [`${f.nome} non ti parla per un mese.`,'b']}},
-  {l:'Gli chiedi qualcosa in cambio',fx:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);f.rapporto=clamp(f.rapporto+2);cambiaPers('A',-1);cambiaPers('E',1);soldi(P(20));return ['Venti euro e la sua felpa preferita per un mese.','']}}]});
+  {l:'Gli chiedi qualcosa in cambio',fx:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);f.rapporto=clamp(f.rapporto+2);cambiaPers('A',-1);cambiaPers('E',1);soldi(P(20));return [`${eur(P(20))} e la sua felpa preferita per un mese.`,'']}}]});
 ev({id:'ado_nonno_storia',min:13,max:17,once:1,t:'La storia del nonno',cond:()=>vivi(['Nonno']).length>0,x:d=>{d.p=d.p||pick(vivi(['Nonno']));return `${d.p.nome} ti racconta di quando aveva la tua età e se ne andò di casa per lavorare.`},c:[
   {l:'Lo ascolti fino alla fine e fai domande',fx:d=>{d.p.rapporto=clamp(d.p.rapporto+8);cambiaPers('A',1);cambiaPers('O',1);return ['Scopri un pezzo della tua famiglia che non conoscevi.','g']}},
   {l:'Registri la storia per non dimenticarla',fx:d=>{d.p.rapporto=clamp(d.p.rapporto+10);cambiaPers('C',1);cambiaPers('O',1);return ['Un giorno quella registrazione varrà più di tutto.','g']}},
@@ -5506,7 +5809,7 @@ ev({id:'affido',link:1,k:'Famiglia',t:'I figli',x:d=>{const n=vivi(['Figlio']).f
   {l:'Una settimana a testa',sub:'Collocamento alternato: niente assegno, le spese a metà',_incl:0,fx:d=>{
     const fg=vivi(['Figlio']).filter(f=>f.eta<18&&!f.conEx);fg.forEach(f=>{f.alterni=true});
     return ['Una settimana da te, una dall\'altro genitore. Zaini che vanno e vengono, ma i figli vi vedono entrambi.','']}}]});
-ev({id:'divorzio_definitivo',link:1,auto:{fx:()=>{S.fatti.separazione=null},r:'Il divorzio da {P} è definitivo.',k:'h'}});
+ev({id:'divorzio_definitivo',link:1,auto:{fx:d=>{if(!divorzioPossibile()){if(S.fatti.separazione)S.fatti.separazione.fino=S.t+12;futuro(1,'divorzio_definitivo',d);return ['In Italia il divorzio non esiste ancora: restate separati, e non puoi risposarti.','h']}S.fatti.separazione=null},r:'Il divorzio da {P} è definitivo.',k:'h'}});
 
 /* ---------- Adozione ---------- */
 ev({id:'adozione_arriva',link:1,k:'Famiglia',t:'La telefonata',x:d=>d.p&&d.p.vivo&&d.p.ruolo==='Coniuge'?(S.adozione&&S.adozione.tipo==='int'?'L\'ente vi chiama: c\'è un bambino che vi aspetta, dall\'altra parte del mondo. Si parte tra un mese.':'Il Tribunale per i minorenni vi chiama: c\'è un bambino per voi.'):'La domanda di adozione decade: non siete più una coppia sposata.',c:d=>{
@@ -5550,7 +5853,7 @@ ev({id:'rientro_lavoro',link:1,k:'Lavoro',t:'Il rientro',x:()=>`Il congedo di ma
   {l:'Torno a tempo pieno',sub:'Nido o babysitter, e giornate di corsa',_incl:0,fx:()=>{pesa(6,3);return ['Torni al lavoro con le occhiaie e il cuore diviso a metà. Ce la fai, un giorno alla volta.','']}},
   {l:'Chiedo il part-time',sub:'Più tempo con tuo figlio, il 60% dello stipendio, una carriera più lenta',_incl:0,fx:()=>chiediPartTime(true)},
   {l:'Prendo altri mesi di congedo parentale',sub:'Quattro mesi con una parte dello stipendio',_incl:0,fx:()=>{S.fatti.congedo=S.t+4;S.fatti.congedoQuota=.6;return ['Altri quattro mesi a casa con il bambino, con una parte dello stipendio. Al lavoro, intanto, la vita va avanti senza di te.','']}},
-  {l:'Mi dimetto per stare con il bambino',sub:'Nel primo anno del bambino le dimissioni danno diritto alla NASpI',_incl:0,fx:()=>{const L=S.lavoro;if(!L)return ['Non hai più un lavoro.','x'];pagaTFR();S.storico.push(L.nome);S.lavoro=null;avviaNaspi(L);S.fatti.dimissioniMadre=(S.fatti.dimissioniMadre||0)+1;return ['Ti dimetti. L\'Ispettorato del lavoro convalida le dimissioni e ti spetta la NASpI. Per un po\' il lavoro può aspettare.','']}}]});
+  {l:'Mi dimetto per stare con il bambino',sub:()=>`Nel primo anno del bambino le dimissioni danno diritto ${S.anno>=2015?'alla NASpI':'al sussidio di disoccupazione'}`,_incl:0,fx:()=>{const L=S.lavoro;if(!L)return ['Non hai più un lavoro.','x'];pagaTFR();S.storico.push(L.nome);S.lavoro=null;avviaNaspi(L);S.fatti.dimissioniMadre=(S.fatti.dimissioniMadre||0)+1;return ['Ti dimetti. L\'Ispettorato del lavoro convalida le dimissioni e ti spetta '+(S.anno>=2015?'la NASpI':'il sussidio di disoccupazione')+'. Per un po\' il lavoro può aspettare.','']}}]});
 ev({id:'congedo_padre',link:1,k:'Lavoro',t:'Il congedo del papà',x:'Ti spettano 10 giorni di congedo di paternità pagati per intero. Puoi prendere anche il congedo parentale, come le mamme.',c:[
   {l:'Prendi tre mesi di congedo parentale',sub:'Stipendio all\'80% per tre mesi; in Italia lo fanno ancora pochi papà',_incl:0,fx:()=>{S.fatti.congedo=S.t+3;S.fatti.congedoQuota=.8;vivi(['Figlio']).filter(f=>f.eta===0).forEach(f=>f.rapporto=clamp(f.rapporto+10));return ['Tre mesi di pannolini, passeggiate e notti in bianco. In ufficio qualcuno alza un sopracciglio; tu non te ne penti.','g']}},
   {l:'Solo i dieci giorni',_incl:0,pers:{A:-1},r:'Dieci giorni e poi di nuovo al lavoro. Le giornate più lunghe le vedi la sera.'}]});
@@ -5714,7 +6017,7 @@ function capodanno(){
 /* ---------- Elezioni: la prima volta si sceglie, poi spesso si vota per abitudine ---------- */
 const conArt=pt=>/^[AEIOU]/.test(pt)?"l'"+pt:'il '+pt;
 function elezioniPolitiche(){
-  if(S.eta<18||S.carcere>0)return;
+  if(S.eta<etaVoto()||S.carcere>0)return;
   const F=S.fatti;
   if(!F.voto||chance(.3)){coda.push({e:EV.elezioni,d:{}});return}
   const vince=pick(PARTITI),v=F.voto;
@@ -5794,7 +6097,7 @@ ev({id:'cal_ferie_grandi',link:1,k:'Agosto',t:'Vengono ancora in vacanza?',x:d=>
   {l:'Si viene in famiglia, punto',pers:{C:1,A:-1},fx:d=>{d.p.rapporto=clamp(d.p.rapporto-6);ricorda(d.p,'Non l\'hai lasciat'+gp(d.p,'o','a')+' partire con gli amici');return ['Dieci giorni di musi lunghi sotto l\'ombrellone.','b']}},
   {l:'Un compromesso: una settimana a testa',pers:{A:1,C:1},fx:d=>{d.p.rapporto=clamp(d.p.rapporto+3);return ['Prima la famiglia, poi gli amici. Tutti scontenti a metà, quindi va benissimo.','']}}]});
 ev({id:'cal_ferie_soldi',link:1,k:'Agosto',t:'Quest\'anno non si parte?',x:d=>`Le solite ferie ${({mare:'al mare',monti:'in montagna',estero:'all\'estero'})[d.x]||''} costerebbero ${eur(costoFerie(d.x))}. Sul conto ne hai ${eur(S.soldi)}.`,c:[
-  {l:'Vacanze a casa, con le gite in giornata',pers:{C:1},fx:()=>{S.bis.stress=clamp(S.bis.stress-4);mod('felicita',-1);return ['Il lago a un\'ora di macchina, panini e asciugamano: un\'avventura low cost.','']}},
+  {l:'Vacanze a casa, con le gite in giornata',pers:{C:1},fx:()=>{S.bis.stress=clamp(S.bis.stress-4);mod('felicita',-1);return ['Il lago a un\'ora di macchina, panini e asciugamano: un\'avventura che costa quasi niente.','']}},
   {l:'Parti lo stesso, con la carta di credito',pers:{C:-2},fx:d=>{const c=costoFerie(d.x);soldi(-c);mod('felicita',5);S.bis.stress=clamp(S.bis.stress-10);return [`Una settimana bellissima. A settembre arriva l'estratto conto: ${eur(c)}.`,'']}},
   {l:'Ospite dai parenti al mare',cond:()=>vivi(['Zio','Cugino','Nonno','Fratello']).length>0,pers:{A:1},fx:()=>{mod('felicita',3);S.bis.stress=clamp(S.bis.stress-8);return ['La zia ti cede la stanza degli ospiti. In cambio: lavare i piatti per dieci giorni.','g']}}]});
 ev({id:'cal_lavoretto',link:1,k:'Estate',t:'Il primo lavoretto estivo',x:'Un amico di famiglia cerca qualcuno per l\'estate. Sono i primi soldi guadagnati da te.',c:[
@@ -6481,10 +6784,10 @@ const diProprieta=()=>S.casa.tipo==='proprieta';
 const inCasaMia=()=>['affitto','proprieta'].includes(S.casa.tipo);
 
 /* ---------- Casa e mutuo ---------- */
-ev({id:'mez_tassi',min:25,max:70,rip:8,cond:()=>!!mutuoMio()&&((S.anno>=2022&&S.anno<=2023)||(S.anno>ANNO_OGGI&&S.mondo.crisi)),t:'La rata sale',x:()=>{const m=mutuoMio();return `La banca ti scrive: il tuo mutuo è a tasso variabile e con i tassi in salita la rata passa da ${eur(m.mutuo.rata/12)} a ${eur(m.mutuo.rata*1.18/12)} al mese.`},c:[
-  {l:'Chiedi la surroga a tasso fisso',p:.55,si:{fx:()=>{const m=mutuoMio();if(m)m.mutuo.rata=Math.round(m.mutuo.rata*1.08)},pers:{C:2},r:'Un\'altra banca ti offre il fisso. La rata sale meno e soprattutto non salirà più.'},no:{fx:()=>{const m=mutuoMio();if(m)m.mutuo.rata=Math.round(m.mutuo.rata*1.18);pesa(4,2)},pers:{N:1},r:'Nessuna banca accetta la surroga. La rata sale.'}},
-  {l:'Estingui una parte del debito',sub:()=>eur(P(15000)),costo:()=>P(15000),pers:{C:2},fx:()=>{const m=mutuoMio();if(m){m.mutuo.residuo=Math.max(0,m.mutuo.residuo-P(15000));m.mutuo.rata=Math.round(m.mutuo.rata*.95)}},r:'Meno debito, rata un po\' più leggera. I risparmi si assottigliano.'},
-  {l:'Stringi la cinghia',pers:{N:1},fx:()=>{const m=mutuoMio();if(m)m.mutuo.rata=Math.round(m.mutuo.rata*1.18);pesa(6,3)},r:'Meno cene fuori, niente vacanze lunghe. A fine mese si fanno i conti.'}]});
+ev({id:'mez_tassi',min:25,max:70,rip:8,cond:()=>!!mutuoVar()&&!!S.fatti.rataSu&&S.t-S.fatti.rataSu.t<=12,t:'La rata sale',x:()=>{const s=S.fatti.rataSu;return `La banca ti scrive: il tuo mutuo è a tasso variabile e con i tassi in salita la rata passa da ${eur(s.da/12)} a ${eur(s.a/12)} al mese.`},c:[
+  {l:'Chiedi di passare al tasso fisso',p:.55,si:{fx:()=>{const m=mutuoVar();if(m){const M=m.mutuo;M.tipo='fisso';M.tasso=tassoMutuo('fisso');M.rata=rataMutuo(M.residuo,Math.max(1,M.anni),M.tasso)}},pers:{C:2},r:'Un\'altra banca ti offre il fisso. Da adesso la rata non cambierà più.'},no:{fx:()=>{pesa(4,2)},pers:{N:1},r:'Nessuna banca accetta. La rata resta alta, e dipende dai tassi.'}},
+  {l:'Estingui una parte del debito',sub:()=>eur(P(15000)),costo:()=>P(15000),pers:{C:2},fx:()=>{const m=mutuoVar();if(m){const M=m.mutuo;M.residuo=Math.max(0,M.residuo-P(15000));M.rata=M.residuo>0?rataMutuo(M.residuo,Math.max(1,M.anni),M.tasso):0}},r:'Meno debito, rata più leggera. I risparmi si assottigliano.'},
+  {l:'Stringi la cinghia',pers:{N:1},fx:()=>{pesa(6,3)},r:'Meno cene fuori, niente vacanze lunghe. A fine mese si fanno i conti.'}]});
 ev({id:'mez_condominio',min:28,max:90,rip:8,cond:diProprieta,t:'L\'assemblea di condominio',x:'Assemblea straordinaria: bisogna rifare la facciata. La tua quota sarebbe di circa 4.000 €.',c:[
   {l:'Voti a favore',sub:()=>eur(P(4000)),costo:()=>P(4000),pers:{C:1,A:1},fx:()=>{const c=casaMia();if(c)c.valore=Math.round(c.valore*1.03)},r:'Sei mesi di impalcature. Alla fine il palazzo è bellissimo e la casa vale un po\' di più.'},
   {l:'Voti contro e dai battaglia',pers:{A:-2,E:1},p:.35,si:{r:'Convinci la maggioranza: se ne riparlerà fra due anni. Il vicino del terzo non ti saluta più.'},no:{fx:()=>soldi(-P(4000)),r:'Passa lo stesso. Paghi, e in più ti sei fatt{o} dei nemici sul pianerottolo.'}},
@@ -6663,7 +6966,7 @@ ev({id:'cat_vertenza',min:25,max:62,once:1,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id
 ev({id:'cat_vertenza2',link:1,cond:()=>!!S.lavoro,t:'La conciliazione',x:'Il sindacato ha chiesto all\'azienda il pagamento degli straordinari. L\'azienda propone un incontro di conciliazione.',c:[
   {l:'Accetti la proposta dell\'azienda',pers:{A:1},fx:()=>{const x=P(r(2500,4000));soldi(x);if(S.lavoro)S.lavoro.perf=clamp(S.lavoro.perf-2);return [`Firmi un accordo: ${eur(x)} di arretrati. Meno di quanto ti spettava, ma subito.`,'g']}},
   {l:'Rifiuti e vai in tribunale',pers:{C:1,A:-1},fut:[1.2,'cat_vertenza3'],fx:()=>pesa(5,2),r:'La causa parte. I colleghi ti guardano come un eroe, o come un pazzo.'},
-  {l:'Ti licenzi e cerchi altro',pers:{O:2,N:-1},fx:()=>{licenzia('Ti dimetti per giusta causa: con le dimissioni per giusta causa spetta anche la NASpI.');S.fatti.cercaAltro=S.t},r:'Una porta che si chiude. Le offerte sono nella scheda Lavoro.'}]});
+  {l:'Ti licenzi e cerchi altro',pers:{O:2,N:-1},fx:()=>{licenzia(`Ti dimetti per giusta causa: in questo caso spetta anche ${S.anno>=2015?'la NASpI':S.anno>=2013?"l'ASpI":"l'indennità di disoccupazione"}.`);S.fatti.cercaAltro=S.t},r:'Una porta che si chiude. Le offerte sono nella scheda Lavoro.'}]});
 ev({id:'cat_vertenza3',link:1,auto:{p:.6,si:{fx:()=>{const x=P(r(7000,14000));soldi(x);mod('felicita',8);return [`Sentenza del giudice del lavoro: l'azienda ti deve ${eur(x)} tra straordinari, interessi e spese. Hai vinto.`,'g']}},no:{fx:()=>{soldi(-P(2500));mod('felicita',-6);return ['Il giudice dà ragione all\'azienda: le ore in più non erano documentate abbastanza. Paghi le spese legali.','b']}}},t:'La sentenza'});
 
 /* ---------- Il figlio che torna a casa ---------- */
@@ -6828,7 +7131,7 @@ ev({id:'cat_tesi',min:21,max:30,once:1,cond:()=>['universita','magistrale'].incl
   {l:'Il professore famoso',pers:{E:1,C:1},x:'famoso',fut:[.4,'cat_tesi2'],r:'Ti accetta con una stretta di mano distratta. «Mi scriva.»'},
   {l:'La giovane ricercatrice',pers:{A:1,O:1},x:'giovane',fut:[.4,'cat_tesi2'],r:'Ti risponde in dieci minuti e ti propone tre argomenti bellissimi.'},
   {l:'Un argomento tutto tuo',pers:{O:3},x:'mio',fut:[.4,'cat_tesi2'],r:'Convinci un professore a seguire un\'idea tua. Sarà più difficile, ma è tua.'}]});
-ev({id:'cat_tesi2',link:1,cond:()=>iscritto(),t:'Silenzio',x:d=>d.x==='famoso'?'Il relatore non risponde alle email da due mesi. La sessione di laurea si avvicina.':'La tesi è a metà e ti sembra tutto sbagliato. La bibliografia è un mostro.',c:[
+ev({id:'cat_tesi2',link:1,cond:()=>iscritto(),t:'Silenzio',x:d=>d.x==='famoso'?(S.anno>=1999?'Il relatore non risponde alle email da due mesi. La sessione di laurea si avvicina.':'Il relatore non si fa trovare al ricevimento da due mesi. La sessione di laurea si avvicina.'):'La tesi è a metà e ti sembra tutto sbagliato. La bibliografia è un mostro.',c:[
   {l:'Ti presenti al ricevimento ogni settimana',pers:{C:2,E:1},fx:d=>{futuro(.3,'cat_tesi3',{x:'bene'})},r:'Alla quarta volta ti riconosce e ti dà le correzioni. In rosso, tantissime, ma ci sono.'},
   {l:'Scrivi giorno e notte',pers:{C:2,N:1},fx:d=>{S.bis.stress=clamp(S.bis.stress+10);futuro(.3,'cat_tesi3',{x:'bene'})},r:'Caffè, biblioteca, caffè. Centoventi pagine.'},
   {l:'Rimandi alla sessione dopo',pers:{C:-2},fx:d=>{futuro(.6,'cat_tesi3',{x:'tardi'})},r:'Sei mesi in più. Almeno dormi.'}]});
@@ -6897,7 +7200,7 @@ ev({id:'cat_sogno2',link:1,t:'Il conto «Tokyo»',x:'Il conto «Tokyo» è quasi
   {l:'Usi i soldi del viaggio per la macchina',pers:{C:2,O:-1},fx:()=>{soldi(-P(1500));futuro(2,'cat_sogno3',{x:'rinviato'})},r:'La macchina riparte. Il Giappone aspetta.'},
   {l:'La macchina può aspettare: prenoti il volo',pers:{O:2,C:-1},fx:()=>futuro(.3,'cat_sogno3',{x:'subito'}),r:'Biglietto comprato. Fino alla partenza vai al lavoro in autobus, sorridendo.'}]});
 ev({id:'cat_sogno3',link:1,t:'Giappone',x:d=>d.x==='rinviato'?'Due anni dopo, il conto «Tokyo» è di nuovo pieno. Questa volta niente scuse.':'Atterri a Tokyo. Dopo anni di sogni, sei davvero qui.',c:[
-  {l:'Tre settimane, da Tokyo a Kyoto',sub:()=>eur(P(4000)),costo:()=>P(4000),pers:{O:2},fx:()=>{segnaVita('viaggio');mod('felicita',15);S.bis.stress=clamp(S.bis.stress-15);return ['Templi all\'alba, treni puntuali al secondo, una tazza di tè in una casa da tè di Kyoto. Valeva ogni euro e ogni attesa.','g']}},
+  {l:'Tre settimane, da Tokyo a Kyoto',sub:()=>eur(P(4000)),costo:()=>P(4000),pers:{O:2},fx:()=>{segnaVita('viaggio');mod('felicita',15);S.bis.stress=clamp(S.bis.stress-15);return ['Templi all\'alba, treni puntuali al secondo, una tazza di tè in una casa da tè di Kyoto. Valeva ogni soldo e ogni attesa.','g']}},
   {l:'Una settimana sola, per non esagerare',sub:()=>eur(P(2200)),costo:()=>P(2200),pers:{C:1},fx:()=>{segnaVita('viaggio');mod('felicita',9);return ['Una settimana corsa, ma piena. Torni con la voglia di ripartire.','g']}}]});
 
 /* ---------- L'amico che sparisce ---------- */
@@ -7052,6 +7355,49 @@ ev({id:'cop_vent_anni',min:40,max:95,once:1,chi:['Coniuge'],pc:p=>p.nozze!==unde
   {l:'Ricordate i momenti più belli',pers:{A:1},fx:d=>{const m=ricordoDi(d.p,1,10);d.p.intim=clamp((d.p.intim||50)+6);d.p.pass=clamp((d.p.pass||50)+6);mod('felicita',6);if(m){ritorno(d.p,m,'anniversario');return [`Ridete, vi commuovete. ${d.p.nome} si ricorda di una cosa di tanti anni fa: ${m.s.charAt(0).toLowerCase()+m.s.slice(1)}.`,'g']}return ['Ridete, vi commuovete. Eravate così giovani.','g']}},
   {l:'Vi dite anche le cose difficili',pers:{O:1,A:1},fx:d=>{const m=ricordoDi(d.p,-1,10);d.p.imp=clamp((d.p.imp||50)+4);if(m){ritorno(d.p,m,'anniversario');m.v=Math.min(0,(m.v||-1)+1);return [`${d.p.nome} confessa che non ha mai dimenticato una cosa: ${m.s.charAt(0).toLowerCase()+m.s.slice(1)}. Ne parlate. Finalmente.`,'']}return ['Anche le crisi, anche i silenzi. Siete ancora qui, ed è questo il punto.','g']}}]});
 
+/* ================= ITALIA VERA: EVENTI (ROADMAP, Fase 3) =================
+   naja (fino ai nati del 1985), sanità (medico di base, liste d'attesa, screening dell'ASL), lavoro (cassa integrazione),
+   territorio (partire per il Nord, tornare al Sud), casa (IMU, mutuo fisso o variabile) e momenti d'epoca. */
+
+/* ---------- La naja ---------- */
+ev({id:'naja',link:1,k:'Servizio militare',t:'La cartolina',x:()=>`Arriva la cartolina precetto: il servizio militare è obbligatorio. Sono ${mesiNaja()} mesi, lontano da casa.`,c:[
+  {l:'Parti per la naja',pers:{C:2,E:1,N:-1},fx:()=>{S.fatti.naja='fatta';S.fatti.najaFine=S.t+mesiNaja();mod('felicita',-4);S.bis.stress=clamp(S.bis.stress+6);
+    const c=candidatoAmico();c.sesso='M';c.eta=S.eta+r(-1,1);c.nome=nomeLibero('M',S.anno-c.eta);const p=nuovaPersona('Amico','M',c.eta,c.cognome,{nome:c.nome,pers:c.pers,rapporto:r(55,75),dove:'naja'});
+    futuro(mesiNaja()/12,'naja_congedo',{p});
+    return [`Visita, capelli rasati, branda in camerata. Il primo amico è ${p.nome}, che russa come un trattore.`,'']}},
+  {l:'Obiettore di coscienza: servizio civile',cond:()=>S.anno>=1972,pers:{A:2,O:1},fx:()=>{S.fatti.naja='civile';S.karma=clamp(S.karma+4);mod('felicita',1);return [`Rifiuti le armi: fai il servizio civile in una casa di riposo. È più lungo della naja, ma ti insegna moltissimo.`,'g']}},
+  {l:'Provi a farti riformare',pers:{C:-2},p:.3,si:{fx:()=>{S.fatti.naja='riformato'},r:'Alla visita medica ti dichiarano «non idoneo». Resti a casa, un po\' sollevato e un po\' in colpa.'.replace('sollevato','sollevat{o}').replace('{o}','o')},no:{fx:()=>{S.fatti.naja='fatta';mod('felicita',-6);futuro(mesiNaja()/12,'naja_congedo',{})},r:'Il medico militare non ci casca: «Abile e arruolato». Parti lo stesso.'}}]});
+ev({id:'naja_congedo',link:1,k:'Servizio militare',t:'Il congedo',x:'Finisce la naja. L\'ultima sera in caserma, la festa dei congedanti: «Alba!»',c:[
+  {l:'Saluti i commilitoni promettendo di rivedervi',pers:{A:1},fx:d=>{mod('felicita',5);if(d.p)d.p.rapporto=clamp(d.p.rapporto+5);return ['Torni a casa più magro, più adulto e con un amico per la vita. Forse.','g']}},
+  {l:'Non vedi l\'ora di tornare',pers:{E:-1},fx:()=>{mod('felicita',4);return ['Il treno di ritorno sembra il più bel viaggio della tua vita.','g']}}]});
+
+/* ---------- Cassa integrazione (S.lavoro.cig: mesi che restano; S.fatti.cigN: mesi in tutta la vita) ---------- */
+ev({id:'ita_cig',link:1,k:'Lavoro',cond:()=>!!S.lavoro,t:'Cassa integrazione',x:d=>d.covid?'Con il lockdown l\'azienda chiude i cancelli. Per tutti c\'è la cassa integrazione: a casa, con circa l\'80% dello stipendio (e un tetto), finché non si riparte.':'Gli ordini calano e l\'azienda chiede la cassa integrazione: per qualche mese si lavora poco o niente, e lo stipendio lo paga in parte l\'INPS, circa l\'80% con un tetto.',c:[
+  {l:'Stringi i denti e aspetti',pers:{N:1},fx:d=>{const m=d.covid?r(2,4):r(3,9);avviaCIG(m);pesa(4,2);return [`${m} mesi di cassa integrazione. Le giornate sono lunghe e i conti più corti.`,'b']}},
+  {l:'Ne approfitti per fare un corso',pers:{O:2,C:1},fx:d=>{const m=d.covid?r(2,4):r(3,9);avviaCIG(m);S.intelligenza=clamp(S.intelligenza+2);return [`${m} mesi di cassa integrazione, e intanto un corso serale: almeno il tempo non va sprecato.`,'']}},
+  {l:'Accetti l\'incentivo e te ne vai',cond:()=>S.anno!==2020&&!!S.lavoro,sub:()=>S.lavoro?`${eur(Math.round(ralEff(S.lavoro)/13*6))} di buonuscita`:'',pers:{O:1,N:-1},fx:()=>{if(!S.lavoro)return;const x=Math.round(ralEff(S.lavoro)/13*6);soldi(x);licenzia('Firmi la risoluzione con l\'incentivo e lasci l\'azienda.');return ['Sei mesi di stipendio come incentivo, la liquidazione e l\'indennità di disoccupazione. Ora tocca cercare altro.','']}}]});
+
+/* ---------- Tornare giù: dopo anni al Centro-Nord o all'estero (S.fatti.emigrato) ---------- */
+ev({id:'ita_ritorno',link:1,k:'Casa',cond:()=>!!S.fatti.emigrato&&!S.fatti.ritornato,t:'Tornare giù',x:()=>{const em=S.fatti.emigrato,n=Math.max(1,Math.round((S.t-em.t)/12)),m=vivi(['Madre'])[0];
+    return `Sono passati ${n} anni da quando sei partit${g('o','a')} da ${em.da}. ${m?'Tua madre, al telefono, te lo chiede ogni volta: «E quando torni?»':'Ogni estate, quando scendi, ti chiedi se non sia il momento di tornare per sempre.'}${S.pensione?' Ora che sei in pensione, niente ti tiene più qui.':''}`},c:[
+  {l:'Torni a casa, per sempre',sub:()=>S.lavoro?'Lasci il lavoro':'',pers:{A:1,O:-1},fx:()=>{const em=S.fatti.emigrato;S.fatti.ritornato=S.t;vaiA(em.da,em.prov);mod('felicita',6);return [`Torni a ${em.da}. I parenti, il dialetto, i pranzi della domenica: sembra che tu non sia mai partit${g('o','a')}. Quasi.`,'g']}},
+  {l:'Torni e lavori da remoto',cond:()=>S.anno>=2020&&!!S.lavoro&&REMOTO.includes(S.lavoro.id),sub:'Stesso lavoro, stesso stipendio',pers:{O:1},fx:()=>{const em=S.fatti.emigrato,L=S.lavoro;S.lavoro=null;vaiA(em.da,em.prov);S.lavoro=L;S.fatti.ritornato=S.t;mod('felicita',8);return [`Porti il computer giù a ${em.da}: lo stesso lavoro, lo stipendio di prima e il pranzo con la famiglia la domenica.`,'g']}},
+  {l:'Resti: ormai la tua vita è qui',pers:{O:1,A:-1},fx:()=>{mod('felicita',-1);return ['Giù ci torni per le feste. Casa, ormai, è dove sei.','']}},
+  {l:'Torni solo d\'estate e a Natale',pers:{C:1},fx:()=>{mod('felicita',2);return ['Due settimane ad agosto e il Natale con i tuoi: abbastanza per non dimenticare il dialetto.','']}}]});
+
+/* ---------- Sanità: il primo invito allo screening, le liste d'attesa ---------- */
+ev({id:'ita_screening',link:1,k:'Sanità',t:'La lettera dell\'ASL',x:d=>`Nella cassetta della posta c'è una lettera dell'ASL: ti invitano ${d.n||'alla mammografia'}, gratis. È il programma di prevenzione per chi ha la tua età.`,c:[
+  {l:'Prenoti e ci vai',pers:{C:2},fx:d=>{S.fatti.scrAbit=1;if(faiScreening(d.id||'mx'))return ['L\'esame trova qualcosa. Il medico vuole parlarti subito.','b'];return ['Dieci minuti, un po\' di imbarazzo, e la risposta arriva per posta: tutto a posto. D\'ora in poi ci vai ogni volta che arriva la lettera.','g']}},
+  {l:'La lasci tra le carte da fare',pers:{C:-2},fx:()=>{S.fatti.scrAbit=0;S.fatti.scrChiesto=S.t;return ['Resta sul mobile dell\'ingresso per settimane, poi sparisce sotto le bollette.','']}}]});
+ev({id:'ita_attesa',link:1,k:'Sanità',t:'La lista d\'attesa',x:d=>`Con il Servizio sanitario la prima visita libera è fra ${d.m||3} ${(d.m||3)===1?'mese':'mesi'}.${alSud(zonaMia())?' Al Sud e nelle Isole le attese sono spesso le più lunghe d\'Italia.':''}`,c:[
+  {l:'Aspetti il tuo turno',_incl:0,sub:d=>`${S.anno<1983?'Gratis':'Ticket 60 €'} · fra ${d.m||3} ${(d.m||3)===1?'mese':'mesi'}`,costo:()=>S.anno<1983?0:P(60),fx:d=>{futuro((d.m||3)/12,'ita_visita',{});return ['Segni la data sul calendario. Intanto, pazienza.','']}},
+  {l:'Paghi la visita in intramoenia',_incl:0,sub:'150 € · lo stesso specialista, in una settimana',cond:()=>S.anno>=1999,costo:()=>P(150),fx:()=>cura(.6,.15)},
+  {l:'Vai da uno specialista privato',_incl:0,sub:'200 € · subito',costo:()=>P(200),fx:()=>cura(.65,.2)},
+  {l:'Prenoti in un\'altra regione',_incl:0,sub:'Viaggio e ticket 350 € · fra un mese',cond:()=>S.anno>=1980&&['Centro','Sud','Isole'].includes(zonaMia()),costo:()=>P(350),fx:()=>{futuro(1/12,'ita_visita',{v:1});return [`Prenoti a ${pick(['Milano','Bologna','Padova','Verona'])}: come tanti, per curarti fai qualche centinaio di chilometri.`,'']}},
+  {l:'Lasci perdere',pers:{C:-1},r:'Magari passa da solo.'}]});
+ev({id:'ita_visita',link:1,k:'Sanità',t:'La visita',x:d=>d.v?'Treno all\'alba, un ospedale che non conosci, una sala d\'attesa piena di accenti di tutta Italia. Poi tocca a te.':'Arriva il giorno della visita prenotata mesi fa. In sala d\'attesa, ognuno racconta i suoi acciacchi.',c:[
+  {l:'Entri nello studio',_incl:0,fx:()=>cura(.6,.15)}]});
+
 /* ================= AZIONI ================= */
 function fatto(k){return !!S.azioni[k]}
 function cdAzione(k){
@@ -7174,12 +7520,12 @@ function azLavoro(k){
   if(k==='promo')return azione(una('promo',0,()=>{
     if(L.liv>=j.liv.length-1)return ['Sei già al livello più alto.','x'];
     const m=mancanti(j.promo&&j.promo[L.liv+1]);if(m.length)return [`Per salire di livello ti serve: ${m.join(', ')}.`,'x'];
-    if(L.anniLiv>=1&&chance((L.perf-45)/70*fattoreCarriera(L))){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere());if(PIVA_LIV[j.id]===L.liv&&!isPiva(L))L.contratto={t:'piva',da:S.t};L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
+    if(L.anniLiv>=1&&chance((L.perf-45)/70*fattoreCarriera(L))){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L))L.contratto={t:'piva',da:S.t};L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
     L.perf=clamp(L.perf-3);return ['Per ora la promozione va a un collega.','b'];
   }));
   if(k==='collega')return azione(una('collega',0,()=>{if(chance(.35)){const p=nuovoAmico(true);if(p)return [`Fai amicizia con ${p.nome}, ${gp(p,'un collega','una collega')}.`,'g']}return ['Pausa caffè un po\' imbarazzante.','']}));
   if(k==='licenziati')return showSheet({k:'Lavoro',t:'Ti licenzi?',p:`Lasci il posto da ${L.nome.toLowerCase()}.`,chiudi:true,scelte:[
-    {l:'Sì, mi licenzio',sub:'Ricevi il TFR, ma chi si dimette non ha la NASpI',fx:()=>{pagaTFR();S.storico.push(L.nome);S.lavoro=null;mod('felicita',3);return ['Hai dato le dimissioni. Si volta pagina.','']}}]});
+    {l:'Sì, mi licenzio',sub:()=>`Ricevi ${S.anno>=1982?'il TFR':'la liquidazione'}, ma chi si dimette non ha ${S.anno>=2015?'la NASpI':'il sussidio di disoccupazione'}`,fx:()=>{pagaTFR();S.storico.push(L.nome);S.lavoro=null;mod('felicita',3);return ['Hai dato le dimissioni. Si volta pagina.','']}}]});
   if(k==='pensione'){coda.unshift({e:EV.pensione,d:{}});return next()}
   if(k==='parttime')return azione(una('parttime',0,()=>chiediPartTime(false)));
   if(k==='tempopieno')return azione(una('tempopieno',0,()=>tornaTempoPieno()));
@@ -7256,7 +7602,8 @@ function apriPersona(id){
     }
     if(R==='Partner'){
       if(S.eta>=18&&!p.conv)opt('Andate a vivere insieme','conv',0,()=>{if(chance(p.rapporto/100)){convivi(p);rel(6,10);mod('felicita',6);return [`Tu e ${p.nome} andate a vivere insieme!`,'g']}rel(-6,-2);return [`${p.nome} dice che è ancora presto.`,'']});
-      if(S.eta>=18)o.push({l:'Chiedi di sposarti',sub:inSeparazione()?'Prima deve arrivare il divorzio':'',disabled:fatto(p.id+'sposa')||inSeparazione(),fx:()=>{segnaAz(p.id+'sposa');if(p.rapporto>=60&&chance(.8)){coda.unshift({e:EV.matrimonio,d:{p}});return null}p.rapporto=clamp(p.rapporto-12);mod('felicita',-6);return [`${p.nome} dice che non è pront${gp(p,'o','a')}.`,'b']}});
+      const ucNo=p.sesso===S.sesso&&!unioneCivilePossibile();
+      if(S.eta>=18)o.push({l:'Chiedi di sposarti',sub:ucNo?'Per le coppie dello stesso sesso la legge arriva nel 2016':inSeparazione()?'Prima deve arrivare il divorzio':'',disabled:ucNo||fatto(p.id+'sposa')||inSeparazione(),fx:()=>{segnaAz(p.id+'sposa');if(p.rapporto>=60&&chance(.8)){coda.unshift({e:EV.matrimonio,d:{p}});return null}p.rapporto=clamp(p.rapporto-12);mod('felicita',-6);return [`${p.nome} dice che non è pront${gp(p,'o','a')}.`,'b']}});
     }
     if((R==='Partner'&&p.conv||R==='Coniuge')&&S.eta>=18){
       const cf=coppiaFertile(p);
@@ -7279,7 +7626,7 @@ function apriPersona(id){
     opt('Litiga','litiga',0,()=>{rel(-18,-8);mod('felicita',-3);if(p.rapporto<10&&['Amico','Cugino','Cognato','Zio','Suocero'].includes(p.ruolo)&&chance(.4)){creaNemico('lite',p);return [`La lite con ${p.nome} degenera. Ora siete nemici.`,'b']}return [`Volano parole grosse con ${p.nome}.`,'b']});
     if(R==='Amico')o.push({l:'Chiudi l\'amicizia',fx:()=>{S.relazioni=S.relazioni.filter(x=>x!==p);mod('felicita',-3-Math.round(p.rapporto/25));pesa(Math.round(3+p.rapporto/10),2);return [`Non sei più amic${g('o','a')} di ${p.nome}.`,'b']}});
     if(R==='Partner')o.push({l:`Lascia ${p.nome}`,fx:()=>chiudiRelazione(p,'Hai chiuso la relazione con {P}.')});
-    if(R==='Coniuge')o.push({l:'Chiedi il divorzio',fx:()=>divorzia(p)});
+    if(R==='Coniuge')o.push({l:divorzioPossibile()?'Chiedi il divorzio':'Chiedi la separazione',_incl:0,fx:()=>divorzia(p)});
   }
   if(R==='Amico')o.unshift({l:p.frequente?'Smetti di vederl'+gp(p,'o','a')+' spesso':'Vedil'+gp(p,'o','a')+' spesso',sub:p.frequente?'Le ore con gli amici andranno anche ad altri':'Le tue ore con gli amici andranno soprattutto a '+gp(p,'lui','lei'),fx:()=>{p.frequente=!p.frequente;apriPersona(p.id);return KEEP}});
   const info=[`${ruoloLabel(p)} · ${p.eta} anni`];
@@ -7389,26 +7736,28 @@ function compraCasa(){
 }
 function dettaglioCasa(i){
   const M=mercato(),h=M.casa[i];if(!h)return;
-  const spese=Math.round(h.prezzo*.05),ant=Math.round(h.prezzo*.2),rata=rataMutuo(h.prezzo-ant,25,.035);
+  const spese=Math.round(h.prezzo*.05),ant=Math.round(h.prezzo*.2),tf=tassoMutuo('fisso'),tv=tassoMutuo('var'),rataF=rataMutuo(h.prezzo-ant,25,tf),rataV=rataMutuo(h.prezzo-ant,25,tv);
   const L=S.lavoro,nettoAnn=L&&!JOB[L.id].pt?(isPiva(L)?nettoPiva(ralEff(L),L):netto(ralEff(L))):0,ctr=L&&L.contratto?L.contratto.t:'';
-  const compra=mutuo=>{
+  const compra=(mutuo,tipo)=>{const rata=tipo==='var'?rataV:rataF;
     M.casa.splice(i,1);
-    const p={id:S.nextId++,tipo:h.t,citta:S.citta,valore:h.prezzo,stato:h.stato,lusso:h.lusso,mutuo:mutuo?{residuo:h.prezzo-ant,rata,anni:25}:null};
+    const p={id:S.nextId++,tipo:h.t,citta:S.citta,valore:h.prezzo,stato:h.stato,lusso:h.lusso,mutuo:mutuo?{residuo:h.prezzo-ant,rata,anni:25,tipo,tasso:tipo==='var'?tv:tf}:null};
     S.prop.push(p);if(!S.fatti.primaCasa){S.fatti.primaCasa=1;momento('casa',{tit:`${h.t} a ${S.citta}`,sub:mutuo?'Con un mutuo di 25 anni':'Pagata in contanti'})}
-    let t=`Compri un ${h.t.toLowerCase()} a ${S.citta}${mutuo?` con un mutuo da ${eur(rata)} l'anno per 25 anni`:''}.`;
+    let t=`Compri un ${h.t.toLowerCase()} a ${S.citta}${mutuo?` con un mutuo a tasso ${tipo==='var'?'variabile':'fisso'} da ${eur(rata)} l'anno per 25 anni`:''}.`;
     if(S.casa.tipo!=='proprieta'){S.casa={tipo:'proprieta',pid:p.id};t+=' Ti trasferisci subito.'}
     mod('felicita',12);return [t,'g'];
   };
-  showSheet({k:'Annuncio',t:`${h.t} · ${h.mq} m²`,p:`Prezzo: ${eur(h.prezzo)}\nCondizioni: ${h.stato}%\nSpese notarili: ${eur(spese)}`,chiudi:true,scelte:[
-    {l:'Paga in contanti',sub:eur(h.prezzo+spese),costo:h.prezzo+spese,fx:()=>compra(false)},
-    {l:'Chiedi un mutuo a 25 anni',sub:`Anticipo ${eur(ant+spese)} · rata ${eur(rata)} l'anno`,costo:ant+spese,fx:()=>{
+  const banca=tipo=>{const rata=tipo==='var'?rataV:rataF;
       if(!nettoAnn){soldi(ant+spese);return ['La banca rifiuta: serve un lavoro stabile (non part-time).','b']}
       if(ctr==='det'&&chance(.75)){soldi(ant+spese);return ['La banca rifiuta: con un contratto a termine serve un garante o un tempo indeterminato.','b']}
       if(ctr==='piva'&&L.anni<2){soldi(ant+spese);return ['La banca vuole almeno due anni di dichiarazioni dei redditi con la partita IVA.','b']}
       if(rata>nettoAnn*.35){soldi(ant+spese);return [`La banca rifiuta: la rata supera il 35% del tuo stipendio netto (${eur(nettoAnn)}).`,'b']}
       if(S.fedina.length&&chance(.4)){soldi(ant+spese);return ['La banca rifiuta: i tuoi precedenti penali non la convincono.','b']}
       if(S.fatti.crif!==undefined&&S.eta-S.fatti.crif<7){soldi(ant+spese);return ['La banca rifiuta: sei segnalat'+g('o','a')+' come cattivo pagatore dopo il sovraindebitamento.','b']}
-      return compra(true)}}]});
+      return compra(true,tipo)};
+  showSheet({k:'Annuncio',t:`${h.t} · ${h.mq} m²`,p:`Prezzo: ${eur(h.prezzo)}\nCondizioni: ${h.stato}%\nSpese notarili: ${eur(spese)}`,chiudi:true,scelte:[
+    {l:'Paga in contanti',sub:eur(h.prezzo+spese),costo:h.prezzo+spese,fx:()=>compra(false)},
+    {l:`Mutuo a tasso fisso (${pctStr(tf)})`,sub:`Anticipo ${eur(ant+spese)} · rata ${eur(rataF)} l'anno per 25 anni, sempre uguale`,costo:ant+spese,fx:()=>banca('fisso')},
+    {l:`Mutuo a tasso variabile (${pctStr(tv)} oggi)`,sub:`Anticipo ${eur(ant+spese)} · rata ${eur(rataV)} l'anno, che segue i tassi`,costo:ant+spese,fx:()=>banca('var')}]});
 }
 function apriProp(id){
   const p=S.prop.find(x=>x.id===id);if(!p)return;
@@ -7426,7 +7775,7 @@ function apriProp(id){
     let t=`Vendi il ${p.tipo.toLowerCase()} e incassi ${eur(netto0)}.`;
     if(qui){S.casa=affittoBase(convivente()?'Bilocale':'Monolocale');t+=' Ti trasferisci in affitto.'}
     return [t,netto0>=0?'g':'b']}});
-  showSheet({k:`${p.citta}${qui?' · ci vivi':''}${p.affittata?' · affittata':''}`,t:p.tipo,p:`Valore: ${eur(p.valore)}\nCondizioni: ${p.stato}%${p.mutuo?`\nMutuo residuo: ${eur(p.mutuo.residuo)} (${p.mutuo.anni} anni, ${eur(p.mutuo.rata)} l'anno)`:''}`,chiudi:true,scelte:o});
+  showSheet({k:`${p.citta}${qui?' · ci vivi':''}${p.affittata?' · affittata':''}`,t:p.tipo,p:`Valore: ${eur(p.valore)}\nCondizioni: ${p.stato}%${p.mutuo?`\nMutuo residuo: ${eur(p.mutuo.residuo)} (${p.mutuo.anni} anni, ${eur(p.mutuo.rata)} l'anno${p.mutuo.tasso?`, tasso ${p.mutuo.tipo==='var'?'variabile':'fisso'} ${pctStr(p.mutuo.tasso)}`:''})`:''}`,chiudi:true,scelte:o});
 }
 function concessionario(){
   const M=mercato();
@@ -7457,6 +7806,7 @@ function trasferisciti(){
 }
 /* Dopo un trasloco: chi vive già nella nuova città non è più «lontano»; chi resta nella vecchia lo diventa */
 function dopoTrasloco(da){
+  marcaEmigrazione(da);
   for(const p of S.relazioni){
     if(!p.vivo||['Nemico','Conoscente','Ex'].includes(p.ruolo)||convive(p))continue;
     if(p.lontano&&p.dove===S.citta){p.lontano=false;p.dove=null;p.rapporto=clamp(p.rapporto+5);log(`Ora tu e ${p.nome} vivete nella stessa città.`,'g')}
@@ -7495,7 +7845,7 @@ function cura(p2,p4){
 const METE=[{n:'Weekend a Roma',c:400,f:5},{n:'Una settimana in Puglia',c:1200,f:9},{n:'Crociera nel Mediterraneo',c:2500,f:12},{n:'New York',c:3500,f:14,l:4},{n:'Giappone',c:5000,f:16,l:3},{n:'Maldive',c:7000,f:18}];
 const ATTIVITA=[
   {sez:'Salute',id:'medico',n:'Medico di base',d:'Visita gratuita',costo:0,min:0,fx:()=>cura(.3,0)},
-  {sez:'Salute',id:'spec',n:'Visita specialistica',d:'Ticket sanitario',costo:60,min:0,fx:()=>cura(.6,.15)},
+  {sez:'Salute',id:'spec',n:'Visita specialistica',d:'Con il Servizio sanitario (e la sua lista d\'attesa) o a pagamento',costo:0,min:0,fx:()=>{coda.unshift({e:EV.ita_attesa,d:{m:mesiAttesa()}});return null}},
   {sez:'Salute',id:'clinica',n:'Clinica privata',d:'Le cure migliori',costo:2500,min:0,fx:()=>{const r0=cura(.9,.4);mod('salute',3);return r0}},
   {sez:'Salute',id:'psi',n:'Psicologo',d:'Sei mesi di sedute',costo:900,min:10,en:4,fx:()=>{eff({f:[6,12]});segnaVita('terapia');S.tensione=Math.max(0,(S.tensione||0)-6);if(S.att&&S.att!=='sicuro'&&chance(.25)){S.att='sicuro';log('La terapia ti aiuta a fidarti di più degli altri.','g')}if(haMal('Depressione')&&chance(.5)){S.malattie=S.malattie.filter(m=>m.n!=='Depressione');return ['Un anno di terapia. La depressione è alle spalle.','g']}return ['Parlare con qualcuno ti aiuta a vedere le cose con più chiarezza.','g']}},
   {sez:'Salute',id:'fumo',n:'Smetti di fumare',d:'Cerotti e forza di volontà',costo:150,min:12,cond:()=>S.dip.fumo,fx:()=>{if(chance(.4)){S.dip.fumo=false;mod('salute',5);return ['Hai smesso di fumare! I polmoni ringraziano.','g']}mod('felicita',-3);return ['Resisti tre settimane, poi ricominci.','b']}},
@@ -7744,7 +8094,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='08638bc0';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='fff91e0c';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 
@@ -7824,7 +8174,7 @@ async function copiaCodice(){
   catch(e){mostraCodice(c);return KEEP}
 }
 function mostraCodice(c){
-  showSheet({k:'Salvataggio',t:'Il tuo codice',p:'Non è stato possibile copiarlo da solo. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
+  showSheet({meta:1,k:'Salvataggio',t:'Il tuo codice',p:'Non è stato possibile copiarlo da solo. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
   const t=document.createElement('textarea');t.className='codice';t.readOnly=true;t.value=c;$('#shA').prepend(t);setTimeout(()=>{t.focus();t.select()},50);
 }
 /* «Segnala un problema» (ROADMAP 0.7): diario degli ultimi 3 mesi, situazione e codice della partita, da incollare in chat */
@@ -7839,7 +8189,7 @@ async function segnalaProblema(){
   const diario=S.log.slice(-3).flatMap(b=>[`— ${MESI[b.mese]} ${b.anno} (${b.eta} anni)`,...b.righe.map(x=>'  '+x.t)]);
   const t=[...testa,...diario,'','Codice della partita (per ricaricarla):',await codiceDa(S)].join('\n');
   try{await navigator.clipboard.writeText(t);toast('Segnalazione copiata: incollala in chat e scrivi cosa non va.')}
-  catch(e){showSheet({k:'Segnala un problema',t:'La tua segnalazione',p:'Non è stato possibile copiarla da sola. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
+  catch(e){showSheet({meta:1,k:'Segnala un problema',t:'La tua segnalazione',p:'Non è stato possibile copiarla da sola. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
     const a=document.createElement('textarea');a.className='codice';a.readOnly=true;a.value=t;$('#shA').prepend(a);setTimeout(()=>{a.focus();a.select()},50);return KEEP}
 }
 function caricaFile(){
@@ -7848,7 +8198,7 @@ function caricaFile(){
   i.click();
 }
 function incollaCodice(){
-  showSheet({k:'Carica una partita',t:'Incolla il codice',p:'Incolla qui il codice di salvataggio che avevi copiato.',chiudi:true,scelte:[]});
+  showSheet({meta:1,k:'Carica una partita',t:'Incolla il codice',p:'Incolla qui il codice di salvataggio che avevi copiato.',chiudi:true,scelte:[]});
   const w=document.createElement('div');w.className='cerca';
   w.innerHTML='<textarea class="codice" id="shCod" placeholder="VITAMIA1…" aria-label="Codice di salvataggio"></textarea><button class="btn" id="shCodOk">Carica</button>';
   $('#shA').prepend(w);
@@ -7877,7 +8227,7 @@ function apriSalvataggi(){
   ];
   if(SALVA.db)sc.unshift({l:'Salva online adesso',sub:'Sul tuo account claude.ai',fx:()=>{salvaOnline().then(ok=>toast(ok?'Salvato online.':'Salvataggio online non riuscito.'));return null}});
   sc.forEach(c=>c._incl=0);
-  showSheet({k:'Salvataggio',t:'La tua partita',p:statoSalvataggio(),chiudi:true,scelte:sc});
+  showSheet({meta:1,k:'Salvataggio',t:'La tua partita',p:statoSalvataggio(),chiudi:true,scelte:sc});
 }
 
 /* ================= CREAZIONE: il certificato di nascita che si compila dal vivo ================= */
@@ -7948,7 +8298,7 @@ function htmlEditor(){
     <div class="field"><label for="iNome">Nome</label><div class="in-d"><input id="iNome" value="${esc(C.nome)}" maxlength="20" autocomplete="off">${dadoBtn('dNome','Un altro nome')}</div></div>
     <div class="field"><label for="iCog">Cognome</label><div class="in-d"><input id="iCog" value="${esc(C.cognome)}" maxlength="20" autocomplete="off">${dadoBtn('dCog','Un altro cognome')}</div></div>`;
   if(C.tab==='dove'){
-    const gm=giorniMese(C.anno,C.mese),A=[];for(let a=annoOggi();a>=2000;a--)A.push(a);
+    const gm=giorniMese(C.anno,C.mese),A=[];for(let a=annoOggi();a>=1950;a--)A.push(a);
     return `
     <div class="field"><label for="iCom">Comune di nascita</label><div class="in-d cerca-com"><input id="iCom" type="search" value="${esc(C.com)} (${esc(C.prov)})" autocomplete="off" placeholder="Scrivi il nome del comune">${dadoBtn('dCom','Un comune a caso')}<div class="sugg" id="sugg" hidden></div></div>
       <div class="note">Uno qualsiasi dei ${nf(comuni().length)} comuni d'Italia.</div></div>
@@ -7956,7 +8306,7 @@ function htmlEditor(){
       <select id="iG" aria-label="Giorno">${Array.from({length:gm},(_,i)=>`<option ${i+1===C.giorno?'selected':''}>${i+1}</option>`).join('')}</select>
       <select id="iM" aria-label="Mese">${MESI.map((m,i)=>`<option value="${i}" ${i===C.mese?'selected':''}>${m}</option>`).join('')}</select>
       <select id="iA" aria-label="Anno">${A.map(a=>`<option ${a===C.anno?'selected':''}>${a}</option>`).join('')}</select></div>
-      <div class="note">Puoi nascere dal 2000 a oggi.</div></div>`;
+      <div class="note">Puoi nascere dal 1950 a oggi: fino al 2001 si paga in lire, e ogni epoca ha i suoi fatti e le sue leggi.</div></div>`;
   }
   if(C.tab==='famiglia')return `
     <div class="field"><label>Condizione della famiglia</label><div class="seg tre-seg">${CLASSI.map(([k,n])=>`<button data-cl="${k}" aria-pressed="${F.classe===k}">${n}</button>`).join('')}</div></div>
@@ -7993,7 +8343,7 @@ function renderCrea(V){
     <div class="crea-cta"><button class="btn" id="btnNasci">Nasci</button><button class="btn ghost" id="btnRnd">${ICO_DADO} Vita a caso</button></div>
   </div>`;
   const brp=$('#btnRiprendi');if(brp)brp.onclick=riprendiOnline;
-  $('#btnCarica').onclick=()=>showSheet({k:'Carica una partita',t:'Da dove la prendi?',p:'Scegli il file che avevi scaricato, oppure incolla il codice che avevi copiato.',chiudi:true,scelte:[{l:'Scegli il file di salvataggio',_incl:0,fx:()=>{caricaFile();return null}},{l:'Incolla un codice',_incl:0,fx:()=>{incollaCodice();return KEEP}}]});
+  $('#btnCarica').onclick=()=>showSheet({meta:1,k:'Carica una partita',t:'Da dove la prendi?',p:'Scegli il file che avevi scaricato, oppure incolla il codice che avevi copiato.',chiudi:true,scelte:[{l:'Scegli il file di salvataggio',_incl:0,fx:()=>{caricaFile();return null}},{l:'Incolla un codice',_incl:0,fx:()=>{incollaCodice();return KEEP}}]});
   V.querySelectorAll('[data-et]').forEach(b=>b.onclick=()=>{C.tab=b.dataset.et;disegnaEd()});
   $('#btnNasci').onclick=()=>nasci(datiVita());
   $('#btnRnd').onclick=()=>{bozzaCasuale();disegnaCert();disegnaEd();nasci(datiVita())};
@@ -8106,7 +8456,9 @@ function showSheet(o){
     V0.innerHTML=fp?volto(lookDi(fp),fp.eta,fp.sesso):fc?volto(fc.look,fc.eta,fc.sesso):'';V0.hidden=!fp&&!fc}
   const P=$('#shP');P.textContent=prezzi(o.p)||'';P.className='';P.hidden=!o.p;
   const A=$('#shA');A.innerHTML='';
-  const sc=(o.scelte||[]).filter(c=>!c.cond||c.cond(d));
+  let sc=(o.scelte||[]).filter(c=>!c.cond||c.cond(d));
+  // niente scelte fuori epoca (telefonini nel 1970, euro nel 1990…), purché ne resti almeno una
+  if(S&&S.vivo&&!o.meta){const ok=sc.filter(c=>annoScelta(c)<=S.anno&&!fuoriEpoca(typeof c.l==='function'?T(c.l,d):''));if(ok.length)sc=ok}
   let attivi=0;
   const clic=c=>{
     const res=o.d?conCausa(o.t,()=>scegli(c,d)):scegli(c,d);
@@ -8151,6 +8503,7 @@ function next(){
     if(d.p&&!d.p.vivo)return next();
     if(e.cond&&!d._fut&&e.id!=='processo'&&!e.cond(d))return next();
     const scelte=typeof e.c==='function'?e.c(d):(e.c||[]);
+    if(!e.link&&(fuoriEpoca(T(e.t,d))||fuoriEpoca(T(e.x,d))))return next();   // un evento casuale fuori epoca si salta
     showSheet({k:`${dataStr()} · ${S.eta} ${S.eta===1?'anno':'anni'}`+(e.k?' · '+T(e.k,d):''),t:T(e.t,d),p:T(e.x,d),scelte,d});
     return;
   }
@@ -8194,7 +8547,7 @@ function renderTop(){
     <div class="stats${S.fama>0?' cinque':''}">${stat('Salute','salute','--salute')}${stat('Felicità','felicita','--felicita')}${stat(S.fama>0?'Intell.':'Intelletto','intelligenza','--intel')}${stat('Aspetto','aspetto','--aspetto')}${S.fama>0?stat('Fama','fama','--accent'):''}</div>`;
   $('#btnCarattere').onclick=mostraCarattere;
   $('#btnSalva').onclick=apriSalvataggi;
-  $('#btnNuova').onclick=()=>showSheet({k:'Nuova vita',t:'Vuoi ricominciare?',p:S.vivo?'La vita attuale andrà persa.':'Inizi una vita completamente nuova.',chiudi:true,scelte:[{l:'Sì, ricomincia da zero',fx:()=>{S=null;coda=[];save();sheetOpen=false;$('#scrim').hidden=true;render();return KEEP}}]});
+  $('#btnNuova').onclick=()=>showSheet({meta:1,k:'Nuova vita',t:'Vuoi ricominciare?',p:S.vivo?'La vita attuale andrà persa.':'Inizi una vita completamente nuova.',chiudi:true,scelte:[{l:'Sì, ricomincia da zero',fx:()=>{S=null;coda=[];save();sheetOpen=false;$('#scrim').hidden=true;render();return KEEP}}]});
 }
 
 /* ---------- Vita ---------- */
@@ -8317,7 +8670,7 @@ function renderScuola(V){
   const es=ABILITAZIONI.map(A=>[A,abilitazioneDisponibile(A)]).filter(([,x])=>x!==null);
   if(es.length&&!iscritto())h+=`<div class="sec">Esami di Stato</div><div class="list">${es.map(([A,x])=>`<div class="job"><div><div class="jn">${A.desc}</div><div class="${x?'jr':'jm'}">${x||eur(P(400))+' · serve per esercitare la professione'}</div></div><button class="chip pri" data-es="${A.n}" ${x||fatto('esame_'+A.n)?'disabled':''}>${fatto('esame_'+A.n)?'Fatto':'Sostieni'}</button></div>`).join('')}</div>`;
   if(S.eta>=6){
-    h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const manca=c.req?mancanti(c.req):[];const lock=S.eta<c.min||manca.length>0;const f=fatto('corso_'+c.id);
+    h+=`<div class="sec">Corsi e certificazioni</div><div class="list">${CORSI.filter(c=>S.anno>=(DAL_CORSO[c.id]||0)).map(c=>{const ho=c.cert&&I.cert.includes(c.cert);const manca=c.req?mancanti(c.req):[];const lock=S.eta<c.min||manca.length>0;const f=fatto('corso_'+c.id);
       return `<div class="job"><div><div class="jn">${c.n}</div><div class="jm">${eur(P(c.costo))}${c.cert?` · ${c.cert}`:''}${c.sk?` · +${ABIL[Object.keys(c.sk)[0]]}`:''}${S.eta<c.min?` · dai ${c.min} anni`:manca.length?` · serve: ${esc(manca.join(', '))}`:''}</div></div><button class="chip" data-corso="${c.id}" ${ho||lock||f?'disabled':''}>${ho?'Ottenuto':f?'Fatto':'Iscriviti'}</button></div>`}).join('')}</div>`;
   }
   const hb=HOBBY.find(x=>x.id===S.hobby);
@@ -8341,7 +8694,7 @@ function renderLavoro(V){
   if(L){const j=JOB[L.id];const nx=L.liv<j.liv.length-1?nomeJob(j,L.liv+1):null;
     const nm=nx?mancanti(j.promo&&j.promo[L.liv+1]):[];
     h+=`<div class="panel"><h3>${esc(L.nome)}</h3><div class="meta">${j.pt?'Part-time · ':''}${L.anni} ${L.anni===1?'anno':'anni'} in azienda · livello ${L.liv+1} di ${j.liv.length}</div>
-    ${isPiva(L)?`${kv(j.var?'Compensi medi (lordi annui)':'Compensi (lordi annui)',eur(ralEff(L)))}${kv('Netto al mese',eur(nettoPiva(ralEff(L),L)/12))}${kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">regime forfettario: contributi INPS e imposta sostitutiva · niente tredicesima, TFR e NASpI</span>`)}`
+    ${isPiva(L)?`${kv(j.var?'Compensi medi (lordi annui)':'Compensi (lordi annui)',eur(ralEff(L)))}${kv('Netto al mese',eur(nettoPiva(ralEff(L),L)/12))}${kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">regime forfettario: contributi INPS e imposta sostitutiva · niente tredicesima, ${S.anno>=1982?'TFR':'liquidazione'} e ${S.anno>=2015?'NASpI':'sussidio di disoccupazione'}</span>`)}`
      :`${kv(j.var?'Guadagno medio (lordo annuo)':L.ptv?'RAL in part-time (lordo annuo)':'RAL (lordo annuo)',eur(ralEff(L)))}${kv('Netto al mese (13 mensilità)',eur(netto(ralEff(L))/13))}${(()=>{const t=tasseDettaglio(ralEff(L));return kv('Tasse e contributi',`<span style="font-weight:400;color:var(--muted)">IRPEF ${eur(t.irpef)} · INPS ${eur(t.inps)} · addizionali ${eur(t.addiz)}</span>`)})()}`}
     ${nx?kv('Prossimo livello',esc(nx)+(nm.length?` <span style="color:var(--bad);font-weight:400">· serve ${esc(nm.join(', '))}</span>`:'')):''}
     ${kv('Contratto',descrContratto(L))}${kv('Rendimento',L.perf+'%')}${bar(L.perf,'--salute')}${kv('Soddisfazione',soddLavoro()+'%')}${bar(soddLavoro(),'--felicita')}<div class="meta">Affinità con i tuoi interessi: ${matchLavoro(L.id)}% · ${oreLavoro()} ore a settimana</div>
@@ -8355,7 +8708,7 @@ function renderLavoro(V){
       <button class="chip warn" data-lv="licenziati">Licenziati</button>
     </div></div>`;
   }else if(S.pensione)h+=`<div class="panel"><h3>In pensione</h3>${kv('Pensione netta al mese',eur(S.pensione/13)+' × 13')}${kv('Anni di contributi',Math.floor(S.contributi))}</div>`;
-  else h+=`<div class="panel"><div class="meta">Non hai un lavoro. Le offerte sono qui sotto: i requisiti dipendono da studi, certificazioni e abilità.</div>${S.contributi?kv('Anni di contributi',Math.floor(S.contributi)):''}${S.naspi?kv('NASpI',`${eur(naspiMese())} al mese · ancora ${S.naspi.mesi-S.naspi.m} mesi`):''}${S.sfl?kv('Supporto formazione e lavoro',`${eur(P(500))} al mese · ancora ${S.sfl.mesi-S.sfl.m} mesi`):''}</div>`;
+  else h+=`<div class="panel"><div class="meta">Non hai un lavoro. Le offerte sono qui sotto: i requisiti dipendono da studi, certificazioni e abilità.</div>${S.contributi?kv('Anni di contributi',Math.floor(S.contributi)):''}${S.naspi?kv(cap(S.naspi.nome||'NASpI'),`${eur(naspiMese())} al mese · ancora ${S.naspi.mesi-S.naspi.m} mesi`):''}${S.sfl?kv('Supporto formazione e lavoro',`${eur(P(500))} al mese · ancora ${S.sfl.mesi-S.sfl.m} mesi`):''}</div>`;
   if(S.eta>=18){
     h+='<div class="sec">Attività in proprio</div>';
     if(S.azienda){const A=S.azienda,T0=AZ(A.id),u=A.ultimo,pv=calcolaAzienda(A,true);
@@ -8372,7 +8725,7 @@ function renderLavoro(V){
     else h+=`<div class="panel"><div class="meta">Apri un bar, una pizzeria, una palestra o una startup. Decidi prezzi, qualità, pubblicità, dipendenti e sedi.</div><button class="btn ghost" id="btnImpresa">Apri un'attività</button></div>`;
   }
   if(!S.pensione){
-    const vis=LAVORI.filter(j=>!j.nascosto||S.fatti[j.nascosto]);
+    const vis=LAVORI.filter(j=>(!j.nascosto||S.fatti[j.nascosto])&&lavoroInEpoca(j));
     const righe=vis.map(j=>({j,m:requisitiJob(j)})).filter(x=>!soloDisponibili||!x.m.length);
     h+=`<div class="sec"><span>Offerte di lavoro</span><button class="chip" id="btnFiltro" style="padding:2px 10px;font-size:11px;font-family:var(--f-body);letter-spacing:0;text-transform:none">${soloDisponibili?'Mostra tutte':'Solo disponibili'}</button></div><div class="list">`;
     h+=righe.length?righe.map(({j,m})=>{const mio=L&&L.id===j.id,f=fatto('job_'+j.id);
@@ -8437,7 +8790,7 @@ function renderPersone(V){
 /* ---------- Beni ---------- */
 function renderBeni(V){
   const v=bilancioMese(true);const sv=costoRoutineMese();if(sv)v.push(['Svago e attività della settimana',-sv]);if(S.fatti.extraMese)v.push(['Lavoro extra (ultimo mese)',S.fatti.extraMese]);const tot=v.reduce((s,x)=>s+x[1],0);
-  let h=`<div class="sec">Finanze</div><div class="panel">${kv('Conto corrente',eur(S.soldi),S.soldi<0?'neg':'')}${kv('Patrimonio netto',eur(patrimonio()))}${kv('Prezzi rispetto alla tua nascita','×'+S.mondo.ip.toFixed(2).replace('.',','))}`;
+  let h=`<div class="sec">Finanze</div><div class="panel">${kv('Conto corrente',eur(S.soldi),S.soldi<0?'neg':'')}${kv('Patrimonio netto',eur(patrimonio()))}${kv('Prezzi rispetto alla tua nascita','×'+S.mondo.ip.toFixed(2).replace('.',','))}${S.eta>=18&&S.anno>=1998?kv('ISEE (stima)',eur(iseeStima())):''}`;
   if(v.length){h+=`<div class="meta" style="margin-top:4px">Bilancio previsto per ${MESI[(S.mese+1)%12]}</div>${v.map(([n,x])=>kv(esc(n),(x>0?'+':'')+eur(x),x>0?'pos':'neg')).join('')}<div class="kv tot"><span>Totale</span><b class="${tot>=0?'pos':'neg'}">${tot>=0?'+':''}${eur(tot)}</b></div>`}
   h+='</div>';
   const ab=S.casa,mia=casaMia();
@@ -8516,14 +8869,15 @@ function renderAttivita(V){
   if(attTab==='svago'){
     const sez=[...new Set(ATTIVITA.map(a=>a.sez))];
     for(const s0 of sez){
-      const acts=ATTIVITA.filter(a=>a.sez===s0&&(!a.max||S.eta<=a.max)&&(!a.cond||a.cond()));
+      const acts=ATTIVITA.filter(a=>a.sez===s0&&(!a.max||S.eta<=a.max)&&(!a.cond||a.cond())&&!fuoriEpoca(a.n+' '+(a.d||'')));
       if(!acts.length)continue;
       h+=`<div class="sec">${s0}</div><div class="grid2">${acts.map(a=>card(a,S.eta<a.min,!a.ripeti&&fatto('att_'+a.id),`data-att="${a.id}"`,P(a.costo),'att_'+a.id)).join('')}</div>`;
     }
   }
   if(attTab==='social'){
     const so=S.social;
-    if(S.eta<14)h+='<div class="panel"><div class="meta">Potrai aprire un profilo social a 14 anni: in Italia prima serve il consenso dei genitori.</div></div>';
+    if(S.anno<2008)h+='<div class="panel"><div class="meta">I social network in Italia arrivano verso il 2008. Per ora la fama si conquista in TV, sui giornali o in piazza.</div></div>';
+    else if(S.eta<14)h+='<div class="panel"><div class="meta">Potrai aprire un profilo social a 14 anni: in Italia prima serve il consenso dei genitori.</div></div>';
     else if(!so.attivo)h+=`<div class="panel"><h3>Non hai un profilo</h3><div class="meta">Con tanti follower arrivano sponsor, fama e qualche guaio. Da 5.000 follower i marchi iniziano a pagarti.</div><button class="btn" id="btnApriSocial">Apri un profilo</button></div>`;
     else{
       h+=`<div class="panel"><div class="big">${nf(so.follower)}</div><div class="meta">follower · fama ${S.fama}/100${redditoSocial()?` · circa ${eur(redditoSocial())} l'anno dalle collaborazioni`:''}</div></div>
@@ -8592,6 +8946,7 @@ function renderMorte(V){
    ${kv('Titolo di studio',esc(titoloLabel()))}
    ${kv('Ultimo lavoro',esc(S.ultimoLavoro||'Nessuno'))}
    ${kv('Patrimonio',eur(patrimonio()))}
+   ${patrimonio()>0?kv('Eredità',esc(testoSuccessione())):''}
    ${kv('Coniuge',con?esc(con.nome):'—')}
    ${kv('Figli',figli.length)}${nip?kv('Nipoti',nip):''}
    ${kv('Fedina penale',S.fedina.length?'Sporca':'Pulita')}

@@ -32,7 +32,7 @@ ev({id:'ado_corpo',min:13,max:15,once:1,t:'Lo spogliatoio',x:'Nello spogliatoio 
 
 /* ---------- Amicizie e amori ---------- */
 ev({id:'ado_compagnia',min:13,max:15,once:1,w:1.3,t:'La compagnia',x:'All\'inizio delle superiori si formano i gruppi. Due ti vogliono.',c:[
-  {l:'I ragazzi popolari',fx:()=>{nuovoAmico();cambiaPers('E',2);cambiaPers('A',-1);mod('felicita',3);return ['Feste, chat di gruppo e sabati in centro. Devi sempre essere all\'altezza.','g']}},
+  {l:'I ragazzi popolari',fx:()=>{nuovoAmico();cambiaPers('E',2);cambiaPers('A',-1);mod('felicita',3);return [`Feste, ${S.anno>=2008?'chat di gruppo':'telefonate interminabili'} e sabati in centro. Devi sempre essere all'altezza.`,'g']}},
   {l:'Il gruppo dei nerd',fx:()=>{nuovoAmico();cambiaPers('O',2);S.abil.tech=clamp(S.abil.tech+3);return ['Giochi di ruolo, film di fantascienza e battute che capite solo voi.','g']}},
   {l:'Un paio di amici veri, fuori dai gruppi',fx:()=>{const p=nuovoAmico();if(p)p.rapporto=clamp(p.rapporto+15);cambiaPers('A',1);cambiaPers('E',-1);return ['Pochi, ma buoni. Ci sarete gli uni per gli altri per anni.','g']}}]});
 ev({id:'ado_bacio',min:13,max:16,once:1,w:1.2,t:'Il primo bacio',x:'A una festa, una persona che ti piace si avvicina sempre di più.',c:[
@@ -77,7 +77,7 @@ ev({id:'ado_lavoro_genitori',min:13,max:17,once:1,t:'I soldi in casa',cond:()=>S
 ev({id:'ado_fratello_grande',min:13,max:17,once:1,t:'Tuo fratello',cond:()=>vivi(['Fratello']).some(f=>f.eta>S.eta),x:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);return `${f.nome} ti chiede di coprirl${gp(f,'o','a')} con i vostri genitori: stasera non dorme a casa.`},c:[
   {l:'Lo copri',fx:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);f.rapporto=clamp(f.rapporto+10);ricorda(f,'L\'hai copert'+gp(f,'o','a')+' con i genitori');cambiaPers('A',1);return ['Vi siete alleati. D\'ora in poi siete una squadra.','g']}},
   {l:'Lo dici ai tuoi',fx:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);f.rapporto=clamp(f.rapporto-15);ricorda(f,'L\'hai tradit'+gp(f,'o','a')+' con i genitori');cambiaPers('C',1);cambiaPers('A',-2);return [`${f.nome} non ti parla per un mese.`,'b']}},
-  {l:'Gli chiedi qualcosa in cambio',fx:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);f.rapporto=clamp(f.rapporto+2);cambiaPers('A',-1);cambiaPers('E',1);soldi(P(20));return ['Venti euro e la sua felpa preferita per un mese.','']}}]});
+  {l:'Gli chiedi qualcosa in cambio',fx:()=>{const f=vivi(['Fratello']).find(x=>x.eta>S.eta);f.rapporto=clamp(f.rapporto+2);cambiaPers('A',-1);cambiaPers('E',1);soldi(P(20));return [`${eur(P(20))} e la sua felpa preferita per un mese.`,'']}}]});
 ev({id:'ado_nonno_storia',min:13,max:17,once:1,t:'La storia del nonno',cond:()=>vivi(['Nonno']).length>0,x:d=>{d.p=d.p||pick(vivi(['Nonno']));return `${d.p.nome} ti racconta di quando aveva la tua età e se ne andò di casa per lavorare.`},c:[
   {l:'Lo ascolti fino alla fine e fai domande',fx:d=>{d.p.rapporto=clamp(d.p.rapporto+8);cambiaPers('A',1);cambiaPers('O',1);return ['Scopri un pezzo della tua famiglia che non conoscevi.','g']}},
   {l:'Registri la storia per non dimenticarla',fx:d=>{d.p.rapporto=clamp(d.p.rapporto+10);cambiaPers('C',1);cambiaPers('O',1);return ['Un giorno quella registrazione varrà più di tutto.','g']}},

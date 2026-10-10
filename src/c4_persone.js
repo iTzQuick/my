@@ -16,7 +16,7 @@ function initNpc(p){
   if(!p.ricordi)p.ricordi=[];
   if(p.stato===undefined){
     const e=p.eta;
-    p.stato=e<6?'bambino':e<19?'studente':e<25?(chance(.4)?'studente':chance(.8)?'lavora':'disoccupato'):e<67?(chance(.82)?'lavora':chance(.5)?'disoccupato':'casa'):'pensione';
+    p.stato=e<6?'bambino':e<19?'studente':e<25?(chance(.4)?'studente':chance(.8)?'lavora':'disoccupato'):e<67?(chance(occZona().occ)?'lavora':chance(.5)?'disoccupato':'casa'):'pensione';
     if(p.stato==='lavora'&&!p.lavoro)p.lavoro=lavoroPerNpc(p);
   }
   if(p.coppia===undefined){
@@ -32,7 +32,7 @@ function initNpc(p){
 }
 /* Un lavoro per una persona del gioco: diffuso come in Italia (DIFFUSIONE), con la quota di donne di ogni mestiere (DONNE) */
 function lavoroPerNpc(p){
-  const L=LAVORI.filter(j=>!j.pt&&!j.nascosto&&DIFFUSIONE[j.id]);
+  const L=LAVORI.filter(j=>!j.pt&&!j.nascosto&&DIFFUSIONE[j.id]&&lavoroInEpoca(j));
   const pesi=L.map(j=>{const f=DONNE[j.id]!==undefined?DONNE[j.id]:.42;const ses=p.sesso==='F'?f/.42:(1-f)/.58;return [j.id,DIFFUSIONE[j.id]*ses*(j.req&&j.req.lau?(p.pers&&p.pers.C>55?1.4:.6):1)]});
   return pesata(pesi);
 }
@@ -105,7 +105,7 @@ function mesePartner(p){
   if(conflitto>4.5&&chance(.12)&&!coda.length)coda.push({e:EV.lite_coppia,d:{p}});
   else if(h<3&&prima>40&&chance(.08)&&!coda.length)coda.push({e:EV.trascurato,d:{p}});
   if(p.ruolo==='Partner'&&!p.conv&&anni>=1.5&&p.rapporto>=65&&p.imp>=60&&chance(.03)&&S.eta>=19&&!coda.length&&S.carcere===0)coda.push({e:EV.proposta_conv,d:{p}});
-  if(p.ruolo==='Partner'&&p.conv&&anni>=2&&p.rapporto>=70&&p.imp>=70&&chance(.025)&&!coda.length)coda.push({e:EV.proposta_nozze,d:{p}});
+  if(p.ruolo==='Partner'&&p.conv&&anni>=2&&p.rapporto>=70&&p.imp>=70&&(p.sesso!==S.sesso||unioneCivilePossibile())&&chance(.025)&&!coda.length)coda.push({e:EV.proposta_nozze,d:{p}});
   if(p.ruolo==='Partner'&&p.rapporto<18&&chance(.25)){p.ruolo='Ex';p.conv=false;mod('felicita',-12);pesa(Math.round(8+prima/8),5);ricorda(p,'Vi siete lasciati');log(`${p.nome} ti lascia: «Non funziona più tra noi».`,'b');if(S.att==='ansioso')segnaVita('divorzio')}
   if(p.ruolo==='Coniuge'&&(p.rapporto<12&&chance(.05)||chance(.0011*(1+pz('N')*.5)*(1+ppz(p,'N')*.5)*(1.5-affinita(p)/100)))&&!coda.some(q=>q.e.id==='div_richiesta'))coda.push({e:EV.div_richiesta,d:{p}});
 }
@@ -216,9 +216,9 @@ function vitaNpc(p){
   if(e<18||p.ruolo==='Figlio'&&e<19)return;
   // lavoro
   if(p.stato==='casa'&&p.tornaLav&&S.t>=p.tornaLav){p.stato='lavora';p.tornaLav=0;if(!p.lavoro)p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} torna a lavorare.`,'h')}
-  if(p.stato==='lavora'&&chance(.003+(M.crisi?.012:0)+(A.C<35?.002:0))){p.stato='disoccupato';p.umore=clamp(p.umore-20);
+  if(p.stato==='lavora'&&chance((.003+(M.crisi?.012:0)+(A.C<35?.002:0))*occZona().perdi)){p.stato='disoccupato';p.umore=clamp(p.umore-20);
     p.lavT=0;if(!(p.rapporto>=50&&chance(.3)&&richiesta('r_lavoro_perso',p)))annuncia(p,`${p.nome} ha perso il lavoro.`,'b')}
-  else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1))){p.stato='lavora';p.lavoro=lavoroPerNpc(p);p.lavT=S.t;annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
+  else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1)*occZona().trova)){p.stato='lavora';p.lavoro=lavoroPerNpc(p);p.lavT=S.t;annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
   else if(p.stato==='lavora'&&chance(.002*(A.C/50))){annuncia(p,`${p.nome} ha avuto una promozione.`,'g');p.umore=clamp(p.umore+10)}
   // amore
   if(['Partner','Coniuge','Ex'].includes(p.ruolo))return;
@@ -229,7 +229,7 @@ function vitaNpc(p){
     return;
   }
   if(['single','separato','vedovo'].includes(p.coppia)&&e<65&&chance(.01*(.5+A.E/100))){nuovoCompagnoNpc(p);annuncia(p,`${cap(tuoR(p))} ${p.nome} ha una nuova relazione con ${p.pNome}.`,'h')}
-  else if(p.coppia==='coppia'&&S.t-(p.dalC||0)>=20&&e>=23&&e<60&&chance(.012)){p.coppia='sposato';if(p.pId){const q=persona(p.pId);if(q&&q.vivo)q.coppia='sposato'}
+  else if(p.coppia==='coppia'&&S.t-(p.dalC||0)>=20&&e>=23&&e<60&&(!coppiaStessoSesso(p)||unioneCivilePossibile())&&chance(.012)){p.coppia='sposato';if(p.pId){const q=persona(p.pId);if(q&&q.vivo)q.coppia='sposato'}
     if(vicino(p)&&!richiesta('r_matrimonio',p))annuncia(p,`${cap(tuoR(p))} ${p.nome} ${coppiaStessoSesso(p)?'celebra l\'unione civile con':'si sposa con'} ${p.pNome||'la persona che ama'}.`,'g');
     if(p.ruolo==='Fratello'&&!S.relazioni.some(x=>x.famDi===p.id))nuovaPersona('Cognato',p.pSesso||(p.sesso==='M'?'F':'M'),p.eta+r(-3,3),null,{rapporto:r(40,70),famDi:p.id,nome:p.pNome||undefined})}
   else if(['coppia','sposato'].includes(p.coppia)&&chance(.003*(1+(A.N-50)/60-(A.A-50)/80))){const sp=p.coppia==='sposato';p.coppia='separato';p.umore=clamp(p.umore-25);p.sepT=S.t;if(p.pId)separaNpc(p);

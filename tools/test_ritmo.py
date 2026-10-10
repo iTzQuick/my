@@ -72,7 +72,8 @@ JS = r'''
    if(id.startsWith('inc_'))d.x=id.slice(4);
    const SETUP={bim_catechismo:()=>{S.fatti.famRel=1},bim_ciclo:()=>{S.sesso='F'},bim_voce:()=>{S.sesso='M'},rag_terza_media:()=>{S.scuola.stato='medie'},
      rag_motorino_rubato:()=>{S.veicoli.push({id:S.nextId++,n:'Scooter 50',valore:1800,stato:100,costo:300})},rag_ripetizioni:()=>{S.scuola.voto=70},rag_debito:()=>{S.scuola.voto=40},
-     rag_agonismo:()=>{S.abil.sport=60},mez_tassi:()=>{S.anno=2022;const c={id:S.nextId++,tipo:'Bilocale',valore:200000,mutuo:{residuo:150000,rata:9000,anni:20}};S.prop.push(c);S.casa={tipo:'proprieta',pid:c.id}},
+     rag_agonismo:()=>{S.abil.sport=60},mez_tassi:()=>{S.anno=2022;const c={id:S.nextId++,tipo:'Bilocale',valore:200000,mutuo:{residuo:150000,rata:9000,anni:20,tipo:'var',tasso:.019}};S.prop.push(c);S.casa={tipo:'proprieta',pid:c.id};S.fatti.rataSu={t:S.t,da:9000,a:11500}},
+     ita_cig:()=>{S.anno=2009;assumi(JOB.ope)},ita_ritorno:()=>{S.fatti.emigrato={t:S.t-120,da:'Bari',prov:'BA'};S.citta='Milano';S.prov='MI';S.anno=2021;assumi(JOB.imp)},
      mez_condominio:()=>{const c={id:S.nextId++,tipo:'Bilocale',valore:200000};S.prop.push(c);S.casa={tipo:'proprieta',pid:c.id}},
      mez_bolletta:()=>{S.anno=2022},mez_menopausa:()=>{S.sesso='F'},mez_prostata:()=>{S.sesso='M'},mez_insonnia:()=>{S.bis.stress=70},mez_bilancia:()=>{S.bis.forma=30},mez_ponte:()=>{S.bis.stress=60},
      mez_domenica:()=>{S.fatti.capoCattivo=1},mez_sandwich:()=>{nuovaPersona('Figlio','M',6,S.cognome,{});S.relazioni.filter(x=>['Madre','Padre'].includes(x.ruolo)).forEach(x=>{x.eta=80;x.vivo=true})},

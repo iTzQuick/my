@@ -157,7 +157,7 @@ function capodanno(){
 /* ---------- Elezioni: la prima volta si sceglie, poi spesso si vota per abitudine ---------- */
 const conArt=pt=>/^[AEIOU]/.test(pt)?"l'"+pt:'il '+pt;
 function elezioniPolitiche(){
-  if(S.eta<18||S.carcere>0)return;
+  if(S.eta<etaVoto()||S.carcere>0)return;
   const F=S.fatti;
   if(!F.voto||chance(.3)){coda.push({e:EV.elezioni,d:{}});return}
   const vince=pick(PARTITI),v=F.voto;
@@ -237,7 +237,7 @@ ev({id:'cal_ferie_grandi',link:1,k:'Agosto',t:'Vengono ancora in vacanza?',x:d=>
   {l:'Si viene in famiglia, punto',pers:{C:1,A:-1},fx:d=>{d.p.rapporto=clamp(d.p.rapporto-6);ricorda(d.p,'Non l\'hai lasciat'+gp(d.p,'o','a')+' partire con gli amici');return ['Dieci giorni di musi lunghi sotto l\'ombrellone.','b']}},
   {l:'Un compromesso: una settimana a testa',pers:{A:1,C:1},fx:d=>{d.p.rapporto=clamp(d.p.rapporto+3);return ['Prima la famiglia, poi gli amici. Tutti scontenti a metà, quindi va benissimo.','']}}]});
 ev({id:'cal_ferie_soldi',link:1,k:'Agosto',t:'Quest\'anno non si parte?',x:d=>`Le solite ferie ${({mare:'al mare',monti:'in montagna',estero:'all\'estero'})[d.x]||''} costerebbero ${eur(costoFerie(d.x))}. Sul conto ne hai ${eur(S.soldi)}.`,c:[
-  {l:'Vacanze a casa, con le gite in giornata',pers:{C:1},fx:()=>{S.bis.stress=clamp(S.bis.stress-4);mod('felicita',-1);return ['Il lago a un\'ora di macchina, panini e asciugamano: un\'avventura low cost.','']}},
+  {l:'Vacanze a casa, con le gite in giornata',pers:{C:1},fx:()=>{S.bis.stress=clamp(S.bis.stress-4);mod('felicita',-1);return ['Il lago a un\'ora di macchina, panini e asciugamano: un\'avventura che costa quasi niente.','']}},
   {l:'Parti lo stesso, con la carta di credito',pers:{C:-2},fx:d=>{const c=costoFerie(d.x);soldi(-c);mod('felicita',5);S.bis.stress=clamp(S.bis.stress-10);return [`Una settimana bellissima. A settembre arriva l'estratto conto: ${eur(c)}.`,'']}},
   {l:'Ospite dai parenti al mare',cond:()=>vivi(['Zio','Cugino','Nonno','Fratello']).length>0,pers:{A:1},fx:()=>{mod('felicita',3);S.bis.stress=clamp(S.bis.stress-8);return ['La zia ti cede la stanza degli ospiti. In cambio: lavare i piatti per dieci giorni.','g']}}]});
 ev({id:'cal_lavoretto',link:1,k:'Estate',t:'Il primo lavoretto estivo',x:'Un amico di famiglia cerca qualcuno per l\'estate. Sono i primi soldi guadagnati da te.',c:[

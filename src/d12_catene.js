@@ -23,7 +23,7 @@ ev({id:'cat_vertenza',min:25,max:62,once:1,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id
 ev({id:'cat_vertenza2',link:1,cond:()=>!!S.lavoro,t:'La conciliazione',x:'Il sindacato ha chiesto all\'azienda il pagamento degli straordinari. L\'azienda propone un incontro di conciliazione.',c:[
   {l:'Accetti la proposta dell\'azienda',pers:{A:1},fx:()=>{const x=P(r(2500,4000));soldi(x);if(S.lavoro)S.lavoro.perf=clamp(S.lavoro.perf-2);return [`Firmi un accordo: ${eur(x)} di arretrati. Meno di quanto ti spettava, ma subito.`,'g']}},
   {l:'Rifiuti e vai in tribunale',pers:{C:1,A:-1},fut:[1.2,'cat_vertenza3'],fx:()=>pesa(5,2),r:'La causa parte. I colleghi ti guardano come un eroe, o come un pazzo.'},
-  {l:'Ti licenzi e cerchi altro',pers:{O:2,N:-1},fx:()=>{licenzia('Ti dimetti per giusta causa: con le dimissioni per giusta causa spetta anche la NASpI.');S.fatti.cercaAltro=S.t},r:'Una porta che si chiude. Le offerte sono nella scheda Lavoro.'}]});
+  {l:'Ti licenzi e cerchi altro',pers:{O:2,N:-1},fx:()=>{licenzia(`Ti dimetti per giusta causa: in questo caso spetta anche ${S.anno>=2015?'la NASpI':S.anno>=2013?"l'ASpI":"l'indennità di disoccupazione"}.`);S.fatti.cercaAltro=S.t},r:'Una porta che si chiude. Le offerte sono nella scheda Lavoro.'}]});
 ev({id:'cat_vertenza3',link:1,auto:{p:.6,si:{fx:()=>{const x=P(r(7000,14000));soldi(x);mod('felicita',8);return [`Sentenza del giudice del lavoro: l'azienda ti deve ${eur(x)} tra straordinari, interessi e spese. Hai vinto.`,'g']}},no:{fx:()=>{soldi(-P(2500));mod('felicita',-6);return ['Il giudice dà ragione all\'azienda: le ore in più non erano documentate abbastanza. Paghi le spese legali.','b']}}},t:'La sentenza'});
 
 /* ---------- Il figlio che torna a casa ---------- */
@@ -188,7 +188,7 @@ ev({id:'cat_tesi',min:21,max:30,once:1,cond:()=>['universita','magistrale'].incl
   {l:'Il professore famoso',pers:{E:1,C:1},x:'famoso',fut:[.4,'cat_tesi2'],r:'Ti accetta con una stretta di mano distratta. «Mi scriva.»'},
   {l:'La giovane ricercatrice',pers:{A:1,O:1},x:'giovane',fut:[.4,'cat_tesi2'],r:'Ti risponde in dieci minuti e ti propone tre argomenti bellissimi.'},
   {l:'Un argomento tutto tuo',pers:{O:3},x:'mio',fut:[.4,'cat_tesi2'],r:'Convinci un professore a seguire un\'idea tua. Sarà più difficile, ma è tua.'}]});
-ev({id:'cat_tesi2',link:1,cond:()=>iscritto(),t:'Silenzio',x:d=>d.x==='famoso'?'Il relatore non risponde alle email da due mesi. La sessione di laurea si avvicina.':'La tesi è a metà e ti sembra tutto sbagliato. La bibliografia è un mostro.',c:[
+ev({id:'cat_tesi2',link:1,cond:()=>iscritto(),t:'Silenzio',x:d=>d.x==='famoso'?(S.anno>=1999?'Il relatore non risponde alle email da due mesi. La sessione di laurea si avvicina.':'Il relatore non si fa trovare al ricevimento da due mesi. La sessione di laurea si avvicina.'):'La tesi è a metà e ti sembra tutto sbagliato. La bibliografia è un mostro.',c:[
   {l:'Ti presenti al ricevimento ogni settimana',pers:{C:2,E:1},fx:d=>{futuro(.3,'cat_tesi3',{x:'bene'})},r:'Alla quarta volta ti riconosce e ti dà le correzioni. In rosso, tantissime, ma ci sono.'},
   {l:'Scrivi giorno e notte',pers:{C:2,N:1},fx:d=>{S.bis.stress=clamp(S.bis.stress+10);futuro(.3,'cat_tesi3',{x:'bene'})},r:'Caffè, biblioteca, caffè. Centoventi pagine.'},
   {l:'Rimandi alla sessione dopo',pers:{C:-2},fx:d=>{futuro(.6,'cat_tesi3',{x:'tardi'})},r:'Sei mesi in più. Almeno dormi.'}]});
@@ -257,7 +257,7 @@ ev({id:'cat_sogno2',link:1,t:'Il conto «Tokyo»',x:'Il conto «Tokyo» è quasi
   {l:'Usi i soldi del viaggio per la macchina',pers:{C:2,O:-1},fx:()=>{soldi(-P(1500));futuro(2,'cat_sogno3',{x:'rinviato'})},r:'La macchina riparte. Il Giappone aspetta.'},
   {l:'La macchina può aspettare: prenoti il volo',pers:{O:2,C:-1},fx:()=>futuro(.3,'cat_sogno3',{x:'subito'}),r:'Biglietto comprato. Fino alla partenza vai al lavoro in autobus, sorridendo.'}]});
 ev({id:'cat_sogno3',link:1,t:'Giappone',x:d=>d.x==='rinviato'?'Due anni dopo, il conto «Tokyo» è di nuovo pieno. Questa volta niente scuse.':'Atterri a Tokyo. Dopo anni di sogni, sei davvero qui.',c:[
-  {l:'Tre settimane, da Tokyo a Kyoto',sub:()=>eur(P(4000)),costo:()=>P(4000),pers:{O:2},fx:()=>{segnaVita('viaggio');mod('felicita',15);S.bis.stress=clamp(S.bis.stress-15);return ['Templi all\'alba, treni puntuali al secondo, una tazza di tè in una casa da tè di Kyoto. Valeva ogni euro e ogni attesa.','g']}},
+  {l:'Tre settimane, da Tokyo a Kyoto',sub:()=>eur(P(4000)),costo:()=>P(4000),pers:{O:2},fx:()=>{segnaVita('viaggio');mod('felicita',15);S.bis.stress=clamp(S.bis.stress-15);return ['Templi all\'alba, treni puntuali al secondo, una tazza di tè in una casa da tè di Kyoto. Valeva ogni soldo e ogni attesa.','g']}},
   {l:'Una settimana sola, per non esagerare',sub:()=>eur(P(2200)),costo:()=>P(2200),pers:{C:1},fx:()=>{segnaVita('viaggio');mod('felicita',9);return ['Una settimana corsa, ma piena. Torni con la voglia di ripartire.','g']}}]});
 
 /* ---------- L'amico che sparisce ---------- */

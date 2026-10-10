@@ -94,7 +94,7 @@ ev({id:'r_separazione',link:1,k:'Amici e famiglia',t:'{P} si è lasciat{po}',x:d
   {l:'Ospita{lo} da te per qualche settimana',pers:{A:3},cond:()=>!['genitori','carcere','figlio'].includes(S.casa.tipo),fx:d=>{d.p.rapporto=clamp(d.p.rapporto+14);ricorda(d.p,'L\'hai ospitat'+gp(d.p,'o','a')+' quando si è lasciat'+gp(d.p,'o','a'));S.tensione=(S.tensione||0)+3;const pa=partnerAttuale();if(pa&&pa.conv)pa.intim=clamp(pa.intim-4);return ['Il divano diventa il suo letto per un mese. Ti sarà grat'+gp(d.p,'o','a')+' per sempre.','g']}},
   {l:'Un messaggio di conforto',fx:d=>{d.p.rapporto=clamp(d.p.rapporto+1);return ['«Se ti serve qualcosa, ci sono.»','']}}]});
 ev({id:'r_trasloco',link:1,k:'Amici e famiglia',t:'{P} se ne va',x:d=>`${d.p.nome} ti annuncia che si trasferisce a ${d.p.dove||'un\'altra città'} per lavoro.`,c:[
-  {l:'Organizza una cena d\'addio',pers:{E:1},sub:()=>eur(P(60)),costo:()=>P(60),fx:d=>{d.p.rapporto=clamp(d.p.rapporto+8);return ['Brindisi, abbracci e promesse di videochiamate.','g']}},
+  {l:'Organizza una cena d\'addio',pers:{E:1},sub:()=>eur(P(60)),costo:()=>P(60),fx:d=>{d.p.rapporto=clamp(d.p.rapporto+8);return [`Brindisi, abbracci e promesse di ${S.anno>=2010?'videochiamate':S.anno>=1995?'telefonate':'lettere'}.`,'g']}},
   {l:'Prometti di andar{lo} a trovare',fx:d=>{d.p.rapporto=clamp(d.p.rapporto+3);d.p.promessa=S.t;return ['Lo segni in agenda. A matita.','']}},
   {l:'Ci rimani male e non dici niente',pers:{N:1,E:-1},fx:d=>{d.p.rapporto=clamp(d.p.rapporto-4);mod('felicita',-3);return ['Il saluto è più freddo di quanto vorresti.','b']}}]});
 ev({id:'r_sfogo',link:1,k:'Amici e famiglia',t:'{P} ha bisogno di parlare',x:d=>`${d.p.nome} ti scrive alle undici di sera: «Sei sveglio? Ho bisogno di parlare.»`.replace('sveglio',g('sveglio','sveglia')),c:[
@@ -142,9 +142,9 @@ ev({id:'conto_rosso',link:1,k:'Soldi',t:'Il conto è in rosso',x:()=>`Da tre mes
   {l:'Taglia uscite e svago',fx:()=>{S.routine.uscite=0;S.routine.amici=Math.min(S.routine.amici||0,3);mod('felicita',-3);return ['Niente aperitivi per un po\'. Il conto ringrazia.','']}},
   {l:'Fai ore extra',sub:'+6 ore di lavoro extra a settimana',cond:()=>S.eta>=16,fx:()=>{const x=aggiungiOre('extra',6);return [x?'Più lavoro, meno tempo libero.':'Non hai ore libere da dedicare al lavoro extra.','']}},
   {l:'Chiedi aiuto ai genitori',cond:()=>genitoriVivi(),fx:()=>{const g0=pick(vivi(['Madre','Padre']));if(chance(.3+g0.rapporto/200)&&S.classe!=='umile'){const x=P(r(5,20)*100);soldi(x);g0.rapporto=clamp(g0.rapporto-3);return [`${g0.nome} ti fa un bonifico di ${eur(x)}. Con la predica inclusa.`,'']}g0.rapporto=clamp(g0.rapporto-5);return [`${g0.nome} dice che è ora che impari a gestirti.`,'b']}},
-  {l:'Fai finta di niente',fx:()=>{S.tensione=(S.tensione||0)+5;return ['Non apri l\'app della banca.','b']}}]});
+  {l:'Fai finta di niente',fx:()=>{S.tensione=(S.tensione||0)+5;return [S.anno>=2010?'Non apri l\'app della banca.':'Non apri gli estratti conto che arrivano per posta.','b']}}]});
 ev({id:'medico_forma',link:1,k:'Salute',t:'Il medico è chiaro',x:'Alla visita il medico ti misura la pressione e scuote la testa: «Lei si muove troppo poco.»',c:[
-  {l:'Cammina mezz\'ora al giorno',sub:'+3 ore di sport',fx:()=>{const x=aggiungiOre('sport',3);return [x?'Scarpe comode e podcast nelle orecchie.':'Non trovi il tempo. Per ora.','']}},
+  {l:'Cammina mezz\'ora al giorno',sub:'+3 ore di sport',fx:()=>{const x=aggiungiOre('sport',3);return [x?`Scarpe comode e ${S.anno>=2015?'podcast':'musica'} nelle orecchie.`:'Non trovi il tempo. Per ora.','']}},
   {l:'Iscriviti in palestra',sub:'+5 ore di sport',fx:()=>{const x=aggiungiOre('sport',5);return [x?'Abbonamento annuale. Stavolta ci vai davvero.':'La settimana è piena: niente palestra.','']}},
   {l:'Annuisci e non cambi niente',fx:()=>{mod('salute',-2);return ['«Sì sì, dottore.»','']}}]});
 ev({id:'console',link:1,k:'Famiglia',t:'Niente console',x:'I tuoi genitori hanno visto la pagella: troppe ore davanti allo schermo. Vogliono toglierti la console.',c:[
@@ -170,7 +170,7 @@ function emergenti(){
   if(F.soloN>=4&&S.t-(F.soloT||-99)>=12){F.soloT=S.t;coda.push({e:EV.solitudine,d:{}});return}
   if(F.rossoN>=3&&S.t-(F.rossoT||-99)>=Math.min(48,12*(1+(F.rossoV||0)))){F.rossoT=S.t;F.rossoV=(F.rossoV||0)+1;coda.push({e:EV.conto_rosso,d:{}});return}   // la seconda volta dopo 2 anni, poi 3, poi 4: nel frattempo resta la riga nel bilancio
   if(S.eta>=30&&B.forma<30&&chance(.02)&&S.t-(F.medT||-99)>=24){F.medT=S.t;coda.push({e:EV.medico_forma,d:{}});return}
-  if(S.eta>=9&&S.eta<17&&rOre('schermi')>=14&&iscritto()&&S.scuola.voto<48&&genitoriVivi()&&S.casa.tipo==='genitori'&&chance(.15)&&S.t-(F.consT||-99)>=12){F.consT=S.t;coda.push({e:EV.console,d:{}});return}
+  if(S.anno>=1985&&S.eta>=9&&S.eta<17&&rOre('schermi')>=14&&iscritto()&&S.scuola.voto<48&&genitoriVivi()&&S.casa.tipo==='genitori'&&chance(.15)&&S.t-(F.consT||-99)>=12){F.consT=S.t;coda.push({e:EV.console,d:{}});return}
   if(S.lavoro&&!JOB[S.lavoro.id].pt&&soddLavoro()<38&&chance(.04)&&S.t-(F.pesaT||-99)>=18){F.pesaT=S.t;coda.push({e:EV.lavoro_pesa,d:{}});return}
   if(S.lavoro&&!JOB[S.lavoro.id].pt&&S.lavoro.perf>=70&&chance(.012+pz('C')*.008)&&S.t-(F.progT||-99)>=24){F.progT=S.t;coda.push({e:EV.capo_progetto,d:{}});return}
   if(S.sonno<6.5&&B.energia<35&&chance(.15))log('Dormi troppo poco: ti trascini per tutta la giornata.','b');

@@ -66,7 +66,7 @@ function htmlEditor(){
     <div class="field"><label for="iNome">Nome</label><div class="in-d"><input id="iNome" value="${esc(C.nome)}" maxlength="20" autocomplete="off">${dadoBtn('dNome','Un altro nome')}</div></div>
     <div class="field"><label for="iCog">Cognome</label><div class="in-d"><input id="iCog" value="${esc(C.cognome)}" maxlength="20" autocomplete="off">${dadoBtn('dCog','Un altro cognome')}</div></div>`;
   if(C.tab==='dove'){
-    const gm=giorniMese(C.anno,C.mese),A=[];for(let a=annoOggi();a>=2000;a--)A.push(a);
+    const gm=giorniMese(C.anno,C.mese),A=[];for(let a=annoOggi();a>=1950;a--)A.push(a);
     return `
     <div class="field"><label for="iCom">Comune di nascita</label><div class="in-d cerca-com"><input id="iCom" type="search" value="${esc(C.com)} (${esc(C.prov)})" autocomplete="off" placeholder="Scrivi il nome del comune">${dadoBtn('dCom','Un comune a caso')}<div class="sugg" id="sugg" hidden></div></div>
       <div class="note">Uno qualsiasi dei ${nf(comuni().length)} comuni d'Italia.</div></div>
@@ -74,7 +74,7 @@ function htmlEditor(){
       <select id="iG" aria-label="Giorno">${Array.from({length:gm},(_,i)=>`<option ${i+1===C.giorno?'selected':''}>${i+1}</option>`).join('')}</select>
       <select id="iM" aria-label="Mese">${MESI.map((m,i)=>`<option value="${i}" ${i===C.mese?'selected':''}>${m}</option>`).join('')}</select>
       <select id="iA" aria-label="Anno">${A.map(a=>`<option ${a===C.anno?'selected':''}>${a}</option>`).join('')}</select></div>
-      <div class="note">Puoi nascere dal 2000 a oggi.</div></div>`;
+      <div class="note">Puoi nascere dal 1950 a oggi: fino al 2001 si paga in lire, e ogni epoca ha i suoi fatti e le sue leggi.</div></div>`;
   }
   if(C.tab==='famiglia')return `
     <div class="field"><label>Condizione della famiglia</label><div class="seg tre-seg">${CLASSI.map(([k,n])=>`<button data-cl="${k}" aria-pressed="${F.classe===k}">${n}</button>`).join('')}</div></div>
@@ -111,7 +111,7 @@ function renderCrea(V){
     <div class="crea-cta"><button class="btn" id="btnNasci">Nasci</button><button class="btn ghost" id="btnRnd">${ICO_DADO} Vita a caso</button></div>
   </div>`;
   const brp=$('#btnRiprendi');if(brp)brp.onclick=riprendiOnline;
-  $('#btnCarica').onclick=()=>showSheet({k:'Carica una partita',t:'Da dove la prendi?',p:'Scegli il file che avevi scaricato, oppure incolla il codice che avevi copiato.',chiudi:true,scelte:[{l:'Scegli il file di salvataggio',_incl:0,fx:()=>{caricaFile();return null}},{l:'Incolla un codice',_incl:0,fx:()=>{incollaCodice();return KEEP}}]});
+  $('#btnCarica').onclick=()=>showSheet({meta:1,k:'Carica una partita',t:'Da dove la prendi?',p:'Scegli il file che avevi scaricato, oppure incolla il codice che avevi copiato.',chiudi:true,scelte:[{l:'Scegli il file di salvataggio',_incl:0,fx:()=>{caricaFile();return null}},{l:'Incolla un codice',_incl:0,fx:()=>{incollaCodice();return KEEP}}]});
   V.querySelectorAll('[data-et]').forEach(b=>b.onclick=()=>{C.tab=b.dataset.et;disegnaEd()});
   $('#btnNasci').onclick=()=>nasci(datiVita());
   $('#btnRnd').onclick=()=>{bozzaCasuale();disegnaCert();disegnaEd();nasci(datiVita())};

@@ -4,7 +4,10 @@ const ip=()=>(S&&S.mondo?S.mondo.ip:1);
 const P=x=>Math.round(x*ip());
 /* Gli importi scritti nei testi («400 €», «1.800 €», con lo spazio normale) sono ai prezzi del 2026: prezzi() li porta all'anno del gioco.
    eur() scrive con lo spazio non separabile, quindi un testo già convertito non cambia. Usato da fogli, esiti, diario e attività. */
-const prezzi=s=>typeof s==='string'&&S&&S.mondo?s.replace(/(\d{1,3}(?:\.\d{3})+|\d+) €/g,(m,n)=>eur(P(+n.replace(/\./g,'')))):s;
+const prezzi=s=>typeof s==='string'&&S&&S.mondo?mutua(s.replace(/(\d{1,3}(?:\.\d{3})+|\d+) €/g,(m,n)=>eur(P(+n.replace(/\./g,''))))):s;
+/* prima del Servizio sanitario nazionale (dicembre 1978) ci si curava con la mutua */
+const MUTUA=[[/\bil Servizio sanitario(?! nazionale)/g,'la mutua'],[/\bIl Servizio sanitario(?! nazionale)/g,'La mutua'],[/\bdel Servizio sanitario(?! nazionale)/g,'della mutua'],[/\bdella sanità pubblica\b/g,'della mutua'],[/\b([Mm])edico di base\b/g,'$1edico della mutua']];
+const mutua=s=>S.anno>=1979?s:MUTUA.reduce((x,[a,b])=>x.replace(a,b),s);
 function gauss(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
 
 /* ---------- Mondo ---------- */
@@ -25,7 +28,7 @@ function annoMondo(){
     if(!M.bolla&&chance(.02)){M.bolla=r(3,5);notizia('Il mercato immobiliare impazzisce: i prezzi delle case salgono alle stelle.')}
     if(M.pensEta<71&&chance(.015)){M.pensEta++;notizia(`Riforma delle pensioni: ora ci si va a ${M.pensEta} anni.`)}
   }
-  M.infl=vero&&INFL_VERA[anno-1]!==undefined?INFL_VERA[anno-1]/100:(M.crisi?r(4,8):M.boom?r(2,4):r(1,3))/100+(M.pandemia?.01:0);
+  M.infl=vero&&(INFL_VERA[anno-1]??INFL_PRIMA[anno-1])!==undefined?(INFL_VERA[anno-1]??INFL_PRIMA[anno-1])/100:(M.crisi?r(4,8):M.boom?r(2,4):r(1,3))/100+(M.pandemia?.01:0);
   M.ip*=1+M.infl;
   M.mattone*=1+M.infl+(M.bolla?.06:0)-(M.crisi?.05:0)+r(-2,2)/100;
   for(const t of TITOLI){
@@ -52,8 +55,8 @@ function irpef(i){
   return t;
 }
 function detrazione(r0){const f=fattoreFisco();r0/=f;let d;if(r0<=15000)d=1955;else if(r0<=28000)d=1910+1190*(28000-r0)/13000;else if(r0<=50000)d=1910*(50000-r0)/22000;else d=0;return d*f}
-function netto(l){if(l<=0)return 0;const inps=l*.0919,imp=l-inps;const t=Math.max(0,irpef(imp)-detrazione(imp))+imp*.02;return Math.round(l-inps-t)}
-function tasseDettaglio(l){const inps=l*.0919,imp=l-inps;const ir=Math.max(0,irpef(imp)-detrazione(imp)),add=imp*.02;return {inps:Math.round(inps),irpef:Math.round(ir),addiz:Math.round(add),netto:Math.round(l-inps-ir-add)}}
+function netto(l){if(l<=0)return 0;const inps=l*.0919,imp=l-inps;const t=Math.max(0,irpef(imp)-detrazione(imp))+imp*aliqAddiz();return Math.round(l-inps-t)}
+function tasseDettaglio(l){const inps=l*.0919,imp=l-inps;const ir=Math.max(0,irpef(imp)-detrazione(imp)),add=imp*aliqAddiz();return {inps:Math.round(inps),irpef:Math.round(ir),addiz:Math.round(add),netto:Math.round(l-inps-ir-add)}}
 
 /* ---------- Borsa ---------- */
 function valoreBorsa(X){X=X||S;let t=0;for(const id in X.borsa)t+=X.borsa[id]*X.mondo.prezzi[id];return Math.round(t)}
@@ -272,7 +275,7 @@ function rimuoviSuoceri(p){S.relazioni=S.relazioni.filter(x=>x.famDi!==p.id||!['
 
 /* ---------- Dialoghi ---------- */
 function parla(p){
-  const temi=TEMI.filter(t=>!t.c&&(!t.min||S.eta>=t.min)&&(!t.max||S.eta<=t.max)&&(!t.pmin||p.eta>=t.pmin)&&(!t.solo||t.solo.includes(p.ruolo))&&(!t.etaMax||p.eta<=t.etaMax)&&(!t.basso||p.rapporto<60)&&(t.id!=='scuola_fig'||p.eta>=6));
+  const temi=TEMI.filter(t=>!t.c&&!fuoriEpoca(typeof t.l==='string'?t.l:'')&&(!t.min||S.eta>=t.min)&&(!t.max||S.eta<=t.max)&&(!t.pmin||p.eta>=t.pmin)&&(!t.solo||t.solo.includes(p.ruolo))&&(!t.etaMax||p.eta<=t.etaMax)&&(!t.basso||p.rapporto<60)&&(t.id!=='scuola_fig'||p.eta>=6));
   // gli argomenti legati a quello che sta vivendo (lutto, neonato, lavoro nuovo…) vengono per primi
   const ctx=TEMI.filter(t=>t.c&&(!t.min||S.eta>=t.min)&&t.c(p)).slice(0,2);
   const scelte=ctx.concat(shuffle(temi.filter(t=>!t.solo&&!t.basso)).slice(0,5-ctx.length)).concat(temi.filter(t=>t.solo||t.basso));
@@ -298,7 +301,8 @@ function colloquio(j){
   let score=0,i=0,mstip=1;
   const finale=()=>{
     const z=luogo().zona,M0=S.mondo;
-    const mercato=({'Nord-ovest':.03,'Nord-est':.04,Centro:-.03,Sud:-.12,Isole:-.13}[z]||0)-(S.eta<25?.05:0)-(S.eta>50?.1:0)-(S.eta>58?.1:0)-(M0.crisi?.12:0)+(M0.boom?.08:0);
+    const mercato=({'Nord-ovest':.03,'Nord-est':.04,Centro:-.04,Sud:-.2,Isole:-.22}[z]||0)   // al Sud si trova lavoro con meno della metà della facilità del Nord (disoccupazione 14% contro 5%)
+     -(S.eta<25?.05:0)-(S.eta>50?.1:0)-(S.eta>58?.1:0)-(M0.crisi?.12:0)+(M0.boom?.08:0);
     let p=.42+mercato+(S.intelligenza-50)/200+(S.aspetto-50)/400+Math.min(S.contributi,10)/40-(j.stip>40000?.15:0)-(S.fedina.length?.2:0)+(S.fatti.esperienza?.05:0)+S.fama/400+score*.06;
     p=Math.max(.04,Math.min(.92,p));
     let res;
@@ -328,7 +332,7 @@ function elezione(j){
     {l:'Candidati',costo:()=>P(5000),_incl:0,fx:()=>{if(chance(p)){assumi(j);mod('felicita',10);return [`Elett${g('o','a')}! Ora sei ${S.lavoro.nome.toLowerCase()}.`,'g']}mod('felicita',-6);pesa(5,2);return ['Pochi voti: questa volta non ce la fai.','b']}}]});
 }
 function concorso(j){
-  const qs=shuffle(QUIZ).slice(0,3);let giuste=0,i=0;
+  const qs=shuffle(QUIZ.filter(q=>!fuoriEpoca(JSON.stringify(q)))).slice(0,3);let giuste=0,i=0;
   const finale=()=>{
     const p=Math.max(.02,Math.min(.9,(.06+giuste*.24+(S.istr.liv>=3?.05:0)+(S.intelligenza-50)/500)*(j.cdiff||1)));   // notaio e magistrato: concorsi molto più difficili
     let res;

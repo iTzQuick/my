@@ -79,7 +79,7 @@ async function copiaCodice(){
   catch(e){mostraCodice(c);return KEEP}
 }
 function mostraCodice(c){
-  showSheet({k:'Salvataggio',t:'Il tuo codice',p:'Non è stato possibile copiarlo da solo. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
+  showSheet({meta:1,k:'Salvataggio',t:'Il tuo codice',p:'Non è stato possibile copiarlo da solo. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
   const t=document.createElement('textarea');t.className='codice';t.readOnly=true;t.value=c;$('#shA').prepend(t);setTimeout(()=>{t.focus();t.select()},50);
 }
 /* «Segnala un problema» (ROADMAP 0.7): diario degli ultimi 3 mesi, situazione e codice della partita, da incollare in chat */
@@ -94,7 +94,7 @@ async function segnalaProblema(){
   const diario=S.log.slice(-3).flatMap(b=>[`— ${MESI[b.mese]} ${b.anno} (${b.eta} anni)`,...b.righe.map(x=>'  '+x.t)]);
   const t=[...testa,...diario,'','Codice della partita (per ricaricarla):',await codiceDa(S)].join('\n');
   try{await navigator.clipboard.writeText(t);toast('Segnalazione copiata: incollala in chat e scrivi cosa non va.')}
-  catch(e){showSheet({k:'Segnala un problema',t:'La tua segnalazione',p:'Non è stato possibile copiarla da sola. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
+  catch(e){showSheet({meta:1,k:'Segnala un problema',t:'La tua segnalazione',p:'Non è stato possibile copiarla da sola. Tieni premuto nel riquadro, seleziona tutto e copia.',chiudi:true,scelte:[]});
     const a=document.createElement('textarea');a.className='codice';a.readOnly=true;a.value=t;$('#shA').prepend(a);setTimeout(()=>{a.focus();a.select()},50);return KEEP}
 }
 function caricaFile(){
@@ -103,7 +103,7 @@ function caricaFile(){
   i.click();
 }
 function incollaCodice(){
-  showSheet({k:'Carica una partita',t:'Incolla il codice',p:'Incolla qui il codice di salvataggio che avevi copiato.',chiudi:true,scelte:[]});
+  showSheet({meta:1,k:'Carica una partita',t:'Incolla il codice',p:'Incolla qui il codice di salvataggio che avevi copiato.',chiudi:true,scelte:[]});
   const w=document.createElement('div');w.className='cerca';
   w.innerHTML='<textarea class="codice" id="shCod" placeholder="VITAMIA1…" aria-label="Codice di salvataggio"></textarea><button class="btn" id="shCodOk">Carica</button>';
   $('#shA').prepend(w);
@@ -132,5 +132,5 @@ function apriSalvataggi(){
   ];
   if(SALVA.db)sc.unshift({l:'Salva online adesso',sub:'Sul tuo account claude.ai',fx:()=>{salvaOnline().then(ok=>toast(ok?'Salvato online.':'Salvataggio online non riuscito.'));return null}});
   sc.forEach(c=>c._incl=0);
-  showSheet({k:'Salvataggio',t:'La tua partita',p:statoSalvataggio(),chiudi:true,scelte:sc});
+  showSheet({meta:1,k:'Salvataggio',t:'La tua partita',p:statoSalvataggio(),chiudi:true,scelte:sc});
 }
