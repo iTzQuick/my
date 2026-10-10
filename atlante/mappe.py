@@ -175,7 +175,8 @@ PF.update({"()=>.45+pz('E')*.25":"45%, di più se sei estroverso/a","()=>.4+pz('
 "()=>.45+pz('C')*.35":"45%, di più se sei coscienzioso/a","()=>.5+pz('O')*.3":"50%, di più se sei aperto/a"})
 PC.update({"p=>p.rapporto>=70&&amorePossibile(p)&&ricambia(p)":"è un amico o un'amica con rapporto almeno 70, ti piace, ricambia e ha un'età compatibile"})
 # ottobre 2026: famiglia, regole italiane, storia vera
-COND.update({"()=>!!S.orient&&S.orient!=='etero'":"Non sei eterosessuale (orientamento deciso alla nascita)","()=>!S.provano&&!S.gravidanza":"Non state già provando ad avere un figlio e non aspettate un bambino",
+COND.update({"()=>aspAttive().length<3&&aspLiberi().length>0":"Hai meno di 3 sogni ancora da realizzare e ne restano da scegliere","()=>aspAttive().length>0&&aspLiberi().length>0":"Hai almeno un sogno ancora da realizzare e ne restano da scegliere","()=>aspAttive().length>0":"Hai almeno un sogno ancora da realizzare","()=>aspAttive().length===0":"Hai già realizzato tutti i tuoi sogni",
+"()=>!!S.orient&&S.orient!=='etero'":"Non sei eterosessuale (orientamento deciso alla nascita)","()=>!S.provano&&!S.gravidanza":"Non state già provando ad avere un figlio e non aspettate un bambino",
 "()=>!inSeparazione()":"Non sei in attesa di un divorzio","()=>S.anno>=2010":"Dal 2010 in poi","()=>S.eta<12":"Hai meno di 12 anni","()=>S.eta<16":"Hai meno di 16 anni","()=>S.eta>=12":"Hai almeno 12 anni",
 "()=>S.eta>=14":"Hai almeno 14 anni","()=>S.social.attivo":"Hai un profilo social","()=>gr()===2":"La malattia si può curare","()=>gr()===4&&!tum()":"È una malattia grave che non guarisce (cuore, fegato)",
 "()=>{const x=m();return !!(x&&x.tum)}":"È un tumore","d=>!!(d&&d.p&&d.p.sesso===S.sesso)":"Siete una coppia dello stesso sesso (unione civile)","d=>!unioneCivile(d)":"Siete una coppia di sesso diverso",

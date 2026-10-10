@@ -417,6 +417,7 @@ function compleanno(){
   if(S.carcere===0)presentaAmici(S.eta<14?'Alla tua festa':'Alla tua cena di compleanno');
   if(S.eta>=30&&S.eta%10===0)auguriDalPassato();
   if(S.eta>=18&&S.eta<=60&&!S.aspir&&S.carcere===0)coda.push({e:EV.aspirazioni,d:{}});
+  else if(S.aspir&&S.eta>=25&&S.eta<=75&&S.carcere===0&&coda.length<2&&S.eta-(S.fatti.aspEta||18)>=(aspAttive().length?9:4)&&aspLiberi().length&&chance(.5)){const da=S.fatti.aspEta||18;S.fatti.aspEta=S.eta;coda.push({e:EV.asp_ripensa,d:{da}})}
   controllaNaja();
 }
 function tappe(){
@@ -732,6 +733,7 @@ function load(){
 function aggiornaStato(){
   if(S.montante===undefined)S.montante=Math.round((S.contributi||0)*(S.lavoro?S.lavoro.stip:P(25000))*.33*1.1);
   if(!S.lav48)S.lav48=[];
+  if(S.aspir&&!S.aspTappe)S.aspir.forEach(id=>{if(ASPIR[id])aspAvvia(id)});
   if(S.lavoro&&!S.lavoro.contratto)S.lavoro.contratto=PIVA.includes(S.lavoro.id)?{t:'piva',da:S.t-60}:{t:'ind'};
   if(!S.orient)S.orient=S.attrazione?(S.attrazione==='E'?'bi':S.attrazione===S.sesso?'omo':'etero'):pesata([['etero',94],['omo',3],['bi',3]]);
   if(!S.fatti.cittaNascita){S.fatti.cittaNascita=S.citta;S.fatti.provNascita=S.prov}

@@ -36,6 +36,7 @@ python tools/ritmo.py 40        # Fase 1: eventi possibili per fascia d'età, ca
 python tools/test_ritmo.py      # apre ogni evento cal_ e inc_ (o un altro prefisso: pic_ bim_ rag_ mez_ cat_ leg_ mem_ edu_ cop_) nella situazione giusta, M e F, e clicca ogni risposta (-v per leggere i testi)
 python tools/persone.py 40      # Fase 2: amici stretti legati ad altre persone (≥95%), ricordi di 10 anni prima che tornano (≥5 per vita), gruppi, stile da genitore → «FASE 2: FATTA ✓»
 python tools/italia_vera.py 25  # Fase 3: vite nate nel 1950, 1965, 1980, 2000 (o anni scelti: italia_vera.py 25 1955 1970): anacronismi → «nessuno ✓», lire, pensione per anno, naja, occupati e stipendi per zona, screening, cassa integrazione, emigrati
+python tools/test_aspir.py 30   # Fase 5.1: tappe di ogni sogno (l'ultima = ok(), una volta sola, +2 di felicità), salvataggi vecchi, eventi asp_, mai più di 3 sogni aperti
 ```
 
 **Dopo ogni modifica:** `build.py` → controllo sintassi → `fuzz.py` → `lint_testi.py` (se tocchi testi o prezzi) → `invarianti.py` (almeno 100 vite se tocchi persone, famiglia, coppia o soldi) → `archivio_salvataggi.py` (se tocchi lo stato o i salvataggi) → `sim.py` (almeno 40 vite se tocchi formule o probabilità; `realismo.py` con 400+ vite se tocchi salute, morte, lavoro o famiglia: con meno vite la media dell'età alla morte oscilla di ±1,5 anni) → `italia_vera.py` se scrivi testi legati a un'epoca o tocchi leggi, prezzi, lavoro e territorio.
@@ -75,7 +76,7 @@ VitaMia/
 │  ├─ c9_epoca.js        ITALIA VERA (Fase 3.1): EPOCA (da che anno ha senso ogni parola), filtro degli anacronismi, lavori e corsi per anno, pensione con le regole dell'anno, divorzio, unione civile, voto a 21 anni, naja
 │  ├─ d_eventi.js        eventi «classici» (definisce EV e ev())
 │  ├─ d2_eventi2.js      eventi aggiuntivi: catene, regionali, storici, rari
-│  ├─ d3_emergenti.js    calendario, coppia, richieste delle persone, incontri, eventi dallo stato (burnout…), diagnosi, aspirazioni
+│  ├─ d3_emergenti.js    calendario, coppia, richieste delle persone, incontri, eventi dallo stato (burnout…), diagnosi, aspirazioni (e `asp_`: ripensare i sogni)
 │  ├─ d4_infanzia.js     65 eventi 1–12 anni che FORMANO IL CARATTERE
 │  ├─ d5_adolescenza.js  36 eventi 13–17 anni che formano il carattere
 │  ├─ d6_adulti.js       31 eventi 18+ con scelte che formano il carattere (lavoro, coppia, figli, vecchiaia)
@@ -138,7 +139,7 @@ Una sola variabile globale `S` (salvata come JSON, chiave `vitamia_save_v4`; `lo
 ### Il mese — `mese()` in c_motore.js (ordine esatto)
 1. `t++`, avanza mese/anno, pulisce le azioni scadute, nuovo blocco di diario
 2. **gennaio** → `inizioAnno()`: mondo/Borsa, fama, nemici, beni, azienda, clan, pensioni e stipendi rivalutati, bilancio dell'anno
-3. **mese di nascita** → `eta++`, `compleanno()`: tappe, maturazione del carattere, attaccamento a 4 anni, aspirazioni a 18, pensione
+3. **mese di nascita** → `eta++`, `compleanno()`: tappe, maturazione del carattere, attaccamento a 4 anni, aspirazioni a 18 (e dai 25, circa ogni 10 anni, `asp_ripensa`), pensione
 4. carcere → `meseNpc()` (vita degli altri) → `chiudiGruppi()` + `meseSociale()` (gruppi, coppie e liti tra le tue persone, scelte da genitore) → `meseFamiglia()` (tentativi, gravidanza, parto) → animali → scuola → `calendario()` (settembre inizio scuola, giugno fine anno; Natale, ferie, Capodanno in d8_ritmo.js) → `storiaMese()` (fatti veri fino al 2026)
 5. `meseLavoro()` → `meseItalia()` (TFR, contributi, NASpI, SFL) → `normalizzaRoutine()` → `meseRoutine()` (effetti delle ore) → `bisogni()` → `finanzeMese()` → `meseSalute()`
 6. conseguenze rimandate (`S.futuri`, in mesi) → `controllaMorte()` (rischio annuo diviso sui 12 mesi)
@@ -208,6 +209,13 @@ Ogni persona ha `pers`, `tr` (tratto riassuntivo usato dai dialoghi), `mn` (mese
 - **Stile da genitore** (`S.genit = {cal, reg, st}`): calore e regole (modello di Baumrind: autorevole, permissivo, autoritario, distaccato). Si muovono piano verso il tuo carattere e le ore con i figli, e con le scelte degli eventi `edu_` (`gen:{cal,reg}` sulla scelta, applicato da `applica()`; `eduMese()` ne propone una ogni tanto finché i figli vivono con te). Ogni anno `crescitaFiglio(p)` sposta il carattere dei figli secondo lo stile (`STILE_GEN`); a 18 anni `bilancioFiglio(p)` racconta com'è diventato e quanto ti somiglia. Nella scheda Persone: «Come genitore sei…».
 - **Volti per tutti**: nella lista delle persone, in alto a destra nei fogli che riguardano una persona (`d.p`) o chi stai conoscendo (`d.cand.look`), al funerale nel necrologio (`funerale()`: chi viene e il ricordo che ha di te).
 - Salvataggi vecchi: `iniziaLegami()` (in `aggiornaStato`) mette amici e conoscenti nei gruppi secondo `p.dove`.
+
+### Aspirazioni (c3_vita.js, d3_emergenti.js — ROADMAP Fase 5.1)
+- `ASPIR[id] = {n, ok(), w(), tappe:[{n,d,c,p}]}` (costruito da `ASP()`): ogni sogno è una scala di 3 tappe con nome `n`, cosa serve `d`, condizione `c` e avanzamento 0–1 verso la tappa `p` (facoltativo). **L'ultima tappa è sempre `ok()`** (`ASP` la completa da sola quando la condizione è `null`). Esempi: carriera = lavoro stabile → livello 1 → livello 2; sapere = diploma → laurea → magistrale; casa = fuori di casa → un anno di affitto (`S.fatti.affMesi`) → casa propria; viaggi = 1/3/6; altri = karma 60 → 75 (o 65 con 24 mesi di volontariato `S.fatti.volMesi` o 5.000 € donati) → 85; ricchezza = 25%/50%/100% dei 500.000 € (a prezzi dell'anno).
+- `S.aspTappe[id] = [null | {t,anno,eta,pre}]`: le tappe raggiunte restano per sempre (un divorzio non toglie «mi sono sposato»); `pre:1` = già fatta quando il sogno è stato scelto (`aspAvvia(id)`, senza premi né diario; lo usa anche `aggiornaStato()` per i salvataggi vecchi). `aspAltezza(id)` = ultima tappa vera adesso (le precedenti valgono come raggiunte), `aspProg(id)` = 0–1 per la barra, `aspAttive()` = sogni scelti e non ancora realizzati.
+- `meseAspir()`: ogni tappa nuova dà +2 di felicità (`mod`) e una riga di diario; il sogno intero +12, il momento `sogno` per il film e +4 all'umore per sempre (al massimo per 2 sogni). Dopo i 45 anni ogni sogno aperto toglie `2×(1−avanzamento)`.
+- **Ripensare i sogni**: da `compleanno()` (c_motore.js), dai 25 ai 75 anni, 9 anni dopo l'ultima scelta (`S.fatti.aspEta`; 4 se non c'è nessun sogno aperto), con probabilità 50% l'anno: `asp_ripensa` → aggiungere (`asp_nuovo`), cambiare (`asp_cambia` → `asp_nuovo`) o restare. **Al massimo 3 sogni aperti**; i sogni realizzati restano nella lista (necrologio: «Sogni realizzati N su M») e non si lasciano; chi viene lasciato esce da `S.aspir` ma le sue tappe restano in `S.aspTappe` (`S.fatti.aspLasciati` li conta).
+- Interfaccia: bottone «I tuoi sogni» nella scheda Vita → `mostraSogni()` / `testoSogni()` (barra, tappe con l'età, prossima tappa); la scheda Carattere mostra le percentuali; il necrologio le tappe per sogno e l'anno di quello realizzato.
 
 ### Eventi
 Definizione: `ev({id, min, max, w, once, rip, cond, chi, pc, link, auto, prig, t, x, k, c})`
@@ -322,13 +330,14 @@ Se aggiungi un file di eventi in `src/`, aggiungilo anche alla lettura delle sez
 ---
 
 ## Numeri attuali
-764 eventi, ~2.120 risposte (~1.200 con `pers`); eventi possibili per età (`ritmo.py`): 0–5 → 104, 6–12 → 190, 13–17 → 160, 18–25 → 231, 26–40 → 261, 41–65 → 266, 66+ → 192; 29 catene di almeno 3 passi; nessun evento oltre le 10 volte per vita (i più frequenti: propositi, Natale, ferie ~7–8). 81 lavori, 22 facoltà, 19 corsi, 9 attività in proprio, 48 attività, 7.904 comuni; si nasce dal 1950 (storia vera fino al 2026).
+767 eventi, ~2.120 risposte (~1.200 con `pers`); eventi possibili per età (`ritmo.py`): 0–5 → 104, 6–12 → 190, 13–17 → 160, 18–25 → 231, 26–40 → 261, 41–65 → 266, 66+ → 192; 29 catene di almeno 3 passi; nessun evento oltre le 10 volte per vita (i più frequenti: propositi, Natale, ferie ~7–8). 81 lavori, 22 facoltà, 19 corsi, 9 attività in proprio, 48 attività, 7.904 comuni; si nasce dal 1950 (storia vera fino al 2026).
 
 ## Idee e cose da fare
 La roadmap completa, con priorità e criteri di «fatto», è in **ROADMAP.md** (fasi 0–7: zero errori, ritmo, persone, Italia vera, corpo e mente, scopo, interfaccia, misura del realismo). La lista dettagliata di cosa manca e cosa non va (errori con il punto del codice, dati veri da usare, fonti) è in **ANALISI.md** (ottobre 2026): le correzioni del punto 3 sono fatte; restano le aggiunte del punto 4 (animali, viaggi, regioni, feste, sanità…); i nuovi lavori del punto 4.6, i contratti di lavoro e il divario uomo-donna sono fatti.
 - Carattere da adulti: fatto (d6_adulti.js, `pers` sulle richieste delle persone e su ~25 eventi adulti classici). Si potrebbe estendere ad altri eventi di d_eventi/d2 (per ora solo quelli dove la scelta dice chiaramente qualcosa del carattere).
 - Fase 1 (ritmo e varietà) fatta nell'ottobre 2026: calendario, incontri, eventi 26–65, infanzia e adolescenza, catene, momenti chiave.
 - Fase 2 (persone vere) fatta nell'ottobre 2026: gruppi e legami tra le persone, ricordi che tornano, conversazioni nel contesto, stile da genitore, crisi e terapia di coppia, volti. Prossime nella ROADMAP: Fasi 5, 4, 6.
+- Fase 5.1 (aspirazioni con progressi visibili) fatta nell'ottobre 2026: tappe per ogni sogno, foglio «I tuoi sogni», ripensare i sogni dai 25 anni. Restano 5.2–5.4.
 - Fase 3 (Italia vera) fatta nell'ottobre 2026: si nasce dal 1950 con le lire e la storia vera, nessun anacronismo, pensioni con le regole dell'anno, naja, zone (stipendi, occupazione, costo della vita, emigrazione e ritorno), cassa integrazione, addizionali, assegno unico, ISEE, successione legittima, mutuo fisso o variabile con i tassi veri, screening dell'ASL, liste d'attesa, «mutua» prima del 1979.
 - Più eventi per la terza età legati alla vita del mese (nipoti, salute, solitudine, il circolo).
 - Un «pilota automatico» giocabile: far vivere il personaggio da solo secondo il carattere (la base c'è in `tools/autopilota.js`).

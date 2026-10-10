@@ -131,7 +131,7 @@ function renderVita(V){
     <div class="frase">${esc(umoreFrase())}</div>
     ${!SALVA.locale&&!SALVA.db?`<div class="avviso">Questo browser non conserva la partita: se chiudi la pagina la perdi. <button class="chip" id="btnAvvSalva">Salvala</button></div>`:''}
     ${S.eta>=3?`<div class="needs">${needBar('Energia',B.energia,'--salute')}${needBar('Stress',B.stress,'',1)}${needBar('Socialità',B.soc,'--aspetto')}${needBar('Forma',B.forma,'--intel')}</div>`:''}
-    <div class="row-btns"><button class="chip" id="btnCar">Carattere: ${esc(descrPers(S.pers,S.sesso))}</button>${S.eta>=6&&S.carcere===0?'<button class="chip" id="btnSett">La tua settimana</button>':''}${(S.momenti||[]).length?`<button class="chip" id="btnMom">I tuoi momenti (${S.momenti.length})</button>`:''}</div>
+    <div class="row-btns"><button class="chip" id="btnCar">Carattere: ${esc(descrPers(S.pers,S.sesso))}</button>${S.eta>=6&&S.carcere===0?'<button class="chip" id="btnSett">La tua settimana</button>':''}${S.aspir&&S.aspir.length?'<button class="chip" id="btnSogni">I tuoi sogni</button>':''}${(S.momenti||[]).length?`<button class="chip" id="btnMom">I tuoi momenti (${S.momenti.length})</button>`:''}</div>
     <div class="row-btns ff"><span class="meta">Avanti veloce</span><button class="chip" data-ff="3">3 mesi</button><button class="chip" data-ff="6">6 mesi</button><button class="chip" data-ff="12">1 anno</button></div></div>`;
   const mondo=`<div class="mondo"><div class="mondo-h"><span>Il mondo · ${S.anno}</span><span>Inflazione ${(M.infl*100).toFixed(1).replace('.',',')}% · prezzi ×${M.ip.toFixed(2).replace('.',',')}</span></div>${st.length?`<div class="tags">${st.map(x=>`<span class="tag bad">${x}</span>`).join('')}</div>`:''}${ult.map(n=>`<div class="news"><b>${n.anno}</b> ${esc(n.t)}</div>`).join('')}</div>`;
   // diario: raggruppa per anno di età
@@ -147,11 +147,18 @@ function renderVita(V){
   V.innerHTML=(S.eta>=6?mondo:'')+diario+(tags.length?`<div class="tags" style="padding:10px 0 2px">${tags.map(([n,b])=>`<span class="tag${b?' bad':''}">${esc(n)}</span>`).join('')}</div>`:'')+ora;
   const bc=$('#btnCar');if(bc)bc.onclick=mostraCarattere;
   const bav=$('#btnAvvSalva');if(bav)bav.onclick=apriSalvataggi;
+  const bso=$('#btnSogni');if(bso)bso.onclick=mostraSogni;
   const bm=$('#btnMom');if(bm)bm.onclick=()=>filmVita(false);
   const bs=$('#btnSett');if(bs)bs.onclick=()=>{tab='attivita';attTab='settimana';render();$('#view').scrollTop=0};
   V.querySelectorAll('[data-ff]').forEach(b=>b.onclick=()=>avanti(+b.dataset.ff));
   requestAnimationFrame(()=>{V.scrollTop=V.scrollHeight});
 }
+function sogniNecro(){
+  return S.aspir.filter(id=>ASPIR[id]).map(id=>{
+    const A=ASPIR[id],a=aspTappeDi(id),n=a.filter(Boolean).length,ok=(S.aspOk||[]).includes(id),u=a[a.length-1];
+    return kv(T(A.n),ok?`realizzato${u&&!u.pre?` nel ${u.anno}, a ${u.eta} anni`:''}`:`${n} tappe su ${a.length}`)}).join('');
+}
+function mostraSogni(){showSheet({k:'Quello che vuoi',t:'I tuoi sogni',p:testoSogni(),chiudi:true,scelte:[],meta:1})}
 /* Com'eri e cosa ti ha cambiato */
 function storiaCarattere(){
   let t='';
@@ -181,7 +188,7 @@ function mostraCarattere(){
   const righe=B5.map(b=>{const v=Math.round(p[b.k]);const lab=v>=62?b.hi[v>=78?1:0][f]:v<=38?b.lo[v<=22?1:0][f]:'Nella media';return `${b.n}: ${v}/100 · ${lab}. ${v>=62?b.dhi:v<=38?b.dlo:'Né un estremo né l\'altro.'}`});
   const it=interessi().slice(0,3).map(x=>RIASEC[x[0]]).join(', ');
   const A=S.att?ATTACCAMENTI[S.att]:null;
-  const txt=righe.join('\n\n')+(A?`\n\nStile di attaccamento: ${A.n.toLowerCase()}. ${A.d}`:'')+(S.eta>=10?`\n\nInteressi (codice Holland ${codiceRiasec()}): ${it.toLowerCase()}. I lavori in linea con i tuoi interessi ti danno più soddisfazione.`:'')+(S.aspir?`\n\nAspirazioni: ${S.aspir.map(id=>T(ASPIR[id].n).toLowerCase()+((S.aspOk||[]).includes(id)?' (realizzata)':'')).join(', ')}.`:'')+storiaCarattere()+'\n\nIl carattere guida le tue reazioni: le scelte «da te» ti costano meno, quelle «non è da te» ti stressano di più. Cambia lentamente con l\'età e con quello che vivi.';
+  const txt=righe.join('\n\n')+(A?`\n\nStile di attaccamento: ${A.n.toLowerCase()}. ${A.d}`:'')+(S.eta>=10?`\n\nInteressi (codice Holland ${codiceRiasec()}): ${it.toLowerCase()}. I lavori in linea con i tuoi interessi ti danno più soddisfazione.`:'')+(S.aspir?`\n\nAspirazioni: ${S.aspir.filter(id=>ASPIR[id]).map(id=>T(ASPIR[id].n).toLowerCase()+((S.aspOk||[]).includes(id)?' (realizzata)':` (${Math.round(aspProg(id)*100)}%)`)).join(', ')}.`:'')+storiaCarattere()+'\n\nIl carattere guida le tue reazioni: le scelte «da te» ti costano meno, quelle «non è da te» ti stressano di più. Cambia lentamente con l\'età e con quello che vivi.';
   const txtG=f?txt.replace(/da solo\b/g,'da sola').replace(/\blo (stanca|spegne)/g,'la $1'):txt;   // le descrizioni dei tratti sono scritte al maschile
   showSheet({k:'Carattere',t:`${S.nome}: ${descrPers(p,S.sesso)}`,p:txtG,chiudi:true,scelte:[]});
 }
@@ -500,7 +507,7 @@ function renderMorte(V){
   <p>Si è ${g('spento','spenta')} a ${S.eta} anni, ${esc(S.causa)}. ${ricordo}</p>
   <div class="facts">
    ${kv('Carattere',esc(descrPers(S.pers,S.sesso)))}
-   ${S.aspir?kv('Sogni realizzati',`${(S.aspOk||[]).length} su ${S.aspir.length}`):''}
+   ${S.aspir?kv('Sogni realizzati',`${(S.aspOk||[]).length} su ${S.aspir.length}`)+sogniNecro():''}
    ${kv('Titolo di studio',esc(titoloLabel()))}
    ${kv('Ultimo lavoro',esc(S.ultimoLavoro||'Nessuno'))}
    ${kv('Patrimonio',eur(patrimonio()))}

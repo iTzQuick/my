@@ -197,8 +197,27 @@ ev({id:'diagnosi',link:1,k:'Salute',t:'La diagnosi',x:d=>{const m=S.malattie.fin
 /* ---------- Aspirazioni ---------- */
 function sceltaAspir(primo){
   return Object.entries(ASPIR).filter(([id])=>id!==primo).map(([id,A])=>({l:T(A.n),_incl:Math.max(-1,Math.min(1,A.w()*1.6)),fx:()=>{
-    if(!primo){S.aspir=[id];coda.unshift({e:EV.aspirazioni2,d:{x:id}});return null}
-    S.aspir=[primo,id];return [`Le tue aspirazioni: ${T(ASPIR[primo].n).toLowerCase()} e ${T(A.n).toLowerCase()}. Realizzarle ti renderà più felice; mancarle, col tempo, pesa.`,'g']}}));
+    if(!primo){S.aspir=[id];aspAvvia(id);S.fatti.aspEta=S.eta;coda.unshift({e:EV.aspirazioni2,d:{x:id}});return null}
+    S.aspir=[primo,id];aspAvvia(primo);aspAvvia(id);return [`Le tue aspirazioni: ${T(ASPIR[primo].n).toLowerCase()} e ${T(A.n).toLowerCase()}. Realizzarle ti renderà più felice; mancarle, col tempo, pesa.`,'g']}}));
 }
 ev({id:'aspirazioni',link:1,k:'Diventare grandi',t:'Che cosa vuoi dalla vita?',x:'Sei maggiorenne. Tra tutte le cose che una vita può dare, qual è quella che conta di più per te?',c:()=>sceltaAspir(null)});
 ev({id:'aspirazioni2',link:1,k:'Diventare grandi',t:'E poi?',x:d=>`Al primo posto: ${T(ASPIR[d.x].n).toLowerCase()}. Che cos'altro desideri?`,c:d=>sceltaAspir(d.x)});
+
+/* ---------- Ripensare i sogni ---------- */
+// dai 25 anni, circa ogni 10 (si apre da compleanno() in c_motore.js): al massimo 3 sogni ancora da realizzare
+const aspLiberi=()=>Object.keys(ASPIR).filter(id=>!(S.aspir||[]).includes(id)&&!ASPIR[id].ok());
+const aspStato=id=>{const A=ASPIR[id];return `${T(A.n).toLowerCase()} (${(S.aspOk||[]).includes(id)?'realizzato':Math.round(aspProg(id)*100)+'%'})`};
+ev({id:'asp_ripensa',link:1,k:'Quello che vuoi',t:'Che cosa vuoi, adesso?',x:d=>{
+  const anni=S.eta-(d.da||18);
+  return `Sono passati ${anni>=8?'una decina d\'anni':anni+' anni'} da quando hai deciso che cosa conta di più. Rileggi i tuoi sogni: ${(S.aspir||[]).map(aspStato).join(', ')}. Sono ancora quelli?`},c:()=>[
+  {l:'Aggiungo un nuovo sogno',sub:'Al massimo tre sogni da realizzare insieme',cond:()=>aspAttive().length<3&&aspLiberi().length>0,_incl:0,fx:()=>{coda.unshift({e:EV.asp_nuovo,d:{x:null}});return null}},
+  {l:'Ne cambio uno',sub:'Quello che hai fatto resta tuo',cond:()=>aspAttive().length>0&&aspLiberi().length>0,_incl:0,fx:()=>{coda.unshift({e:EV.asp_cambia,d:{}});return null}},
+  {l:'Resto sulla mia strada',cond:()=>aspAttive().length>0,_incl:0,pers:{C:1},r:'I sogni sono quelli di sempre. Cambiano i passi, non la direzione.'},
+  {l:'Va bene così',cond:()=>aspAttive().length===0,_incl:0,pers:{N:-1},fx:()=>{mod('felicita',2);return ['Hai quello che volevi. Per ora non ti serve altro, e non è poco.','g']}}]});
+ev({id:'asp_cambia',link:1,k:'Quello che vuoi',t:'Che cosa lasci andare?',x:'Non si può inseguire tutto. Quale dei sogni ancora aperti lasci andare?',c:()=>aspAttive().map(id=>({l:T(ASPIR[id].n),sub:`${Math.round(aspProg(id)*100)}% della strada`,_incl:0,fx:()=>{coda.unshift({e:EV.asp_nuovo,d:{x:id}});return null}}))
+  .concat([{l:'Ci ripenso',_incl:0,r:'Per ora resta tutto com\'è.'}])});
+const aspNuovoTesto=(x,id)=>`${x?`Lasci andare ${T(ASPIR[x].n).toLowerCase()}. Da ora`:'Da ora'} vuoi anche questo: ${T(ASPIR[id].n).toLowerCase()}.`;
+ev({id:'asp_nuovo',link:1,k:'Quello che vuoi',t:'E adesso?',x:d=>d.x?`Lasci andare ${T(ASPIR[d.x].n).toLowerCase()}. Che cosa desideri, al suo posto?`:'Che cosa desideri, in più?',c:d=>aspLiberi().map(id=>{const A=ASPIR[id];return {l:T(A.n),_incl:Math.max(-1,Math.min(1,A.w()*1.6)),fx:()=>{
+  S.aspir=(S.aspir||[]).filter(z=>z!==d.x);if(d.x)S.fatti.aspLasciati=(S.fatti.aspLasciati||0)+1;
+  S.aspir.push(id);aspAvvia(id);
+  return [aspNuovoTesto(d.x,id),'g']}}}).concat([{l:'Ci ripenso',_incl:0,r:'Per ora resta tutto com\'è.'}])});

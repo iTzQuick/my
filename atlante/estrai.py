@@ -90,7 +90,7 @@ const att=ATTIVITA.map(a=>({sez:a.sez,n:a.n,d:a.d,costo:a.costo,min:a.min,ripeti
 const attC=AZ_CARCERE.map(a=>({n:a.n,d:a.d}));
 const citta=CITTA.concat(CITTA_ESTERE).map(c=>({n:c.n,mq:c.mq,estero:!CITTA.includes(c),affitti:AFFITTI.map(a=>({t:a.t,anno:affittoBase(a.t,c.n).costo})),case:CASE_TIPI.map(t=>({t:t.t,mq:t.mq,prezzo:Math.round(t.mq*c.mq*(t.k||1)*(.75+80/400)/1000)*1000}))}));
 const nuovo={b5:B5,attacc:ATTACCAMENTI,riasec:RIASEC,attR:ATT_R.map(a=>({id:a.id,n:a.n,d:a.d,min:a.min,cond:a.cond?src(a.cond):null})),
- aspir:Object.entries(ASPIR).map(([id,A])=>({id,n:tok(A.n),ok:src(A.ok),w:src(A.w)})),
+ aspir:Object.entries(ASPIR).map(([id,A])=>({id,n:tok(A.n),ok:src(A.ok),w:src(A.w),tappe:A.tappe.map(t=>({n:tok(t.n),d:tok(t.d),c:t.c===A.ok?'(= il sogno è realizzato)':src(t.c)}))})),
  incl:INCL.map(([k,sg,re])=>({k,sg,parole:re.source.replace(/^\\b\(|\)$/g,'').split('|').map(w=>w.replace(/\\/g,''))})),
  segna:SEGNA,cd:['crim_x','mis_x','post_x','esame_x','corso_x','c_condotta','c_palestra','aumento','promo','nuoviamici','collega','compra_fol','clan'].map(k=>[k,cdAzione(k)])};
 return {ev,lavori,...nuovo,corsi,att,attC,citta,

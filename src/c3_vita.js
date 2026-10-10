@@ -529,27 +529,99 @@ function avanti(n){
   render();
 }
 
-/* ---------- Aspirazioni: ciò che dà senso alla vita ---------- */
+/* ---------- Aspirazioni: ciò che dà senso alla vita ----------
+   Ogni aspirazione è una scala di tappe [nome, cosa serve, condizione, avanzamento 0–1 verso quella tappa].
+   L'ultima tappa è sempre l'ok() del sogno (ASP la completa da sola). S.aspTappe[id] = [null | {t,anno,eta,pre}]:
+   le tappe raggiunte restano anche se la situazione cambia; «pre» = già raggiunta quando il sogno è stato scelto. */
+const ASP=(n,ok,w,t)=>({n,ok,w,tappe:t.map(([nome,d,c,p])=>({n:nome,d,c:c||ok,p}))});
 const ASPIR={
-  famiglia:{n:'Avere una famiglia',ok:()=>!!S.relazioni.find(p=>p.vivo&&(p.ruolo==='Coniuge'||(p.ruolo==='Partner'&&p.conv)))&&S.relazioni.some(p=>p.ruolo==='Figlio'),w:()=>pz('A')*.6+pz('C')*.2},
-  carriera:{n:'Fare carriera',ok:()=>(S.lavoro&&S.lavoro.liv>=2)||(S.azienda&&S.azienda.sedi>=2),w:()=>pz('C')*.5+pz('E')*.3-pz('A')*.1},
-  ricchezza:{n:'Diventare ricc{o}',ok:()=>patrimonio()>=P(500000),w:()=>-pz('A')*.4+pz('E')*.2},
-  fama:{n:'Diventare famos{o}',ok:()=>S.fama>=40,w:()=>pz('E')*.5+pz('O')*.2-pz('A')*.2},
-  viaggi:{n:'Vedere il mondo',ok:()=>(S.fatti.viaggi||0)>=6,w:()=>pz('O')*.6+pz('E')*.2},
-  sapere:{n:'Studiare e capire il mondo',ok:()=>S.istr.liv>=4,w:()=>pz('O')*.5+pz('C')*.3},
-  altri:{n:'Aiutare gli altri',ok:()=>S.karma>=85,w:()=>pz('A')*.7},
-  casa:{n:'Una casa tutta mia',ok:()=>!!casaMia(),w:()=>pz('C')*.4-pz('O')*.2},
-  serenita:{n:'Una vita serena',ok:()=>(S.fatti.sereni||0)>=60,w:()=>-pz('O')*.2+pz('N')*.3}
+  famiglia:ASP('Avere una famiglia',()=>!!S.relazioni.find(p=>p.vivo&&(p.ruolo==='Coniuge'||(p.ruolo==='Partner'&&p.conv)))&&S.relazioni.some(p=>p.ruolo==='Figlio'),()=>pz('A')*.6+pz('C')*.2,[
+    ['Una vita in due','Andare a vivere con qualcuno o sposarti',()=>!!S.relazioni.find(p=>p.vivo&&(p.ruolo==='Coniuge'||(p.ruolo==='Partner'&&p.conv)))],
+    ['Un figlio','Avere il tuo primo figlio',()=>S.relazioni.some(p=>p.ruolo==='Figlio')],
+    ['Una famiglia tua','Un figlio e qualcuno accanto a te']]),
+  carriera:ASP('Fare carriera',()=>(S.lavoro&&S.lavoro.liv>=2)||(S.azienda&&S.azienda.sedi>=2),()=>pz('C')*.5+pz('E')*.3-pz('A')*.1,[
+    ['Un lavoro stabile','Un contratto stabile, la partita IVA o un\'attività tua',()=>!!S.azienda||(!!S.lavoro&&['ind','piva','carica'].includes((S.lavoro.contratto||{t:'ind'}).t))],
+    ['Il primo avanzamento','Salire al primo livello della carriera',()=>!!S.lavoro&&S.lavoro.liv>=1],
+    ['Il vertice','Il terzo livello della carriera o un\'azienda con due sedi']]),
+  ricchezza:ASP('Diventare ricc{o}',()=>patrimonio()>=P(500000),()=>-pz('A')*.4+pz('E')*.2,[
+    ['Un quarto della strada','Un quarto del patrimonio che sogni',()=>patrimonio()>=P(125000),()=>patrimonio()/P(125000)],
+    ['Metà strada','La metà del patrimonio che sogni',()=>patrimonio()>=P(250000),()=>patrimonio()/P(250000)],
+    ['Ricc{o} davvero','Un patrimonio di 500.000 €',null,()=>patrimonio()/P(500000)]]),
+  fama:ASP('Diventare famos{o}',()=>S.fama>=40,()=>pz('E')*.5+pz('O')*.2-pz('A')*.2,[
+    ['Qualcuno ti riconosce','Fama almeno 10',()=>S.fama>=10,()=>S.fama/10],
+    ['Hai un nome','Fama almeno 25',()=>S.fama>=25,()=>S.fama/25],
+    ['Famos{o}','Fama almeno 40',null,()=>S.fama/40]]),
+  viaggi:ASP('Vedere il mondo',()=>(S.fatti.viaggi||0)>=6,()=>pz('O')*.6+pz('E')*.2,[
+    ['Il primo viaggio','Un viaggio che conta',()=>(S.fatti.viaggi||0)>=1,()=>(S.fatti.viaggi||0)/1],
+    ['Tre viaggi','Tre viaggi che contano',()=>(S.fatti.viaggi||0)>=3,()=>(S.fatti.viaggi||0)/3],
+    ['Il mondo visto','Sei viaggi che contano',null,()=>(S.fatti.viaggi||0)/6]]),
+  sapere:ASP('Studiare e capire il mondo',()=>S.istr.liv>=4,()=>pz('O')*.5+pz('C')*.3,[
+    ['Il diploma','Prendere il diploma',()=>S.istr.liv>=2],
+    ['La laurea','Laurearti',()=>S.istr.liv>=3],
+    ['La magistrale','Prendere la laurea magistrale']]),
+  altri:ASP('Aiutare gli altri',()=>S.karma>=85,()=>pz('A')*.7,[
+    ['Una brava persona','Karma almeno 60',()=>S.karma>=60,()=>S.karma/60],
+    ['Un aiuto che dura','Karma almeno 75, o 65 con due anni di volontariato o una bella donazione',()=>S.karma>=75||(S.karma>=65&&((S.fatti.volMesi||0)>=24||LX().donato>=5000)),()=>S.karma/75],
+    ['Un punto di riferimento','Karma almeno 85',null,()=>S.karma/85]]),
+  casa:ASP('Una casa tutta mia',()=>!!casaMia(),()=>pz('C')*.4-pz('O')*.2,[
+    ['Fuori di casa','Andare a vivere fuori dalla casa dei genitori',()=>S.eta>=18&&!['genitori','figlio','carcere'].includes(S.casa.tipo)],
+    ['Un affitto tuo','Un anno in una casa in affitto',()=>(S.fatti.affMesi||0)>=12,()=>(S.fatti.affMesi||0)/12],
+    ['Casa tua','Vivere in una casa di proprietà']]),
+  serenita:ASP('Una vita serena',()=>(S.fatti.sereni||0)>=60,()=>-pz('O')*.2+pz('N')*.3,[
+    ['Un anno sereno','12 mesi con poco stress e buon umore',()=>(S.fatti.sereni||0)>=12,()=>(S.fatti.sereni||0)/12],
+    ['Due anni e mezzo','30 mesi sereni',()=>(S.fatti.sereni||0)>=30,()=>(S.fatti.sereni||0)/30],
+    ['Cinque anni di pace','60 mesi sereni',null,()=>(S.fatti.sereni||0)/60]])
 };
+/* quante tappe sono vere adesso (indice dell'ultima vera, -1 se nessuna); le precedenti valgono come raggiunte */
+function aspAltezza(id){const T=ASPIR[id].tappe;for(let i=T.length-1;i>=0;i--)if(T[i].c())return i;return -1}
+function aspTappeDi(id){
+  S.aspTappe=S.aspTappe||{};const n=ASPIR[id].tappe.length,a=S.aspTappe[id]||[];
+  return S.aspTappe[id]=Array.from({length:n},(_,i)=>a[i]||null);
+}
+/* quante tappe ha già raggiunto + quanto manca alla prossima, da 0 a 1 */
+function aspProg(id){
+  const T=ASPIR[id].tappe,a=aspTappeDi(id);let k=0;while(k<T.length&&a[k])k++;
+  if(k>=T.length)return 1;
+  const p=T[k].p?Math.max(0,Math.min(.95,T[k].p())):0;
+  return Math.min(1,(k+p)/T.length);
+}
+/* quando si sceglie un sogno (o si carica una partita vecchia) le tappe già fatte si segnano senza premi né diario */
+function aspAvvia(id){
+  const a=aspTappeDi(id),k=aspAltezza(id);
+  for(let i=0;i<=k;i++)if(!a[i])a[i]={t:S.t,anno:S.anno,eta:S.eta,pre:1};
+}
+const aspAttive=()=>(S.aspir||[]).filter(id=>ASPIR[id]&&!(S.aspOk||[]).includes(id));
+/* testo del foglio «I tuoi sogni»: per ogni sogno la barra, le tappe fatte (con l'età) e la prossima */
+function barraTesto(f,n=10){const k=Math.round(Math.max(0,Math.min(1,f))*n);return '▰'.repeat(k)+'▱'.repeat(n-k)}
+function testoSogni(){
+  const ids=(S.aspir||[]).filter(id=>ASPIR[id]);
+  if(!ids.length)return 'Non hai ancora deciso che cosa conta di più per te. Succederà a 18 anni.';
+  const blocco=id=>{
+    const A=ASPIR[id],a=aspTappeDi(id),ok=(S.aspOk||[]).includes(id),pr=ok?1:aspProg(id);
+    const righe=A.tappe.map((t,i)=>{
+      const prossima=!a[i]&&(i===0||a[i-1]);
+      return `${a[i]?'✓':prossima?'›':'·'} ${T(t.n)}${a[i]?(a[i].pre?' (già fatto)':` · ${a[i].eta} anni`):prossima?` — ${T(t.d)}`:''}`}).join('\n');
+    const extra=id==='altri'&&((S.fatti.volMesi||0)>0||LX().donato>0)?`\nVolontariato: ${S.fatti.volMesi||0} mesi · Donato: ${eur(LX().donato*S.mondo.ip)}`:id==='serenita'?`\nMesi sereni: ${S.fatti.sereni||0}`:id==='viaggi'?`\nViaggi che contano: ${S.fatti.viaggi||0}`:'';
+    return `${T(A.n)}${ok?' — realizzato':''}\n${barraTesto(pr)} ${Math.round(pr*100)}%\n${righe}${extra}`};
+  return ids.map(blocco).join('\n\n')+'\n\nOgni tappa raggiunta ti dà un po\' di felicità; il sogno intero molta di più. Più avanti potrai ripensare cosa vuoi.';
+}
 function meseAspir(){
+  if(S.eta>=18&&S.casa.tipo==='affitto')S.fatti.affMesi=(S.fatti.affMesi||0)+1;
+  if(rOre('volont')>0)S.fatti.volMesi=(S.fatti.volMesi||0)+1;
   if(!S.aspir||!S.aspir.length)return 0;
   if(S.bis.stress<35&&S.felicita>=62)S.fatti.sereni=(S.fatti.sereni||0)+1;
-  S.aspOk=S.aspOk||[];let b=0;
+  S.aspOk=S.aspOk||[];let b=0,veri=0;
   for(const id of S.aspir){
     const A=ASPIR[id];if(!A)continue;
-    if(S.aspOk.includes(id)){b+=4;continue}
-    if(A.ok()){S.aspOk.push(id);mod('felicita',12);log(`Un sogno realizzato: ${T(A.n).toLowerCase()}.`,'g');b+=4}
-    else if(S.eta>=45)b-=2;
+    if(S.aspOk.includes(id)){if(++veri<=2)b+=4;continue}
+    const a=aspTappeDi(id),k=aspAltezza(id),ult=A.tappe.length-1;let ultima=-1;
+    for(let i=0;i<=k;i++)if(!a[i]){a[i]={t:S.t,anno:S.anno,eta:S.eta};if(i<ult){mod('felicita',2);ultima=i}}
+    if(k===ult){S.aspOk.push(id);mod('felicita',12);log(`Un sogno realizzato: ${T(A.n).toLowerCase()}.`,'g');b+=4;veri++;
+      if(typeof momento==='function')momento('sogno',{tit:T(A.n),sub:'Un sogno realizzato',txt:'Quello che volevi dalla vita, adesso ce l\'hai.'})}
+    else{
+      if(ultima>=0)log(`Un passo verso un sogno (${T(A.n).toLowerCase()}): ${T(A.tappe[ultima].n).toLowerCase()}.`,'g');
+      if(S.eta>=45)b-=2*(1-aspProg(id));
+    }
   }
   return b;
 }

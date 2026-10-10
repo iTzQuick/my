@@ -101,7 +101,7 @@ Misura: `python tools/persone.py 60` → amici stretti legati ad altre persone d
 ---
 
 ## Fase 5 — Scopo a ogni età (🟠, M)
-- 5.1 **Aspirazioni con progressi visibili** (oggi realizzata sì/no) e traguardi per ogni aspirazione, non solo per la ricchezza.
+- 5.1 ✅ **Aspirazioni con progressi visibili**: ogni sogno è una scala di 3 tappe (l'ultima è il sogno), con barra e tappe nel foglio «I tuoi sogni»; si possono ripensare dai 25 anni, al massimo 3 aperti. Fatta (ottobre 2026): vedi «Aspirazioni» in CLAUDE.md, `tools/test_aspir.py`.
 - 5.2 **Vecchiaia piena**: nipoti, viaggi, volontariato, solitudine, testamento dettagliato (a chi lasci cosa), «ultimo desiderio».
 - 5.3 **Lavoro vissuto**: colleghi e capo come persone persistenti, progetti, scelte di carriera (cambiare settore, mettersi in proprio, emigrare).
 - 5.4 **Eredità tra generazioni**: giocare come figlio con la casa, i debiti, i rancori e le collezioni dei genitori.

@@ -8,7 +8,7 @@ let momentiDaMostrare=[];
 const animMomenti=()=>!navigator.webdriver||/[?&]anim(=|&|$)/.test(location.search);
 const MOM={
   laurea:{k:'Laurea'},lavoro:{k:'Il primo lavoro'},matrimonio:{k:'Un sì'},figlio:{k:'Una nascita'},pensione:{k:'La pensione'},
-  diploma:{k:'Diploma',muto:1},casa:{k:'Casa tua',muto:1},nipote:{k:'Un nipote',muto:1},nascita:{k:'La nascita',muto:1},fine:{k:'Fine',muto:1}
+  diploma:{k:'Diploma',muto:1},casa:{k:'Casa tua',muto:1},nipote:{k:'Un nipote',muto:1},sogno:{k:'Un sogno',muto:1},nascita:{k:'La nascita',muto:1},fine:{k:'Fine',muto:1}
 };
 function momento(tipo,o){
   if(!S||!MOM[tipo])return;
