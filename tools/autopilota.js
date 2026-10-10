@@ -30,6 +30,8 @@ window.AP={
   if(tit==='Un figlio?'&&vivi(['Figlio']).length>=F.apFigli){const b=L.find(x=>/Non ancora|Non voglio/.test(x.textContent));if(b){b.click();return true}}
   let best=null,bv=-9;
   for(const b of L.filter(x=>!/Cambia preferenze/.test(x.textContent))){const em=b.querySelector('em.incl');let v=Math.random()*1.2;if(em)v+=em.classList.contains('ok')?1:-1;if(v>bv){bv=v;best=b}}
+  // resta solo «Cambia preferenze» (tutto il resto già fatto o troppo caro): si chiude il foglio
+  if(!best){const c=bs.find(x=>x.classList.contains('close'));if(c){c.click();return true}return false}
   best.click();return true;
  },
  routine(){
