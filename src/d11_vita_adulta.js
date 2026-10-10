@@ -89,11 +89,11 @@ ev({id:'mez_sandwich',min:35,max:58,rip:8,cond:()=>figliTra(0,13).length>0&&vivi
   {l:'Ti prendi una sera solo per te',pers:{N:-1},fx:()=>{S.bis.stress=clamp(S.bis.stress-6);mod('felicita',3)},r:'Un cinema da sol{o}. Ti senti in colpa per dieci minuti, poi benissimo.'}]});
 
 /* ---------- Lavoro e colleghi ---------- */
-ev({id:'mez_merito',min:24,max:66,rip:8,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id].pt,t:'Il merito',x:'In riunione un collega presenta come sua l\'idea che gli avevi raccontato davanti alla macchinetta.',c:[
+ev({id:'mez_merito',min:24,max:66,rip:8,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id].pt,t:'Il merito',x:d=>{if(d.n===undefined)d.n=pick(squadra().colleghi)||null;return d.n?`In riunione ${d.n.nome} presenta come sua l'idea che ${gp(d.n,'gli','le')} avevi raccontato davanti alla macchinetta.`:'In riunione un collega presenta come sua l\'idea che gli avevi raccontato davanti alla macchinetta.'},c:[
   {l:'Lo fai notare, con calma, davanti a tutti',pers:{E:2,A:-1},p:.6,si:{e:{perf:5},r:'«Ne avevamo parlato insieme, giusto?» Il capo capisce al volo.'},no:{e:{perf:-1},pers:{N:1},r:'Il collega nega con un sorriso. Clima gelido per mesi.'}},
   {l:'Ne parli dopo con il capo',pers:{C:1},e:{perf:3},r:'Il capo prende nota. La prossima idea la mandi per email, con la data.'},
   {l:'Lasci perdere',pers:{A:1,N:1},e:{perf:-2},r:'Il collega viene promosso sei mesi dopo. Coincidenze.'}]});
-ev({id:'mez_capo_giovane',min:42,max:66,once:1,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id].pt,t:'Il nuovo capo',x:'Il nuovo responsabile ha quindici anni meno di te e dice spesso «facciamo sinergia».',c:[
+ev({id:'mez_capo_giovane',min:42,max:66,once:1,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id].pt&&!squadra().capo,t:'Il nuovo capo',x:'Il nuovo responsabile ha quindici anni meno di te e dice spesso «facciamo sinergia».',c:[
   {l:'Gli offri la tua esperienza',pers:{A:2,O:1},e:{perf:4},r:'Diventi il suo punto di riferimento. Lui porta le idee, tu sai dove sono le trappole.'},
   {l:'Lo aspetti al varco',pers:{A:-2},e:{perf:-3},r:'Sbaglia una scadenza e tu non lo avvisi. Il clima in ufficio peggiora per tutti.'},
   {l:'Fai il tuo e basta',pers:{E:-1},r:'Le riunioni si allungano, il tuo lavoro resta lo stesso.'}]});

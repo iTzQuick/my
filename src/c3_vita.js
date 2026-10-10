@@ -138,7 +138,7 @@ function soddLavoro(){
   const j=JOB[L.id];
   const m=matchLavoro(L.id);
   const paga=Math.min(25,netto(L.stip)/P(1000));
-  return clamp(m*.55+paga+(L.perf-50)*.2+(L.liv*3)-(S.fatti.capoCattivo?15:0));
+  return clamp(m*.55+paga+(L.perf-50)*.2+(L.liv*3)+Math.round(capoEsito()*10));
 }
 
 /* ---------- Routine settimanale ---------- */
@@ -304,7 +304,7 @@ function bisogni(){
   let tSt=22+Math.max(0,ca-20)*.7*(1+pz('N')*.6)+deb+insodd+prec+disocc+(S.tensione||0)+malG*.6+(S.fatti.assisti?6:0)
     -Math.min(10,rOre('sport')*1.1)-Math.min(e>=65?5:10,lib*.25)-Math.min(6,rOre('hobby')*.6)-(B.soc>60?3:0)
     +Math.max(0,62-S.salute)*.25+Math.max(0,40-B.soc)*.2+(e>=70?5:0)
-    +(S.sonno<6.5?(6.5-S.sonno)*9:0)+(S.carcere?25:0)+pz('N')*10;
+    +(S.sonno<6.5?(6.5-S.sonno)*9:0)+(S.carcere?25:0)+pz('N')*10-capoEsito()*2.5;
   if(fig)tSt*=.7;
   B.stress=clamp(B.stress+(tSt-B.stress)*.45);
   S.tensione=Math.max(0,(S.tensione||0)*.6-1);

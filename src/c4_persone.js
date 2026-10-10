@@ -129,7 +129,7 @@ function meseNpc(){
     else if(['Zio','Cugino','Suocero','Cognato'].includes(p.ruolo))relD(p,-(non>=6?.5:non>=3?.2:0));
     else if(['Madre','Padre','Fratello','Nonno','Patrigno'].includes(p.ruolo))relD(p,-(non>=3?.6:0));
     else if(p.ruolo==='Figlio'&&p.eta>=18)relD(p,-(non>=4?.5:0));
-    else if(p.ruolo==='Conoscente')relD(p,-1.5);
+    else if(p.ruolo==='Conoscente'&&!lavInCorso(p))relD(p,-1.5);   // i colleghi di adesso li vedi ogni giorno
     // un rapporto perfetto si consuma un po' anche frequentandosi: al 100% si resta solo con cura costante
     if(p.rapporto>=95&&S.eta>=14&&!['Partner','Coniuge'].includes(p.ruolo))relD(p,-.35);
     if(['Partner','Coniuge'].includes(p.ruolo))mesePartner(p);
@@ -145,7 +145,7 @@ function meseNpc(){
   for(const p of S.relazioni){
     if(!p.vivo)continue;
     if(p.ruolo==='Amico'&&p.rapporto<8&&!p.cella){p.rimuovi=true;log(`Tu e ${p.nome} vi siete persi di vista.`,'h')}
-    if(p.ruolo==='Conoscente'&&p.rapporto<5)p.rimuovi=true;
+    if(p.ruolo==='Conoscente'&&p.rapporto<5&&!lavInCorso(p))p.rimuovi=true;
   }
   const ex=S.relazioni.filter(p=>p.ruolo==='Ex');
   if(ex.length>4)ex.slice(0,ex.length-4).forEach(p=>p.rimuovi=true);
@@ -216,7 +216,7 @@ function vitaNpc(p){
   if(e<18||p.ruolo==='Figlio'&&e<19)return;
   // lavoro
   if(p.stato==='casa'&&p.tornaLav&&S.t>=p.tornaLav){p.stato='lavora';p.tornaLav=0;if(!p.lavoro)p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} torna a lavorare.`,'h')}
-  if(p.stato==='lavora'&&chance((.003+(M.crisi?.012:0)+(A.C<35?.002:0))*occZona().perdi)){p.stato='disoccupato';p.umore=clamp(p.umore-20);
+  if(p.stato==='lavora'&&!lavInCorso(p)&&chance((.003+(M.crisi?.012:0)+(A.C<35?.002:0))*occZona().perdi)){p.stato='disoccupato';p.umore=clamp(p.umore-20);
     p.lavT=0;if(!(p.rapporto>=50&&chance(.3)&&richiesta('r_lavoro_perso',p)))annuncia(p,`${p.nome} ha perso il lavoro.`,'b')}
   else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1)*occZona().trova)){p.stato='lavora';p.lavoro=lavoroPerNpc(p);p.lavT=S.t;annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
   else if(p.stato==='lavora'&&chance(.002*(A.C/50))){annuncia(p,`${p.nome} ha avuto una promozione.`,'g');p.umore=clamp(p.umore+10)}
@@ -238,7 +238,7 @@ function vitaNpc(p){
     if(['Fratello'].includes(p.ruolo)){annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}: sei diventat${g('o','a')} zi${g('o','a')}!`,'g');mod('felicita',4)}
     else annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}.`,'g')}
   // trasloco
-  if(!p.lontano&&e>=20&&e<50&&['Amico','Fratello','Cugino','Figlio'].includes(p.ruolo)&&chance(.0018)){p.lontano=true;p.trasfT=S.t;
+  if(!p.lontano&&e>=20&&e<50&&['Amico','Fratello','Cugino','Figlio'].includes(p.ruolo)&&!lavInCorso(p)&&chance(.0018)){p.lontano=true;p.trasfT=S.t;
     const dove=pick(['Milano','Londra','Berlino','Bologna','Roma','Torino','Barcellona','Parigi','Amsterdam','Dublino'].filter(x=>x!==S.citta));p.dove=dove;
     if(!(p.rapporto>=60&&richiesta('r_trasloco',p)))annuncia(p,`${p.nome} si trasferisce a ${dove}.`,'h')}
   // momenti difficili e richieste
@@ -259,7 +259,7 @@ function incontri(){
   const ctx=Object.keys(INC).map(id=>[id,INC[id].w()]).filter(x=>x[1]>0);
   if(!ctx.length)return;
   const tot=ctx.reduce((s,x)=>s+x[1],0);
-  const n=vivi(['Amico','Conoscente']).filter(p=>!p.lontano).length;
+  const n=vivi(['Amico','Conoscente']).filter(p=>!p.lontano&&!lavInCorso(p)).length;
   const sat=n<3?1.3:n<7?1:n<12?.6:n<18?.35:.15;
   if(!chance(Math.min(.07,tot*.0024*(.6+S.pers.E/100))*sat))return;
   const x=pesata(ctx),m=INC[x],d={x};

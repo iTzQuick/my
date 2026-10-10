@@ -1036,6 +1036,7 @@ function gioca(n){S.fatti.gio=(S.fatti.gio||0)+n;if(!S.dip.gioco&&S.fatti.gio>=1
 
 /* ---------- Testi con segnaposto ---------- */
 function ruoloLabel(p){
+  if(p.lav&&(p.ruolo==='Conoscente'||(p.ruolo==='Amico'&&lavInCorso(p))))return etichettaLav(p);
   switch(p.ruolo){
     case 'Fratello':return gp(p,'Fratello','Sorella');
     case 'Nonno':return gp(p,'Nonno','Nonna');
@@ -1176,6 +1177,7 @@ function assumi(j){
   S.ultimoLavoro=S.lavoro.nome;
   if(!j.pt)S.fatti.primoLavoro=1;
   if(primo)momento('lavoro',{tit:S.lavoro.nome,sub:descrContratto(S.lavoro),txt:`Stipendio: ${eur(ralEff(S.lavoro)/12)} lordi al mese. Il primo lavoro vero.`});
+  iniziaSquadra(false);   // il capo e i colleghi (c10_squadra.js)
 }
 /* vol: lo lasci tu (niente NASpI) */
 function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L);if(S.legami)bisognoAiuto('lavoro')}}   // la partita IVA non ha la NASpI
@@ -1360,7 +1362,7 @@ function mese(silenzioso){
   if(S.carcere===0)meseScuola();
   calendario();
   storiaMese();
-  meseLavoro();
+  meseLavoro();meseSquadra();
   meseItalia();
   normalizzaRoutine();
   meseRoutine();
@@ -1529,7 +1531,7 @@ function meseLavoro(){
   if(S.fatti.congedo>S.t)return;   // in congedo: niente valutazioni né promozioni
   const sod=soddLavoro();
   L.perf=clamp(L.perf+(r(-7,5)+(S.felicita<30?-4:0)+(S.dip.alcol?-6:0)+(S.salute<30?-4:0))/3.5+pz('C')*.7+(S.bis.energia<30?-1:0)+(S.bis.stress>80?-1:0)+(sod-50)/90);
-  if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100)/12*fattoreCarriera(L))&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
+  if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100+capoEsito()*.05)/12*fattoreCarriera(L))&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
     L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L)){L.contratto={t:'piva',da:S.t};log('Ti metti in proprio: apri la partita IVA.','h')}L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
     mod('felicita',8);segnaVita('promozione');log(`Promozione! Ora sei ${L.nome.toLowerCase()}, con una RAL di ${eur(L.stip)}.`,'g');
   }
@@ -1735,6 +1737,7 @@ function aggiornaStato(){
   if(!S.orient)S.orient=S.attrazione?(S.attrazione==='E'?'bi':S.attrazione===S.sesso?'omo':'etero'):pesata([['etero',94],['omo',3],['bi',3]]);
   if(!S.fatti.cittaNascita){S.fatti.cittaNascita=S.citta;S.fatti.provNascita=S.prov}
   iniziaLegami();
+  if(S.lavoro&&S.lavoro.sq===undefined)iniziaSquadra(true);   // salvataggi vecchi: capo e colleghi senza diario
 }
 function migra3(){
   const X=S;
@@ -2249,7 +2252,7 @@ function soddLavoro(){
   const j=JOB[L.id];
   const m=matchLavoro(L.id);
   const paga=Math.min(25,netto(L.stip)/P(1000));
-  return clamp(m*.55+paga+(L.perf-50)*.2+(L.liv*3)-(S.fatti.capoCattivo?15:0));
+  return clamp(m*.55+paga+(L.perf-50)*.2+(L.liv*3)+Math.round(capoEsito()*10));
 }
 
 /* ---------- Routine settimanale ---------- */
@@ -2415,7 +2418,7 @@ function bisogni(){
   let tSt=22+Math.max(0,ca-20)*.7*(1+pz('N')*.6)+deb+insodd+prec+disocc+(S.tensione||0)+malG*.6+(S.fatti.assisti?6:0)
     -Math.min(10,rOre('sport')*1.1)-Math.min(e>=65?5:10,lib*.25)-Math.min(6,rOre('hobby')*.6)-(B.soc>60?3:0)
     +Math.max(0,62-S.salute)*.25+Math.max(0,40-B.soc)*.2+(e>=70?5:0)
-    +(S.sonno<6.5?(6.5-S.sonno)*9:0)+(S.carcere?25:0)+pz('N')*10;
+    +(S.sonno<6.5?(6.5-S.sonno)*9:0)+(S.carcere?25:0)+pz('N')*10-capoEsito()*2.5;
   if(fig)tSt*=.7;
   B.stress=clamp(B.stress+(tSt-B.stress)*.45);
   S.tensione=Math.max(0,(S.tensione||0)*.6-1);
@@ -2868,7 +2871,7 @@ function meseNpc(){
     else if(['Zio','Cugino','Suocero','Cognato'].includes(p.ruolo))relD(p,-(non>=6?.5:non>=3?.2:0));
     else if(['Madre','Padre','Fratello','Nonno','Patrigno'].includes(p.ruolo))relD(p,-(non>=3?.6:0));
     else if(p.ruolo==='Figlio'&&p.eta>=18)relD(p,-(non>=4?.5:0));
-    else if(p.ruolo==='Conoscente')relD(p,-1.5);
+    else if(p.ruolo==='Conoscente'&&!lavInCorso(p))relD(p,-1.5);   // i colleghi di adesso li vedi ogni giorno
     // un rapporto perfetto si consuma un po' anche frequentandosi: al 100% si resta solo con cura costante
     if(p.rapporto>=95&&S.eta>=14&&!['Partner','Coniuge'].includes(p.ruolo))relD(p,-.35);
     if(['Partner','Coniuge'].includes(p.ruolo))mesePartner(p);
@@ -2884,7 +2887,7 @@ function meseNpc(){
   for(const p of S.relazioni){
     if(!p.vivo)continue;
     if(p.ruolo==='Amico'&&p.rapporto<8&&!p.cella){p.rimuovi=true;log(`Tu e ${p.nome} vi siete persi di vista.`,'h')}
-    if(p.ruolo==='Conoscente'&&p.rapporto<5)p.rimuovi=true;
+    if(p.ruolo==='Conoscente'&&p.rapporto<5&&!lavInCorso(p))p.rimuovi=true;
   }
   const ex=S.relazioni.filter(p=>p.ruolo==='Ex');
   if(ex.length>4)ex.slice(0,ex.length-4).forEach(p=>p.rimuovi=true);
@@ -2955,7 +2958,7 @@ function vitaNpc(p){
   if(e<18||p.ruolo==='Figlio'&&e<19)return;
   // lavoro
   if(p.stato==='casa'&&p.tornaLav&&S.t>=p.tornaLav){p.stato='lavora';p.tornaLav=0;if(!p.lavoro)p.lavoro=lavoroPerNpc(p);annuncia(p,`${p.nome} torna a lavorare.`,'h')}
-  if(p.stato==='lavora'&&chance((.003+(M.crisi?.012:0)+(A.C<35?.002:0))*occZona().perdi)){p.stato='disoccupato';p.umore=clamp(p.umore-20);
+  if(p.stato==='lavora'&&!lavInCorso(p)&&chance((.003+(M.crisi?.012:0)+(A.C<35?.002:0))*occZona().perdi)){p.stato='disoccupato';p.umore=clamp(p.umore-20);
     p.lavT=0;if(!(p.rapporto>=50&&chance(.3)&&richiesta('r_lavoro_perso',p)))annuncia(p,`${p.nome} ha perso il lavoro.`,'b')}
   else if(p.stato==='disoccupato'&&chance(.05*(.5+A.C/100)*(M.crisi?.5:M.boom?1.5:1)*occZona().trova)){p.stato='lavora';p.lavoro=lavoroPerNpc(p);p.lavT=S.t;annuncia(p,`${p.nome} ha trovato lavoro come ${lavoroNpc(p)}.`,'g')}
   else if(p.stato==='lavora'&&chance(.002*(A.C/50))){annuncia(p,`${p.nome} ha avuto una promozione.`,'g');p.umore=clamp(p.umore+10)}
@@ -2977,7 +2980,7 @@ function vitaNpc(p){
     if(['Fratello'].includes(p.ruolo)){annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}: sei diventat${g('o','a')} zi${g('o','a')}!`,'g');mod('felicita',4)}
     else annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}.`,'g')}
   // trasloco
-  if(!p.lontano&&e>=20&&e<50&&['Amico','Fratello','Cugino','Figlio'].includes(p.ruolo)&&chance(.0018)){p.lontano=true;p.trasfT=S.t;
+  if(!p.lontano&&e>=20&&e<50&&['Amico','Fratello','Cugino','Figlio'].includes(p.ruolo)&&!lavInCorso(p)&&chance(.0018)){p.lontano=true;p.trasfT=S.t;
     const dove=pick(['Milano','Londra','Berlino','Bologna','Roma','Torino','Barcellona','Parigi','Amsterdam','Dublino'].filter(x=>x!==S.citta));p.dove=dove;
     if(!(p.rapporto>=60&&richiesta('r_trasloco',p)))annuncia(p,`${p.nome} si trasferisce a ${dove}.`,'h')}
   // momenti difficili e richieste
@@ -2998,7 +3001,7 @@ function incontri(){
   const ctx=Object.keys(INC).map(id=>[id,INC[id].w()]).filter(x=>x[1]>0);
   if(!ctx.length)return;
   const tot=ctx.reduce((s,x)=>s+x[1],0);
-  const n=vivi(['Amico','Conoscente']).filter(p=>!p.lontano).length;
+  const n=vivi(['Amico','Conoscente']).filter(p=>!p.lontano&&!lavInCorso(p)).length;
   const sat=n<3?1.3:n<7?1:n<12?.6:n<18?.35:.15;
   if(!chance(Math.min(.07,tot*.0024*(.6+S.pers.E/100))*sat))return;
   const x=pesata(ctx),m=INC[x],d={x};
@@ -4080,6 +4083,145 @@ function controllaNaja(){
   if((S.eta===19&&!uni)||(S.eta===26)||(S.eta===24&&uni)){S.fatti.naja='chiamato';coda.push({e:EV.naja,d:{}})}
 }
 const mesiNaja=()=>S.anno<1975?15:S.anno<1997?12:10;
+
+/* ================= LAVORO VISSUTO: CAPO E COLLEGHI (ROADMAP Fase 5.3a) =================
+   Il capo e 2–3 colleghi sono persone vere finché resti in quel lavoro. Non c'è un ruolo nuovo: restano `Conoscente`
+   (o `Amico`, se diventate amici) con il marchio p.lav = {id, da, r:'capo'|'collega', t, via?, fine?}:
+   - id e da sono quelli di S.lavoro (gli stessi del gruppo lavoro:<id>:<da> di c8_legami.js, dove entrano alla nascita);
+   - via = la persona se n'è andata dall'azienda (turnover, pensione); fine = sei tu che hai cambiato lavoro.
+   Finché lavInCorso(p) il rapporto non sbiadisce (c4_persone.js) e si muove da solo: il capo secondo il suo carattere e il
+   tuo rendimento, i colleghi secondo l'affinità. Quando il lavoro finisce chi ti era vicino resta amico, gli altri diventano
+   «ex colleghi» e sbiadiscono come ogni conoscente.
+   S.lavoro.sq = {n colleghi, prossimo, capoT, capoN}: undefined = non ancora deciso (salvataggi vecchi), null = nessuna squadra
+   (partita IVA, carica elettiva, lavoretti senza posto fisso, e chi ha già un'azienda quando viene assunto).
+   Il capo conta (capoEsito: da −1 a +1): ±10 sulla soddisfazione, ∓2,5 sullo stress, ±5 punti sulla probabilità di promozione e aumento.
+   Gli sportivi hanno un allenatore e i compagni di squadra. Gli eventi sono in d15_lavoro.js (col_ e prg_). */
+const SENZA_SQUADRA=['vol','rip'];
+const squadraPossibile=L=>!!L&&!!JOB[L.id]&&!SENZA_SQUADRA.includes(L.id)&&!isPiva(L)&&!(L.contratto&&L.contratto.t==='carica')&&!JOB[L.id].elez;
+const lavInCorso=p=>!!(p&&p.vivo&&p.lav&&!p.lav.via&&S&&S.lavoro&&S.lavoro.sq&&p.lav.id===S.lavoro.id&&p.lav.da===S.lavoro.da);
+const sportSq=()=>!!S.lavoro&&SPORTIVI.includes(S.lavoro.id);
+function squadra(){
+  const v=S.relazioni.filter(lavInCorso);
+  return {capo:v.find(p=>p.lav.r==='capo')||null,colleghi:v.filter(p=>p.lav.r==='collega')};
+}
+/* com'è il capo con te, da −1 (insopportabile) a +1 (un capo come si deve): carattere suo e rapporto con te */
+function capoEsito(){
+  const c=squadra().capo;if(!c||!c.pers)return 0;
+  return Math.max(-1,Math.min(1,((c.pers.A-50)*.5-(c.pers.N-50)*.25+(c.pers.C-50)*.15+(c.rapporto-50)*.5)/30));
+}
+function etichettaLav(p){
+  const L=p.lav,sport=SPORTIVI.includes(L.id),ex=!lavInCorso(p);
+  if(L.r==='capo'){const n=sport?gp(p,'Allenatore','Allenatrice'):['maes','edu','ins'].includes(L.id)?'Dirigente':gp(p,'Capo','Responsabile');return ex?'Ex '+n.toLowerCase():n}
+  const n=sport?gp(p,'Compagno di squadra','Compagna di squadra'):'Collega';
+  return p.ruolo==='Amico'?(sport?n:gp(p,'Collega e amico','Collega e amica')):(ex?'Ex '+n.toLowerCase():n);
+}
+const nomeCapoDi=p=>SPORTIVI.includes(p.lav.id)?gp(p,'allenatore','allenatrice'):['maes','edu','ins'].includes(p.lav.id)?'dirigente':gp(p,'capo','responsabile');
+
+function nuovoDelLavoro(rl,L){
+  const sport=SPORTIVI.includes(L.id),f=DONNE[L.id]!==undefined?DONNE[L.id]:.42;
+  const ses=chance(rl==='capo'?f*.8:f)?'F':'M';
+  // il capo di solito è più grande di te, ma con gli anni cala la differenza (a 55 anni il capo ne ha 35–58); nessuno è vicino alla pensione all'arrivo
+  let eta=rl==='capo'?(S.eta>=50?r(36,58):S.eta+r(-4,16)):S.eta+r(-9,9);
+  if(sport)eta=rl==='capo'?S.eta+r(4,22):S.eta+r(-3,5);
+  const lo=sport?(rl==='capo'?28:16):(rl==='capo'?27:17),hi=sport?(rl==='capo'?60:42):(rl==='capo'?60:62);
+  eta=Math.max(lo,Math.min(hi,eta));
+  return nuovaPersona('Conoscente',ses,eta,null,{rapporto:rl==='capo'?r(30,45):r(30,48),dove:'lavoro',look:lookCasuale(ses),stato:'lavora',lavoro:L.id,lav:{id:L.id,da:L.da,r:rl,t:S.t}});
+}
+function arrivoCapo(L,silenzioso){
+  const p=nuovoDelLavoro('capo',L),sq=L.sq;sq.capoN=(sq.capoN||0)+1;sq.capoT=undefined;
+  if(!silenzioso){
+    const sport=SPORTIVI.includes(L.id);
+    log(`${sq.capoN>1?gp(p,'Il nuovo','La nuova')+' '+nomeCapoDi(p)+' è':gp(p,sport?'Il tuo allenatore è':'Il tuo capo è',sport?'La tua allenatrice è':'La tua responsabile è')} ${p.nome} ${p.cognome}, ${p.eta} anni. Sembra ${descrPers(p.pers,p.sesso)}.`,'h');
+    if(sq.capoN>1&&!coda.length&&S.carcere===0&&S.t-(S.fatti.nuovoCapoT===undefined?-999:S.fatti.nuovoCapoT)>=36){S.fatti.nuovoCapoT=S.t;coda.push({e:EV.col_nuovo_capo,d:{p}})}
+  }
+  return p;
+}
+function arrivoCollega(L,silenzioso){
+  const p=nuovoDelLavoro('collega',L),sq=L.sq;
+  sq.arr=(sq.arr||0)+1;sq.prossimo=S.t+(sq.arr<sq.n?1:r(1,3));   // i primi uno al mese, poi i ricambi a caso
+  if(!silenzioso)log(SPORTIVI.includes(L.id)?`${p.nome} ${p.cognome}, ${p.eta} anni, entra in squadra con te. Sembra ${descrPers(p.pers,p.sesso)}.`
+    :`${p.nome} ${p.cognome}, ${p.eta} anni, ${gp(p,'è il tuo nuovo collega','è la tua nuova collega')}. Sembra ${descrPers(p.pers,p.sesso)}.`,'h');
+  return p;
+}
+/* all'assunzione: il capo subito, i colleghi uno al mese nei primi tre mesi (silenzioso = salvataggi vecchi e prove: tutti subito, senza diario) */
+function iniziaSquadra(silenzioso){
+  const L=S&&S.lavoro;
+  if(!L||L.sq!==undefined||!S.vivo||!S.relazioni)return;
+  if(!S.gruppi)iniziaLegami();
+  if(!squadraPossibile(L)||S.azienda){L.sq=null;return}
+  L.sq={n:r(2,3),prossimo:S.t+1,capoN:0};
+  arrivoCapo(L,silenzioso);
+  if(silenzioso)completaSquadra(true);
+}
+function completaSquadra(silenzioso){
+  const L=S.lavoro;if(!L)return;
+  if(L.sq===undefined){iniziaSquadra(true);return}
+  if(!L.sq)return;
+  if(!squadra().capo)arrivoCapo(L,true);
+  while(squadra().colleghi.length<L.sq.n){const p=arrivoCollega(L,true);if(silenzioso)p.rapporto=r(38,62)}
+  if(silenzioso)for(const p of S.relazioni.filter(lavInCorso))if(p.lav.r==='capo')p.rapporto=r(38,62);
+}
+function vaViaDalLavoro(p,txt,k){
+  p.lav.via=S.t;p.stato=p.eta>=65?'pensione':'lavora';
+  if(p.eta>=65)p.pensT=S.t;
+  if(txt)log(txt,k||'h');
+}
+function meseSquadra(){
+  if(!S.relazioni||!S.gruppi)return;
+  // il lavoro è finito (o è cambiato): chi ti era vicino resta amico, gli altri sono ex colleghi che sbiadiscono
+  const restano=[];
+  for(const p of S.relazioni){
+    if(!p.vivo||!p.lav||p.lav.via||p.lav.fine||lavInCorso(p))continue;
+    p.lav.fine=S.t;
+    if(p.ruolo==='Conoscente'&&p.rapporto>=(p.lav.r==='capo'?65:55)&&vivi(['Amico']).length<12){p.ruolo='Amico';restano.push(p)}
+  }
+  if(restano.length)log(`Di chi lavorava con te ${restano.length===1?`${restano[0].nome} resta ${gp(restano[0],'un amico',"un'amica")}`:`restano amici ${nomi(restano.map(p=>p.nome))}`}.`,'g');
+  const L=S.lavoro;if(!L||S.carcere>0)return;
+  if(L.sq===undefined)iniziaSquadra(true);
+  if(!L.sq)return;
+  if(!squadraPossibile(L)){L.sq=null;return}     // diventi partita IVA o eletto: la squadra finisce
+  const sq=L.sq;let {capo,colleghi}=squadra();
+  // il capo se ne va (pensione, trasferimento…) o non c'è più: ne arriva un altro
+  if(capo&&(capo.eta>=65||chance(1/72))){
+    const sport=SPORTIVI.includes(L.id);
+    vaViaDalLavoro(capo,capo.eta>=65?`${capo.nome} ${capo.cognome}, ${gp(capo,'il tuo '+nomeCapoDi(capo),'la tua '+nomeCapoDi(capo))}, va in pensione.`:sport?`${capo.nome} ${capo.cognome} lascia la panchina.`:`${capo.nome} ${capo.cognome}, ${gp(capo,'il tuo '+nomeCapoDi(capo),'la tua '+nomeCapoDi(capo))}, viene trasferit${gp(capo,'o','a')} in un'altra sede.`);
+    sq.capoT=S.t+r(0,2);capo=null;
+  }
+  if(!capo&&(sq.capoT===undefined||S.t>=sq.capoT))capo=arrivoCapo(L,false);
+  // i colleghi vanno e vengono
+  for(const p of colleghi){
+    if(p.eta>=65||chance(1/40)){
+      const sport=SPORTIVI.includes(L.id);
+      vaViaDalLavoro(p,p.eta>=65?`${p.nome} va in pensione.`:sport?`${p.nome} viene ceduto${gp(p,'','a')} a un'altra squadra.`:pick([`${p.nome} lascia l'azienda: ha trovato un altro lavoro.`,`${p.nome} si trasferisce in un'altra sede.`]));
+      sq.prossimo=Math.max(sq.prossimo||0,S.t+r(1,4));
+    }
+  }
+  colleghi=colleghi.filter(p=>lavInCorso(p));
+  if(colleghi.length<sq.n&&S.t>=(sq.prossimo||0))colleghi.push(arrivoCollega(L,false));
+  // il rapporto si muove da solo: il capo secondo il suo carattere e come lavori, i colleghi secondo l'affinità
+  for(const p of [capo,...colleghi]){
+    if(!p)continue;
+    p.stato='lavora';p.ultimo=S.t;
+    const t=p.lav.r==='capo'?clamp(46+(p.pers.A-50)*.3-(p.pers.N-50)*.1+(L.perf-60)*.18):clamp(36+affinita(p)*.4+(S.pers.E-50)*.05);
+    relD(p,(t-p.rapporto)*.06);
+    if(p.lav.r==='collega'&&p.ruolo==='Conoscente'&&p.rapporto>=62&&S.t-(p.da||0)>=6&&vivi(['Amico']).length<12){
+      p.ruolo='Amico';p.rapporto=Math.max(p.rapporto,60);
+      log(`${p.nome} non è più solo ${gp(p,'un collega','una collega')}: siete diventati amici.`,'g');
+    }
+  }
+  eventoLavoro();
+}
+/* un fatto del lavoro ogni tanto (circa 5–6 in una carriera): la lista COL_EV è in d15_lavoro.js */
+function eventoLavoro(){
+  if(coda.length||S.carcere>0||S.fatti.congedo>S.t||(S.lavoro.cig>0)||!chance(.012))return;
+  const sq=squadra();if(!sq.capo&&!sq.colleghi.length)return;
+  const lista=COL_EV.filter(e=>S.t-(S.fatti['colT_'+e.id]===undefined?-9999:S.fatti['colT_'+e.id])>=e.rip*12&&e.ok(sq,S.lavoro));
+  if(!lista.length)return;
+  const e=pesata(lista.map(x=>[x,typeof x.w==='function'?x.w():x.w])),d=e.d(sq);
+  if(!d)return;
+  S.fatti['colT_'+e.id]=S.t;
+  coda.push({e:EV[e.id],d});
+}
 
 /* ================= EVENTI =================
  Campi evento: id, min, max, w (peso), once, rip (anni prima di ripetersi), cond(d), chi (ruoli persona), pc(p), link (solo come conseguenza), prig (in carcere), auto (conseguenza silenziosa)
@@ -5262,7 +5404,7 @@ ev({id:'console',link:1,k:'Famiglia',t:'Niente console',x:'I tuoi genitori hanno
   {l:'Protesta e sbatti la porta',fx:()=>{S.routine.schermi=0;relGenitori(-8);return ['Console sequestrata per un mese.','b']}}]});
 ev({id:'lavoro_pesa',link:1,k:'Lavoro',t:'Il lavoro ti pesa',x:()=>`Fai ${S.lavoro.nome.toLowerCase()}, ma non è il lavoro per te. Ogni lunedì mattina è più difficile. ${'Il tuo profilo di interessi è '+codiceRiasec()+': '+interessi().slice(0,2).map(x=>RIASEC[x[0]].toLowerCase()).join(' e ')+'.'}`,c:[
   {l:'Inizia a guardarti intorno',fx:()=>{S.fatti.cercaAltro=S.t;return ['Aggiorni il curriculum. Le offerte sono nella scheda Lavoro.','']}},
-  {l:'Parla con il capo',fx:()=>{const L=S.lavoro;if(chance(.4+pz('E')*.15)){L.perf=clamp(L.perf+5);S.fatti.capoCattivo=0;return ['Il capo ti affida compiti più adatti a te.','g']}return ['«Qui facciamo tutti un po\' di tutto.»','b']}},
+  {l:'Parla con il capo',fx:()=>{const L=S.lavoro,c=squadra().capo,n=c?c.nome:'Il capo';if(chance(.4+pz('E')*.15+capoEsito()*.1)){L.perf=clamp(L.perf+5);if(c)relD(c,3);return [`${n} ti affida compiti più adatti a te.`,'g']}if(c)relD(c,-1);return ['«Qui facciamo tutti un po\' di tutto.»','b']}},
   {l:'Tieni duro',fx:()=>{S.tensione=(S.tensione||0)+4;return ['Lo stipendio arriva il 27. Si va avanti.','']}}]});
 ev({id:'capo_progetto',link:1,k:'Lavoro',t:'Un progetto importante',x:'Il capo ti chiama in ufficio: vuole affidarti un progetto delicato. Se va bene, si parla di promozione.',c:[
   {l:'Accetta',sub:'Tre mesi intensi',fx:()=>{const L=S.lavoro;S.bis.stress=clamp(S.bis.stress+12);if(chance(.45+pz('C')*.25+S.intelligenza/400)){L.perf=clamp(L.perf+15);L.anniLiv=Math.max(L.anniLiv,2);return ['Il progetto è un successo. Il tuo nome gira ai piani alti.','g']}L.perf=clamp(L.perf-8);return ['Scadenze mancate e una riunione imbarazzante.','b']}},
@@ -5281,7 +5423,7 @@ function emergenti(){
   if(S.eta>=30&&B.forma<30&&chance(.02)&&S.t-(F.medT||-99)>=24){F.medT=S.t;coda.push({e:EV.medico_forma,d:{}});return}
   if(S.anno>=1985&&S.eta>=9&&S.eta<17&&rOre('schermi')>=14&&iscritto()&&S.scuola.voto<48&&genitoriVivi()&&S.casa.tipo==='genitori'&&chance(.15)&&S.t-(F.consT||-99)>=12){F.consT=S.t;coda.push({e:EV.console,d:{}});return}
   if(S.lavoro&&!JOB[S.lavoro.id].pt&&soddLavoro()<38&&chance(.04)&&S.t-(F.pesaT||-99)>=18){F.pesaT=S.t;coda.push({e:EV.lavoro_pesa,d:{}});return}
-  if(S.lavoro&&!JOB[S.lavoro.id].pt&&S.lavoro.perf>=70&&chance(.012+pz('C')*.008)&&S.t-(F.progT||-99)>=24){F.progT=S.t;coda.push({e:EV.capo_progetto,d:{}});return}
+  if(S.lavoro&&!JOB[S.lavoro.id].pt&&S.lavoro.perf>=70&&chance(.012+pz('C')*.008)&&S.t-(F.progT||-99)>=24){F.progT=S.t;const sq=squadra();if(sq.capo&&sq.colleghi.length)coda.push({e:EV.prg_avvio,d:{p:sq.capo,x:{q:pick(sq.colleghi).id}}});else coda.push({e:EV.capo_progetto,d:{}});return}
   if(S.sonno<6.5&&B.energia<35&&chance(.15))log('Dormi troppo poco: ti trascini per tutta la giornata.','b');
   incontri();
 }
@@ -5816,7 +5958,7 @@ ev({id:'ad_errore',min:18,max:66,rip:8,cond:()=>lavora(),t:'L\'errore',x:'Ti acc
   {l:'Lo dici subito al capo',p:.7,si:{e:{perf:2},pers:{C:3,N:-2},r:'«Grazie per avermelo detto.» Da quel giorno si fida di te.'},no:{e:{perf:-4},pers:{C:2},r:'Una sfuriata memorabile. Ma almeno la notte dormi.'}},
   {l:'Lo correggi di nascosto',p:.65,si:{pers:{C:-1,N:2},r:'Nessuno se ne accorge. Però per settimane apri la posta col cuore in gola.'},no:{e:{perf:-8},pers:{N:3},r:'Se ne accorgono. E capiscono che hai provato a nasconderlo.'}},
   {l:'Dai la colpa al programma',p:.55,si:{e:{k:-3},pers:{A:-3},r:'Il reparto informatico incassa. Tu un po\' meno, la sera.'},no:{e:{perf:-6,k:-3},pers:{A:-3,N:1},r:'Il tecnico dimostra che il programma funziona benissimo. Figuraccia.'}}]});
-ev({id:'ad_mobbing',min:22,max:66,rip:10,cond:()=>lavora(),t:'Il collega preso di mira',x:'Da settimane il capo umilia un collega davanti a tutti. Nessuno dice niente.',c:[
+ev({id:'ad_mobbing',min:22,max:66,rip:10,cond:()=>lavora(),t:'Il collega preso di mira',x:d=>{if(d.n===undefined){const s=squadra();d.n=s.capo&&s.colleghi.length?{c:s.capo,v:pick(s.colleghi)}:null}return d.n?`Da settimane ${d.n.c.nome} umilia ${d.n.v.nome} davanti a tutti. Nessuno dice niente.`:'Da settimane il capo umilia un collega davanti a tutti. Nessuno dice niente.'},c:[
   {l:'Lo difendi in riunione',p:.55,si:{e:{k:5,f:3,perf:-2},pers:{A:3,N:-2,E:1},r:'Cala il silenzio. Il giorno dopo tre colleghi ti ringraziano a bassa voce.'},no:{e:{k:5,perf:-6},pers:{A:3,N:1},r:'Ora il capo ce l\'ha anche con te. Ma il collega non lo dimenticherà.'}},
   {l:'Lo inviti a pranzo e lo ascolti',fx:()=>{if(vivi(['Amico']).length<12){const a=nuovaPersona('Amico','M',Math.max(22,S.eta+r(-8,8)),null,{rapporto:r(45,60)});ricorda(a,'L\'hai ascoltato quando il capo lo umiliava')}},e:{k:3},pers:{A:3},r:'In ufficio non cambia niente. Per lui, invece, cambia parecchio.'},
   {l:'Tieni la testa bassa',pers:{A:-1,N:2},r:'Meglio lui che te. Lo pensi, e non ti piace pensarlo.'},
@@ -5826,9 +5968,9 @@ ev({id:'ad_firma',min:25,max:66,once:1,cond:()=>lavora(),t:'La firma',x:'Ti chie
   {l:'Firmi e non ci pensi più',e:{perf:3,k:-4},fut:[2,'ad_firma_conto'],pers:{C:-2,A:-1},r:'Una firma veloce. Il capo ti dà una pacca sulla spalla.'},
   {l:'Lo segnali all\'ufficio legale',p:.5,si:{e:{perf:4,k:6},pers:{C:2,E:2,N:-1},r:'Indagine interna. Il capo viene trasferito e tu diventi «quell{o} di cui fidarsi».'},no:{e:{perf:-12,f:-6,k:6},pers:{C:2,N:2},r:'Insabbiano tutto. Ti fanno capire che hai sbagliato a parlare.'}}]});
 ev({id:'ad_firma_conto',min:18,max:100,link:1,t:'L\'ispezione',x:'Arriva la Guardia di Finanza. Controllano proprio i documenti che avevi firmato.',auto:{fx:()=>{if(chance(.45)){const m=P(3000);soldi(-m);mod('felicita',-8);if(S.lavoro)S.lavoro.perf=clamp(S.lavoro.perf-15);applicaPers({N:3,C:2});return [`L'ispezione trova tutto. Ti tocca una sanzione di ${eur(m)} e una lunga serie di notti in bianco.`,'b']}return ['L\'ispezione si concentra su altro. Ti è andata bene, ma il cuore ti è arrivato in gola.','']}}});
-ev({id:'ad_valutazione',min:22,max:66,rip:8,cond:()=>lavora(),t:'La valutazione',x:'Nella valutazione annuale il capo scrive di te: «Manca di iniziativa». E lo legge davanti a tutto il gruppo.',c:[
-  {l:'Ringrazi e chiedi come migliorare',e:{perf:4},pers:{C:2,N:-2},r:'Il capo resta spiazzato. Tre mesi dopo ti affida un progetto tutto tuo.'},
-  {l:'Ti difendi, punto per punto',p:.5,si:{e:{perf:2},pers:{A:-2,N:-1},r:'Hai ragione tu, e alla fine lo ammette pure.'},no:{e:{perf:-4},pers:{A:-2,N:1},r:'Sembri una persona che non accetta critiche. E un po\' è vero.'}},
+ev({id:'ad_valutazione',min:22,max:66,rip:8,cond:()=>lavora(),t:'La valutazione',x:()=>{const c=squadra().capo;return `Nella valutazione annuale ${c?c.nome:'il capo'} scrive di te: «Manca di iniziativa». E lo legge davanti a tutto il gruppo.`},c:[
+  {l:'Ringrazi e chiedi come migliorare',fx:()=>{const c=squadra().capo;if(c)relD(c,4)},e:{perf:4},pers:{C:2,N:-2},r:'Il capo resta spiazzato. Tre mesi dopo ti affida un progetto tutto tuo.'},
+  {l:'Ti difendi, punto per punto',p:.5,si:{fx:()=>{const c=squadra().capo;if(c)relD(c,1)},e:{perf:2},pers:{A:-2,N:-1},r:'Hai ragione tu, e alla fine lo ammette pure.'},no:{fx:()=>{const c=squadra().capo;if(c)relD(c,-4)},e:{perf:-4},pers:{A:-2,N:1},r:'Sembri una persona che non accetta critiche. E un po\' è vero.'}},
   {l:'Ci rimugini per settimane',e:{f:-4},pers:{N:3},r:'Rileggi quella frase mille volte. Di notte, soprattutto.'}]});
 ev({id:'ad_fallimento',min:22,max:55,once:1,cond:()=>lavora()||iscritto(),t:'Il no',x:'Il progetto su cui hai lavorato per due anni viene bocciato. Tutto da rifare, o da buttare.',c:[
   {l:'Ricominci il giorno dopo',e:{perf:3,f:-1},pers:{C:3,N:-2},r:'Lo smonti, lo rifai, lo ripresenti. La seconda volta passa.'},
@@ -6982,11 +7124,11 @@ ev({id:'mez_sandwich',min:35,max:58,rip:8,cond:()=>figliTra(0,13).length>0&&vivi
   {l:'Ti prendi una sera solo per te',pers:{N:-1},fx:()=>{S.bis.stress=clamp(S.bis.stress-6);mod('felicita',3)},r:'Un cinema da sol{o}. Ti senti in colpa per dieci minuti, poi benissimo.'}]});
 
 /* ---------- Lavoro e colleghi ---------- */
-ev({id:'mez_merito',min:24,max:66,rip:8,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id].pt,t:'Il merito',x:'In riunione un collega presenta come sua l\'idea che gli avevi raccontato davanti alla macchinetta.',c:[
+ev({id:'mez_merito',min:24,max:66,rip:8,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id].pt,t:'Il merito',x:d=>{if(d.n===undefined)d.n=pick(squadra().colleghi)||null;return d.n?`In riunione ${d.n.nome} presenta come sua l'idea che ${gp(d.n,'gli','le')} avevi raccontato davanti alla macchinetta.`:'In riunione un collega presenta come sua l\'idea che gli avevi raccontato davanti alla macchinetta.'},c:[
   {l:'Lo fai notare, con calma, davanti a tutti',pers:{E:2,A:-1},p:.6,si:{e:{perf:5},r:'«Ne avevamo parlato insieme, giusto?» Il capo capisce al volo.'},no:{e:{perf:-1},pers:{N:1},r:'Il collega nega con un sorriso. Clima gelido per mesi.'}},
   {l:'Ne parli dopo con il capo',pers:{C:1},e:{perf:3},r:'Il capo prende nota. La prossima idea la mandi per email, con la data.'},
   {l:'Lasci perdere',pers:{A:1,N:1},e:{perf:-2},r:'Il collega viene promosso sei mesi dopo. Coincidenze.'}]});
-ev({id:'mez_capo_giovane',min:42,max:66,once:1,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id].pt,t:'Il nuovo capo',x:'Il nuovo responsabile ha quindici anni meno di te e dice spesso «facciamo sinergia».',c:[
+ev({id:'mez_capo_giovane',min:42,max:66,once:1,cond:()=>!!S.lavoro&&!JOB[S.lavoro.id].pt&&!squadra().capo,t:'Il nuovo capo',x:'Il nuovo responsabile ha quindici anni meno di te e dice spesso «facciamo sinergia».',c:[
   {l:'Gli offri la tua esperienza',pers:{A:2,O:1},e:{perf:4},r:'Diventi il suo punto di riferimento. Lui porta le idee, tu sai dove sono le trappole.'},
   {l:'Lo aspetti al varco',pers:{A:-2},e:{perf:-3},r:'Sbaglia una scadenza e tu non lo avvisi. Il clima in ufficio peggiora per tutti.'},
   {l:'Fai il tuo e basta',pers:{E:-1},r:'Le riunioni si allungano, il tuo lavoro resta lo stesso.'}]});
@@ -7514,6 +7656,160 @@ ev({id:'ita_attesa',link:1,k:'Sanità',t:'La lista d\'attesa',x:d=>`Con il Servi
 ev({id:'ita_visita',link:1,k:'Sanità',t:'La visita',x:d=>d.v?'Treno all\'alba, un ospedale che non conosci, una sala d\'attesa piena di accenti di tutta Italia. Poi tocca a te.':'Arriva il giorno della visita prenotata mesi fa. In sala d\'attesa, ognuno racconta i suoi acciacchi.',c:[
   {l:'Entri nello studio',_incl:0,fx:()=>cura(.6,.15)}]});
 
+/* ================= LAVORO VISSUTO: EVENTI CON IL CAPO E I COLLEGHI (ROADMAP Fase 5.3a) =================
+   col_  fatti del lavoro con una persona vera della squadra (c10_squadra.js: capo = d.p, colleghi = d.p e d.q).
+         Li apre eventoLavoro() (circa 5–6 in una carriera, vedi COL_EV in fondo) o l'arrivo di un nuovo capo.
+   prg_  due catene di 3 passi: il progetto importante (prg_avvio → prg_imprevisto → prg_consegna, apre emergenti() al posto di
+         capo_progetto) e la riorganizzazione (prg_riorg1 → prg_riorg2 → prg_riorg3). I dati passano in d.x, il capo in d.p.
+   Gli sportivi hanno l'allenatore e i compagni: gli eventi che non vanno bene per una squadra hanno ok:!sport nella lista. */
+const memb=()=>{const s=squadra();return [s.capo,...s.colleghi].filter(Boolean)};
+const relSq=v=>memb().forEach(p=>relD(p,v));
+const qDi=d=>{const q=d.q||(d.x&&d.x.q?persona(d.x.q):null);return q&&q.vivo?q:null};
+const chiCapo=p=>lavInCorso(p)?`${gp(p,'il tuo '+nomeCapoDi(p),'la tua '+nomeCapoDi(p))} ${p.nome}`:p.nome;
+const tuoColl=p=>sportSq()?gp(p,'il tuo compagno di squadra','la tua compagna di squadra'):gp(p,'il tuo collega','la tua collega');
+
+/* ---------- Il capo ---------- */
+ev({id:'col_capo_nota',link:1,k:'Lavoro',t:'Due minuti?',x:d=>`${cap(chiCapo(d.p))} ti ferma in corridoio: «Hai due minuti?» Ha notato come hai gestito l'ultimo mese e vuole affidarti qualcosa di più grosso.`,c:[
+  {l:'Accetti, anche se è un impegno',sub:'Più responsabilità, più stress',pers:{C:3},fx:d=>{pesa(5,2);S.lavoro.perf=clamp(S.lavoro.perf+6);relD(d.p,6);ricorda(d.p,`${gp(d.p,'Gli','Le')} hai detto sì quando serviva`,2);return [`${d.p.nome} annuisce: «Sapevo di poter contare su di te.»`,'g']}},
+  {l:'Accetti, ma a una condizione',sub:'Chiedi di essere pagat{o} di più',pers:{E:2},fx:d=>{if(chance(.5+capoEsito()*.1+pz('E')*.1)){S.lavoro.stip=Math.round(S.lavoro.stip*1.04);relD(d.p,3);return [`Ci pensa un giorno, poi torna con un +4% e una pacca sulla spalla. ${cap(gp(d.p,'lui','lei'))} apprezza chi sa quanto vale.`,'g']}relD(d.p,-4);S.lavoro.perf=clamp(S.lavoro.perf-1);return [`«Ne riparliamo.» Non se ne riparla più, e ${d.p.nome} ti guarda diversamente.`,'b']}},
+  {l:'Dici di no: sei già al limite',pers:{N:1,C:-1},fx:d=>{S.bis.stress=clamp(S.bis.stress-3);relD(d.p,-3);return [`${d.p.nome} capisce, o finge. L'incarico va a un altro.`,'']}}]});
+
+ev({id:'col_capo_scarica',link:1,k:'Lavoro',t:'Il post-it',x:d=>`Sulla tua scrivania c'è una pratica che non è tua, con un post-it di ${d.p.nome}, ${gp(d.p,'il tuo '+nomeCapoDi(d.p),'la tua '+nomeCapoDi(d.p))}: «Urgente, grazie!» È la terza volta questo mese.`,c:[
+  {l:'La fai e basta',pers:{A:1,C:1},fx:d=>{pesa(5,2);S.lavoro.perf=clamp(S.lavoro.perf+2);relD(d.p,2);ricorda(d.p,'Ti ha scaricato un lavoro non suo',-1);return ['La consegni il giorno dopo. Nessuno ti ringrazia, ma almeno è finita.','']}},
+  {l:'La riporti con garbo: non è tua',pers:{E:2,C:1},p:.6,si:{fx:d=>{relD(d.p,3);S.lavoro.perf=clamp(S.lavoro.perf+1);return [`${d.p.nome} resta un attimo in silenzio: «Hai ragione, scusa.» Da allora ci pensa due volte.`,'g']}},no:{fx:d=>{relD(d.p,-6);S.lavoro.perf=clamp(S.lavoro.perf-3);return [`«Non è questo lo spirito di squadra.» ${cap(gp(d.p,'lui','lei'))} se la lega al dito.`,'b']}}},
+  {l:'La passi a un collega',pers:{A:-3},fx:d=>{const c=pick(squadra().colleghi);if(c){relD(c,-8);ricorda(c,'Ti ha passato una pratica che non era sua',-2)}return [`${c?c.nome+' la prende senza dire niente':'Qualcuno la prende'}. Tu ti senti ${g('furbo','furba')} per un'ora, poi un po' meno.`,'']}}]});
+
+ev({id:'col_straordinari',link:1,k:'Lavoro',t:'Venerdì, le sei e cinquanta',x:d=>`${cap(chiCapo(d.p))} si avvicina alla tua scrivania con la faccia di chi sta per chiedere un favore: serve qualcuno che resti fino a tardi per chiudere la consegna.`,c:[
+  {l:'Resti',sub:()=>`Pagati ${eur(P(90))} in più`,pers:{C:2},fx:d=>{soldi(P(90));pesa(5,1);S.lavoro.perf=clamp(S.lavoro.perf+3);relD(d.p,4);ricorda(d.p,'Si è fermato quando serviva',2);return ['Alle nove spegnete le luci insieme. Il lunedì te lo ricordano con un caffè.','g']}},
+  {l:'Ti scusi: hai un impegno',pers:{C:-1},fx:d=>{relD(d.p,-2);return [`«Nessun problema», dice ${d.p.nome}. Si capisce che il problema c'è.`,'']}},
+  {l:'Contratti: recuperi giovedì',pers:{E:1},p:.55,si:{fx:d=>{relD(d.p,2);return ['Ti fermi un po\' e il giovedì esci alle quattro. Equilibrio, raro.','g']}},no:{fx:d=>{relD(d.p,-3);return ['«I recuperi non si fanno in questo periodo.» Resti lo stesso, un po\' più arrabbiat'+g('o','a')+'.','b']}}}]});
+
+ev({id:'col_nuovo_capo',link:1,k:'Lavoro',t:()=>sportSq()?'Il nuovo allenatore':'Il nuovo capo',x:d=>{const p=d.p,sport=sportSq(),diff=S.eta-p.eta;
+  return `${sport?gp(p,'Il nuovo allenatore','La nuova allenatrice'):gp(p,'Il nuovo responsabile','La nuova responsabile')} è ${p.nome} ${p.cognome}, ${p.eta} anni${diff>=10?`: ${diff} anni meno di te e un sacco di entusiasmo`:diff<=-12?': ha più esperienza di tutti noi messi insieme':''}. Sembra ${descrPers(p.pers,p.sesso)}. Nei primi giorni cambia l'orario ${sport?'degli allenamenti':'delle riunioni'} e impara i nomi di tutti.`},c:[
+  {l:'Ti presenti con una proposta',sub:'Farti notare subito',pers:{E:3,O:1},p:.6,si:{fx:d=>{relD(d.p,8);S.lavoro.perf=clamp(S.lavoro.perf+3);return [`${d.p.nome} annota tutto: «Mi servono persone così.»`,'g']}},no:{fx:d=>{relD(d.p,-3);return ['«Interessante, ne parliamo più avanti.» Non succederà.','']}}},
+  {l:'Lo osservi prima di esporti',pers:{C:2},fx:d=>{relD(d.p,2);return ['Dopo un mese sai già come ragiona. Utile.','g']}},
+  {l:'Pensi che non cambierà niente',pers:{O:-1},fx:()=>['Cambia qualcosa, ma non quello che pensavi.','']}]});
+
+/* ---------- I colleghi ---------- */
+ev({id:'col_copri',link:1,k:'Lavoro',t:'Mi copri?',x:d=>`${cap(tuoColl(d.p))} ${d.p.nome} ti scrive: ${d.x.c}. Ti chiede se giovedì puoi coprire il suo turno o tenere d'occhio le sue scadenze.`,c:[
+  {l:'Certo, ti copro',sub:'Una mano oggi, una domani',pers:{A:3},fx:d=>{pesa(3,1);relD(d.p,8);ricorda(d.p,`${gp(d.p,"L'hai coperto","L'hai coperta")} quando ne aveva bisogno`,3);return [`${d.p.nome} ti ringrazia con un dolce per tutto l'ufficio. «Ti devo una.»`,'g']}},
+  {l:'Solo se mi copri tu un\'altra volta',pers:{C:1},fx:d=>{relD(d.p,2);return [`Patto fatto. ${d.p.nome} lo scrive su un foglio, per sicurezza.`,'']}},
+  {l:'Mi dispiace, non posso',pers:{A:-1},fx:d=>{relD(d.p,-5);ricorda(d.p,`${gp(d.p,'Gli','Le')} hai detto di no quando chiedeva aiuto`,-2);return ['Ti senti in colpa fino a pranzo. Poi passa.','']}}]});
+
+ev({id:'col_promosso',link:1,k:'Lavoro',t:()=>sportSq()?'Il posto da titolare':'Il posto che volevi',x:d=>sportSq()
+  ?`Il mister sceglie ${d.p.nome} come titolare. Il tuo posto, quello che ti sembrava ormai tuo.`
+  :`${cap(tuoColl(d.p))} ${d.p.nome} viene promoss${gp(d.p,'o','a')}. Era anche il posto che volevi tu, e lo sai bene.`,c:[
+  {l:'Ti complimenti davvero',pers:{A:3},fx:d=>{relD(d.p,6);ricorda(d.p,'Si è congratulato con sincerità',3);return [`${d.p.nome} resta di sasso: «Grazie. Non me l'aspettavo da te.»`,'g']}},
+  {l:'Sorridi a denti stretti',pers:{N:1},fx:d=>{pesa(4,1);S.lavoro.perf=clamp(S.lavoro.perf-1);return ['Il sorriso regge fino alle sei. Poi crolla in macchina.','b']}},
+  {l:'Chiedi conto a chi decide',pers:{E:2,C:1},p:.5,si:{fx:()=>{S.lavoro.perf=clamp(S.lavoro.perf+4);S.lavoro.anniLiv=Math.max(S.lavoro.anniLiv,1);return ['Ti ascoltano. Non cambia la scelta, ma si ricorderanno di te la prossima volta.','g']}},no:{fx:()=>{S.lavoro.perf=clamp(S.lavoro.perf-3);return ['«Non è il momento di parlarne.» Il tono ti dice tutto.','b']}}}]});
+
+ev({id:'col_licenziato',link:1,k:'Lavoro',t:'Una scatola di cartone',x:d=>`${cap(tuoColl(d.p))} ${d.p.nome} esce dall'ufficio del capo con una scatola di cartone in mano. L'azienda taglia, e stavolta tocca a ${gp(d.p,'lui','lei')}. L'ufficio è silenzioso.`,c:[
+  {l:'{Lo} saluti con un abbraccio e il tuo numero',pers:{A:3},fx:d=>{salutaVia(d.p);relD(d.p,10);ricorda(d.p,'Si è ricordato di te quando se n\'è andato',3);return [`${d.p.nome} ti scrive il giorno dopo: «Non è un addio, vero?» Non lo è.`,'g']}},
+  {l:'Organizzi un saluto con tutti',pers:{E:3,A:1},fx:d=>{salutaVia(d.p);pesa(2,0);relD(d.p,7);relSq(2);return ['Un regalo comune, una torta e una busta di biglietti. Il capo fa finta di niente.','g']}},
+  {l:'Ti dispiace, ma niente di più',fx:d=>{salutaVia(d.p);return [`${d.p.nome} se ne va. Il giorno dopo la sua scrivania è già vuota.`,'']}},
+  {l:'Pensi: e se capitasse a me?',pers:{N:2},fx:d=>{salutaVia(d.p);pesa(6,3);S.fatti.cercaAltro=S.t;return ['Quella sera aggiorni il curriculum. Non si sa mai.','b']}}]});
+
+ev({id:'col_cena',link:1,k:'Lavoro',t:'La cena del reparto',x:'Il reparto ha chiuso una consegna e qualcuno propone una cena per festeggiare. Il locale è già prenotato.',c:[
+  {l:'Resti fino all\'ultimo brindisi',sub:()=>eur(P(30)),costo:()=>P(30),pers:{E:3},fx:()=>{S.bis.soc=clamp(S.bis.soc+7);mod('felicita',3);relSq(3);const c=squadra().capo;if(c&&chance(.18)){relD(c,-5);return ['Verso mezzanotte dici una cosa sul capo che non dovevi dire, e che il capo sente. Tutti ridono, quasi tutti.','b']}return ['Si finisce a cantare in piazza. Ci si guarda in modo diverso, il lunedì.','g']}},
+  {l:'Vieni, ma torni presto',sub:()=>eur(P(30)),costo:()=>P(30),fx:()=>{relSq(1);S.bis.soc=clamp(S.bis.soc+3);return ['Un piatto, due chiacchiere, un taxi condiviso. Giusto il necessario.','']}},
+  {l:'Salti: sei stanc{o}',pers:{E:-1},fx:()=>{relSq(-1);S.bis.stress=clamp(S.bis.stress-2);return ['Pigiama e divano. Il lunedì ti raccontano di tutto quello che ti sei perso.','']}}]});
+
+ev({id:'col_confida',link:1,k:'Lavoro',t:'Una confidenza',x:d=>`${cap(tuoColl(d.p))} ${d.p.nome} ti prende da parte in pausa: ${d.x.c}. Non lo ha detto a nessun altro.`,c:[
+  {l:'Lo ascolti per un\'ora',sub:'Anche se hai da fare',pers:{A:3},fx:d=>{pesa(2,1);relD(d.p,10);ricorda(d.p,`${gp(d.p,'Lo','La')} hai ascoltato quando ne aveva bisogno`,3);return [`${d.p.nome} ti ringrazia con gli occhi lucidi. Da oggi tra voi c'è qualcosa in più di un caffè.`,'g']}},
+  {l:'Gli dai due consigli pratici',pers:{C:1},fx:d=>{relD(d.p,4);return [`Utile e concreto: ${gp(d.p,'lui','lei')} prende appunti e ti ringrazia due giorni dopo.`,'']}},
+  {l:'Hai una scadenza: ne parlate dopo',fx:d=>{relD(d.p,-2);return ['«Certo, dopo.» Il dopo non arriva mai, per tutti e due.','']}}]});
+
+ev({id:'col_lite',link:1,k:'Lavoro',t:'Non si parlano più',x:d=>{const q=qDi(d);return `${d.p.nome} e ${q.nome} non si parlano più dopo la riunione di ieri. A pranzo ognuno ti racconta la sua versione, e hanno entrambi un po' ragione.`},c:[
+  {l:'Parli con tutti e due',pers:{A:2,E:1},p:.5,si:{fx:d=>{const q=qDi(d);relD(d.p,4);relD(q,4);return [`Dopo un caffè a tre si chiariscono. ${d.p.nome} e ${q.nome} ti guardano come uno che ha salvato il reparto.`,'g']}},no:{fx:d=>{const q=qDi(d);relD(d.p,-3);relD(q,-3);pesa(3,1);return [`Ti sei ${g('messo','messa')} in mezzo e adesso ce l'hanno un po' con te.`,'b']}}},
+  {l:'Stai dalla parte di quello che ti è più vicino',pers:{A:-1},fx:d=>{const q=qDi(d),a=d.p.rapporto>=q.rapporto?d.p:q,b=a===d.p?q:d.p;relD(a,6);relD(b,-6);return [`${a.nome} ti è grato. ${b.nome} smette di salutarti per due settimane.`,'']}},
+  {l:'Non ti schieri',pers:{N:-1},fx:()=>['Mangi il tuo panino fingendo di non aver sentito niente. Funziona, più o meno.','']}]});
+
+ev({id:'col_neonato',link:1,k:'Lavoro',t:'La colletta',x:d=>`${cap(tuoColl(d.p))} ${d.p.nome} annuncia ${gp(d.p,'che sta per diventare papà','che aspetta un bambino')}, e in due giorni la scrivania è piena di bigliettini. Qualcuno ha già iniziato a raccogliere i soldi per il regalo.`,c:[
+  {l:'Dai la tua parte',sub:()=>eur(P(20)),costo:()=>P(20),pers:{A:1},fx:d=>{relD(d.p,3);return ['Tutti firmano il biglietto. Il tuo messaggio è il più breve e il più sincero.','g']}},
+  {l:'La organizzi tu',sub:()=>eur(P(25)),costo:()=>P(25),pers:{E:2,A:2},fx:d=>{relD(d.p,6);relSq(1);ricorda(d.p,'Hai organizzato la colletta per il suo bambino',3);return [`Passeggino scelto, biglietto firmato da tutti. ${d.p.nome} si commuove davanti alla scrivania.`,'g']}},
+  {l:'Stavolta passi',pers:{A:-1},fx:d=>{relD(d.p,-1);return ['Nessuno dice niente. Qualcuno se lo ricorderà.','']}}]});
+
+/* ---------- Prima catena: il progetto importante ---------- */
+ev({id:'prg_avvio',link:1,k:'Un progetto',t:'Un progetto importante',x:d=>{const q=qDi(d);return `${cap(chiCapo(d.p))} ti chiama in ufficio: ${q?`vuole affidarti un progetto delicato, tre mesi di lavoro con un cliente esigente, e vuole che lo segua con ${q.nome}`:'vuole affidarti un progetto delicato, tre mesi di lavoro con un cliente esigente'}. Se va bene, si parla di promozione.`},cond:()=>!!S.lavoro,c:[
+  {l:'Lo guidi tu, dividendo i compiti',sub:'Tre mesi intensi',pers:{C:3},fx:d=>{pesa(8,2);futuro(.3,'prg_imprevisto',{p:d.p,x:{q:d.x&&d.x.q,m:'guida',s:1}});return [`Prepari una lavagna con i compiti di ognuno. ${d.p.nome} guarda la lavagna e sorride.`,'g']}},
+  {l:'Lavori fianco a fianco con il collega',pers:{E:2,A:1},fx:d=>{const q=qDi(d);pesa(6,1);if(q){relD(q,5);ricorda(q,'Avete lavorato insieme a un progetto grosso',2)}futuro(.3,'prg_imprevisto',{p:d.p,x:{q:d.x&&d.x.q,m:'insieme',s:1}});return ['Vi vedete ogni mattina alle otto, lavagna e caffè. Funziona, più o meno.','g']}},
+  {l:'Fai tutto da solo, che è più sicuro',pers:{C:2,A:-2},fx:d=>{pesa(11,3);futuro(.3,'prg_imprevisto',{p:d.p,x:{q:d.x&&d.x.q,m:'solo',s:0}});return ['Notti, lunedì mattina e nessuno a cui chiedere. Ma è tutto tuo.','']}},
+  {l:'Rifiuti: hai già troppo da fare',pers:{N:1,C:-1},fx:d=>{S.lavoro.perf=clamp(S.lavoro.perf-3);relD(d.p,-5);return [`${d.p.nome} annuisce, ma lo segna da qualche parte.`,'']}}]});
+
+ev({id:'prg_imprevisto',link:1,k:'Un progetto',t:'A metà strada',x:d=>{const q=qDi(d),k=(d.x.k=d.x.k||pick(['cliente','malattia','budget']));
+  return k==='cliente'?'Il cliente cambia le regole a metà strada: nuovi requisiti, stessa data di consegna.'
+    :k==='malattia'?`${q?q.nome+' si ammala':'Un collega chiave si ammala'} proprio nella settimana più dura. Il lavoro non si ferma, la persona sì.`
+    :'Il budget viene tagliato di un terzo. «Dovete fare lo stesso lavoro con meno risorse.»'},cond:()=>!!S.lavoro,c:[
+  {l:'Rilanci: notti e caffè',pers:{C:2,N:1},fx:d=>{pesa(9,2);const ok=chance(.5+pz('C')*.2);futuro(.25,'prg_consegna',{p:d.p,x:{...d.x,s:d.x.s+(ok?1:-1)}});return [ok?'Dormi quattro ore a notte, ma tieni botta.':'Ti sfinisci e sbagli proprio dove non dovevi.',ok?'g':'b']}},
+  {l:'Chiedi una mano a chi ti sta intorno',pers:{A:2,E:1},fx:d=>{const q=qDi(d);if(q){relD(q,4)}relSq(1);const ok=chance(.7);futuro(.25,'prg_consegna',{p:d.p,x:{...d.x,s:d.x.s+(ok?1:0)}});return [ok?'Tutti danno una mano, e il reparto si accorge di essere una squadra.':'Qualcuno aiuta, qualcuno no. Si va avanti lo stesso.',ok?'g':'']}},
+  {l:'Chiedi più tempo al capo',pers:{E:1},fx:d=>{const ok=chance(.5+capoEsito()*.15);if(!ok)relD(d.p,-5);futuro(.25,'prg_consegna',{p:d.p,x:{...d.x,s:d.x.s+(ok?1:-1)}});return [ok?`${d.p.nome} ti concede due settimane. Ti senti capito.`:`«Non possiamo.» ${cap(gp(d.p,'lui','lei'))} non è contento della richiesta.`,ok?'g':'b']}}]});
+
+ev({id:'prg_consegna',link:1,k:'Un progetto',t:'La consegna',x:d=>`È il giorno della consegna. ${qDi(d)?`Tu, ${qDi(d).nome}`:'Tu'} e il resto del reparto avete dato tutto quello che avevate. ${d.p.nome} aspetta in sala riunioni con il cliente.`,cond:()=>!!S.lavoro,c:[
+  {l:'Presenti tu il lavoro',pers:{E:2},fx:d=>consegna(d,1)},
+  {l:'Lasci la parola al collega',pers:{A:2},fx:d=>consegna(d,2)},
+  {l:'Lasci presentare il capo',pers:{A:1,E:-1},fx:d=>consegna(d,3)}]});
+function consegna(d,mod3){
+  const L=S.lavoro,q=qDi(d);if(!L)return ['Il progetto si chiude senza di te.',''];
+  const v=(d.x.s||0)+(L.perf-60)/40+r(-8,8)/10+(mod3===1?.2:0);
+  const capo=d.p;
+  if(v>=1.4){
+    L.perf=clamp(L.perf+14);L.anniLiv=Math.max(L.anniLiv,2);relD(capo,10);if(q)relD(q,6);mod('felicita',6);
+    ricorda(capo,'Il progetto è stato un successo grazie a te',3);
+    return [`Il cliente firma. ${capo.nome} ti stringe la mano davanti a tutti${q?` e cita anche ${q.nome}`:''}. Il tuo nome gira ai piani alti.`,'g'];
+  }
+  if(v>=0){
+    L.perf=clamp(L.perf+5);relD(capo,3);if(q)relD(q,3);
+    return ['Il cliente è soddisfatto, a metà. Qualcosa da rivedere, ma il progetto si chiude e nessuno si fa male.','g'];
+  }
+  L.perf=clamp(L.perf-9);relD(capo,-8);pesa(5,2);
+  ricorda(capo,'Il progetto è andato male',-2);
+  return [`Il cliente non è contento e ${capo.nome} lo sa. Nei giorni dopo si cerca qualcuno a cui dare la colpa.`,'b'];
+}
+
+/* ---------- Seconda catena: la riorganizzazione ---------- */
+ev({id:'prg_riorg1',link:1,k:'La riorganizzazione',t:'Girano delle voci',x:'Alla macchinetta del caffè si parla a bassa voce: l\'azienda sta per riorganizzare i reparti. Nessuno sa niente, ma tutti sanno qualcosa.',cond:()=>!!S.lavoro,c:[
+  {l:'Chiedi al capo cosa succede',pers:{E:2},fx:d=>{const ok=chance(.5+capoEsito()*.2);if(d.p)relD(d.p,ok?3:-2);futuro(.5,'prg_riorg2',{p:d.p,x:{a:ok?1:0}});return [ok?`${d.p.nome} ti dice quello che può: «Non preoccuparti, parleremo con tutti.»`:'«Non so niente», risponde. Non sembra vero.',ok?'g':'b']}},
+  {l:'Ti fai vedere di più',pers:{C:2},fx:d=>{pesa(4,1);S.lavoro.perf=clamp(S.lavoro.perf+3);futuro(.5,'prg_riorg2',{p:d.p,x:{a:1}});return ['Prima in ufficio, ultimo a uscire. Se ne accorgono.','']}},
+  {l:'Aggiorni il curriculum, per sicurezza',pers:{N:1,O:1},fx:d=>{S.fatti.cercaAltro=S.t;futuro(.5,'prg_riorg2',{p:d.p,x:{a:2}});return ['Non si sa mai. Lo apri e lo chiudi quattro volte in una settimana.','']}},
+  {l:'Fai finta di niente',pers:{E:-1},fx:d=>{futuro(.5,'prg_riorg2',{p:d.p,x:{a:0}});return ['Le voci passano. Poi tornano, più forti.','']}}]});
+
+ev({id:'prg_riorg2',link:1,k:'La riorganizzazione',t:'I colloqui',x:d=>`${cap(chiCapo(d.p))} convoca tutti, uno alla volta. Il tuo turno è alle quattro. In sala riunioni c'è un foglio con scritti dei nomi, e il tuo è stato cancellato e riscritto.`,cond:()=>!!S.lavoro,c:[
+  {l:'Ti presenti preparat{o}, con i numeri',pers:{C:3},fx:d=>{S.lavoro.perf=clamp(S.lavoro.perf+2);futuro(.4,'prg_riorg3',{p:d.p,x:{a:d.x.a,m:1}});return ['Porti un foglio con i risultati degli ultimi due anni. Il capo annuisce a lungo.','g']}},
+  {l:'Dici cosa vorresti fare davvero',pers:{E:2,O:2},fx:d=>{futuro(.4,'prg_riorg3',{p:d.p,x:{a:d.x.a,m:2}});return ['Parli di quello che ti interessa, non di quello che ti hanno assegnato. Qualcuno ascolta.','']}},
+  {l:'Ascolti e basta',pers:{A:1,E:-1},fx:d=>{futuro(.4,'prg_riorg3',{p:d.p,x:{a:d.x.a,m:0}});return ['«Le faremo sapere.» Esci con la sensazione di non aver detto niente.','']}}]});
+
+ev({id:'prg_riorg3',link:1,k:'La riorganizzazione',t:'Il nuovo assetto',x:()=>`Arriva ${S.anno>=1999?'l\'email':'la circolare'} con il nuovo organigramma. Ti serve un respiro lungo prima di ${S.anno>=1999?'aprirla':'leggerla'}.`,cond:()=>!!S.lavoro,c:[
+  {l:()=>S.anno>=1999?'La apri':'La leggi',fx:d=>{
+    const L=S.lavoro,x=d.x||{},j=JOB[L.id];
+    const punti=(x.a||0)*.4+(x.m===1?.6:x.m===2?.3:0)+(L.perf-60)/60+capoEsito()*.3+r(-6,6)/10-(S.mondo.crisi?.5:0);
+    if(punti>=.9&&L.liv<j.liv.length-1&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
+      L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere()*fattoreZona(j));L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);
+      return [`Nel nuovo organigramma c'è il tuo nome, un livello sopra. Diventi ${L.nome.toLowerCase()}, con una RAL di ${eur(L.stip)}.`,'g'];
+    }
+    if(punti>=.1){mod('felicita',2);return ['Il tuo nome è dove l\'aspettavi, con qualche collega nuovo accanto. Cambiano le scrivanie, il lavoro resta quello.','']}
+    if(punti>=-.6||!L.contratto||L.contratto.t!=='ind'){L.perf=clamp(L.perf-3);pesa(4,2);return ['Ti spostano in un altro reparto, con un capo che non conosci. Non è una punizione, ma ci somiglia.','b']}
+    licenzia('Nella riorganizzazione il tuo posto viene tagliato.');segnaVita('licenziato');soldi(P(3000));
+    return [`Il tuo posto non c'è più. Ti offrono un incentivo di ${eur(P(3000))} e una stretta di mano.`,'b'];
+  }}]});
+
+/* ---------- Quando e con chi: eventoLavoro() (c10_squadra.js) sceglie qui, circa una volta ogni 7–8 anni per evento ---------- */
+const soloColl=sq=>!sportSq()&&sq.colleghi.length>0;
+const unColl=sq=>({p:pick(sq.colleghi)});
+const COL_EV=[
+  {id:'col_capo_nota',w:3,rip:5,ok:sq=>!!sq.capo&&!sportSq(),d:sq=>({p:sq.capo})},
+  {id:'col_capo_scarica',w:2,rip:6,ok:sq=>!!sq.capo&&!sportSq()&&(sq.capo.pers.A<55||sq.capo.pers.C<45),d:sq=>({p:sq.capo})},
+  {id:'col_straordinari',w:2,rip:6,ok:sq=>!!sq.capo&&!sportSq()&&S.lavoro.contratto&&S.lavoro.contratto.t!=='piva',d:sq=>({p:sq.capo})},
+  {id:'col_copri',w:3,rip:4,ok:soloColl,d:sq=>{const p=pick(sq.colleghi);return {p,x:{c:p.figliN>0&&chance(.6)?'il bambino ha la febbre e deve restare a casa':pick(['ha una visita medica che non riesce a spostare','è in pieno trasloco e non ce la fa','deve accompagnare la madre in ospedale'])}}}},
+  {id:'col_promosso',w:2,rip:6,ok:sq=>sq.colleghi.length>0,d:unColl},
+  {id:'col_licenziato',w:()=>1+(S.mondo.crisi?3:0),rip:6,ok:soloColl,d:unColl},
+  {id:'col_cena',w:2,rip:5,ok:sq=>!sportSq()&&sq.colleghi.length>=2&&S.soldi>=P(60)&&S.eta>=20,d:()=>({})},
+  {id:'col_confida',w:3,rip:4,ok:sq=>sq.colleghi.length>0,d:sq=>{const p=pick(sq.colleghi);return {p,x:{c:pick(['si sta separando e non sa a chi dirlo','non dorme da settimane per i soldi','ha avuto un\'offerta da un\'altra azienda e non sa se accettare','ha ricevuto una diagnosi che non ha ancora detto a casa'])}}}},
+  {id:'col_lite',w:2,rip:5,ok:sq=>sq.colleghi.length>=2,d:sq=>{const c=sq.colleghi.slice().sort(()=>Math.random()-.5);return {p:c[0],q:c[1]}}},
+  {id:'col_neonato',w:1,rip:4,ok:sq=>!sportSq()&&sq.colleghi.some(p=>p.eta>=24&&p.eta<=42&&!(p.neoT&&S.t-p.neoT<24)),d:sq=>{const p=pick(sq.colleghi.filter(p=>p.eta>=24&&p.eta<=42&&!(p.neoT&&S.t-p.neoT<24)));p.figliN=(p.figliN||0)+1;p.neoT=S.t;return {p}}},
+  {id:'prg_riorg1',w:()=>2+(S.mondo.crisi?3:0),rip:8,ok:sq=>!!sq.capo&&!sportSq()&&S.lavoro.contratto&&S.lavoro.contratto.t==='ind'&&S.lavoro.anni>=2&&!JOB[S.lavoro.id].conc,d:sq=>({p:sq.capo})}
+];
+const salutaVia=p=>{p.lav.via=S.t;p.stato='disoccupato';p.lavT=0};
+
 /* ================= AZIONI ================= */
 function fatto(k){return !!S.azioni[k]}
 function cdAzione(k){
@@ -7632,14 +7928,19 @@ function azLavoro(k){
   const L=S.lavoro;if(!L)return;
   const j=JOB[L.id];
   if(k==='sodo')return azione(una('sodo',0,()=>{eff({perf:[2,5]});S.bis.stress=clamp(S.bis.stress+5);return ['Un mese a testa bassa, sempre in anticipo. Il capo se ne accorge.','g']},14));
-  if(k==='aumento')return azione(una('aumento',0,()=>{if(L.perf>65&&chance(.5)){L.stip=Math.round(L.stip*1.07);return [`Aumento ottenuto! Nuova RAL: ${eur(L.stip)}.`,'g']}L.perf=clamp(L.perf-4);return ['«Non è il momento», ti risponde il capo.','b']}));
+  if(k==='aumento')return azione(una('aumento',0,()=>{if(L.perf>65&&chance(.5+capoEsito()*.05)){L.stip=Math.round(L.stip*1.07);return [`Aumento ottenuto! Nuova RAL: ${eur(L.stip)}.`,'g']}L.perf=clamp(L.perf-4);return ['«Non è il momento», ti risponde il capo.','b']}));
   if(k==='promo')return azione(una('promo',0,()=>{
     if(L.liv>=j.liv.length-1)return ['Sei già al livello più alto.','x'];
     const m=mancanti(j.promo&&j.promo[L.liv+1]);if(m.length)return [`Per salire di livello ti serve: ${m.join(', ')}.`,'x'];
-    if(L.anniLiv>=1&&chance((L.perf-45)/70*fattoreCarriera(L))){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L))L.contratto={t:'piva',da:S.t};L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
+    if(L.anniLiv>=1&&chance((L.perf-45)/70*fattoreCarriera(L)+capoEsito()*.05)){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L))L.contratto={t:'piva',da:S.t};L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
     L.perf=clamp(L.perf-3);return ['Per ora la promozione va a un collega.','b'];
   }));
-  if(k==='collega')return azione(una('collega',0,()=>{if(chance(.35)){const p=nuovoAmico(true);if(p)return [`Fai amicizia con ${p.nome}, ${gp(p,'un collega','una collega')}.`,'g']}return ['Pausa caffè un po\' imbarazzante.','']}));
+  if(k==='collega')return azione(una('collega',0,()=>{
+    const sq=squadra(),cs=sq.colleghi;
+    if(cs.length){const p=cs.slice().sort((a,b)=>a.rapporto-b.rapporto)[0];const ok=chance(.45+affinita(p)/250+pz('E')*.1);relD(p,ok?9:2);p.ultimo=S.t;
+      if(ok){ricorda(p,'Pausa caffè e due chiacchiere vere',2);return [`Pausa caffè con ${p.nome}: ${gp(p,'finalmente','finalmente')} parlate d'altro che di lavoro.`,'g']}
+      return [`Pausa caffè con ${p.nome}. Si parla del tempo e della macchinetta rotta.`,'']}
+    if(chance(.35)){const p=nuovoAmico(true);if(p)return [`Fai amicizia con ${p.nome}, ${gp(p,'un collega','una collega')}.`,'g']}return ['Pausa caffè un po\' imbarazzante.','']}));
   if(k==='licenziati')return showSheet({k:'Lavoro',t:'Ti licenzi?',p:`Lasci il posto da ${L.nome.toLowerCase()}.`,chiudi:true,scelte:[
     {l:'Sì, mi licenzio',sub:()=>`Ricevi ${S.anno>=1982?'il TFR':'la liquidazione'}, ma chi si dimette non ha ${S.anno>=2015?'la NASpI':'il sussidio di disoccupazione'}`,fx:()=>{pagaTFR();S.storico.push(L.nome);S.lavoro=null;mod('felicita',3);return ['Hai dato le dimissioni. Si volta pagina.','']}}]});
   if(k==='pensione'){coda.unshift({e:EV.pensione,d:{}});return next()}
@@ -7675,8 +7976,8 @@ function apriPersona(id){
   const rel=(a,b)=>{const d=r(a,b);p.rapporto=clamp(p.rapporto+d);p.ultimo=S.t;if(p.intim!==undefined){p.intim=clamp(p.intim+d*.5);p.pass=clamp(p.pass+d*.4)}};
   if(R==='Conoscente'){
     opt('Proponi di vedervi','vedi',0,()=>{if(chance(.3+affinita(p)/200+pz('E')*.12+(p.rapporto-30)/150)){p.ruolo='Amico';p.rapporto=clamp(p.rapporto+15);p.ultimo=S.t;return [`${S.eta<12?'Un pomeriggio al parco e diventate inseparabili.':S.eta<18?'Un gelato diventa un pomeriggio intero.':'Un caffè diventa una serata intera.'} Tu e ${p.nome} ora siete amici.`,'g']}p.rapporto=clamp(p.rapporto+4);return [`${p.nome} è gentile, ma ha sempre da fare.`,'']},6);
-    if(S.eta>=16&&single()&&(S.attrazione==='E'||S.attrazione===p.sesso||(!S.attrazione&&p.sesso!==S.sesso)))opt('Chiedi di uscire','esci_c',0,()=>{const c={nome:p.nome,cognome:p.cognome,sesso:p.sesso,eta:p.eta,asp:r(30,90),pers:p.pers,tr:p.tr};S.relazioni=S.relazioni.filter(x=>x!==p);return appuntamento(c,.05)},6);
-    o.push({l:'Lascia perdere',fx:()=>{S.relazioni=S.relazioni.filter(x=>x!==p);return [`${p.nome} esce dai tuoi contatti.`,'']}});
+    if(S.eta>=16&&single()&&!(p.lav&&p.lav.r==='capo')&&(S.attrazione==='E'||S.attrazione===p.sesso||(!S.attrazione&&p.sesso!==S.sesso)))opt('Chiedi di uscire','esci_c',0,()=>{const c={nome:p.nome,cognome:p.cognome,sesso:p.sesso,eta:p.eta,asp:r(30,90),pers:p.pers,tr:p.tr};S.relazioni=S.relazioni.filter(x=>x!==p);return appuntamento(c,.05)},6);
+    if(!lavInCorso(p))o.push({l:'Lascia perdere',fx:()=>{S.relazioni=S.relazioni.filter(x=>x!==p);return [`${p.nome} esce dai tuoi contatti.`,'']}});
     return showSheet({k:`Conoscente · ${p.eta} anni`,t:`${p.nome} ${p.cognome}`,p:schedaPersona(p),chiudi:true,scelte:o,d:{p}});
   }
   if(R==='Nemico'){
@@ -8210,7 +8511,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='3ed8c286';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='656bdef7';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 
@@ -8903,6 +9204,7 @@ function renderPersone(V){
   const ord=['Madre','Padre','Patrigno','Fratello'];
   const fam=R(ord).sort((a,b)=>ord.indexOf(a.ruolo)-ord.indexOf(b.ruolo));
   const amore=R(['Partner','Coniuge']),figli=R(['Figlio','Nipote']),amici=R(['Amico']).sort((a,b)=>(b.best?1:0)-(a.best?1:0)),ex=R(['Ex']);
+  const lavoroP=R(['Conoscente']).filter(lavInCorso).sort((a,b)=>(a.lav.r==='capo'?0:1)-(b.lav.r==='capo'?0:1));
   const nonni=R(['Nonno']),zii=R(['Zio','Cugino']).sort((a,b)=>a.ruolo.localeCompare(b.ruolo)),acq=R(['Suocero','Cognato']),nem=R(['Nemico']);
   const gruppo=(t,L)=>L.length?`<div class="sec">${t}</div><div class="list">${L.map(personaRow).join('')}</div>`:'';
   let h='<div class="sec">Famiglia</div>'+(fam.length?`<div class="list">${fam.map(personaRow).join('')}</div>`:'<div class="note">Nessun familiare in vita.</div>');
@@ -8915,7 +9217,8 @@ function renderPersone(V){
     h+=`<div class="list">${figli.map(personaRow).join('')}</div>`}
   h+=`<div class="sec">Amici</div>${amici.length?`<div class="list">${amici.map(personaRow).join('')}</div>`:'<div class="note">Non hai ancora amici.</div>'}`;
   if(S.eta>=6&&S.carcere===0)h+=`<button class="btn ghost" id="btnAmici" style="margin-top:8px" ${fatto('nuoviamici')?'disabled':''}>${fatto('nuoviamici')?attesa('nuoviamici'):'Fai nuove amicizie'}</button>`;
-  h+=gruppo('Conoscenti',R(['Conoscente']));
+  h+=gruppo(lavoroP.length?(sportSq()?'In squadra':'Al lavoro'):'',lavoroP);
+  h+=gruppo('Conoscenti',R(['Conoscente']).filter(p=>!lavInCorso(p)));
   const gr=(S.gruppi||[]).map(G=>[G,membriVivi(G).filter(x=>['Amico','Conoscente'].includes(x.ruolo))]).filter(x=>x[1].length>=2);
   if(gr.length)h+=`<div class="sec">I tuoi gruppi</div><div class="panel">${gr.map(([G,M])=>`<div class="kv"><span>${esc(G.n)}${gruppoAttivo(G)?'':' <small class="meta">· di una volta</small>'}</span><b class="meta">${esc(nomi(M.slice(0,4).map(x=>x.nome)))}${M.length>4?' e altri':''}</b></div>`).join('')}</div>`;
   h+=gruppo('Nemici',nem);

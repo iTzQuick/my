@@ -54,6 +54,7 @@ function gioca(n){S.fatti.gio=(S.fatti.gio||0)+n;if(!S.dip.gioco&&S.fatti.gio>=1
 
 /* ---------- Testi con segnaposto ---------- */
 function ruoloLabel(p){
+  if(p.lav&&(p.ruolo==='Conoscente'||(p.ruolo==='Amico'&&lavInCorso(p))))return etichettaLav(p);
   switch(p.ruolo){
     case 'Fratello':return gp(p,'Fratello','Sorella');
     case 'Nonno':return gp(p,'Nonno','Nonna');
@@ -194,6 +195,7 @@ function assumi(j){
   S.ultimoLavoro=S.lavoro.nome;
   if(!j.pt)S.fatti.primoLavoro=1;
   if(primo)momento('lavoro',{tit:S.lavoro.nome,sub:descrContratto(S.lavoro),txt:`Stipendio: ${eur(ralEff(S.lavoro)/12)} lordi al mese. Il primo lavoro vero.`});
+  iniziaSquadra(false);   // il capo e i colleghi (c10_squadra.js)
 }
 /* vol: lo lasci tu (niente NASpI) */
 function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L);if(S.legami)bisognoAiuto('lavoro')}}   // la partita IVA non ha la NASpI
@@ -378,7 +380,7 @@ function mese(silenzioso){
   if(S.carcere===0)meseScuola();
   calendario();
   storiaMese();
-  meseLavoro();
+  meseLavoro();meseSquadra();
   meseItalia();
   normalizzaRoutine();
   meseRoutine();
@@ -547,7 +549,7 @@ function meseLavoro(){
   if(S.fatti.congedo>S.t)return;   // in congedo: niente valutazioni né promozioni
   const sod=soddLavoro();
   L.perf=clamp(L.perf+(r(-7,5)+(S.felicita<30?-4:0)+(S.dip.alcol?-6:0)+(S.salute<30?-4:0))/3.5+pz('C')*.7+(S.bis.energia<30?-1:0)+(S.bis.stress>80?-1:0)+(sod-50)/90);
-  if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100)/12*fattoreCarriera(L))&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
+  if(L.liv<j.liv.length-1&&L.perf>=70&&L.anniLiv>=2&&chance((.3+(L.perf-70)/100+capoEsito()*.05)/12*fattoreCarriera(L))&&mancanti(j.promo&&j.promo[L.liv+1]).length===0){
     L.liv++;L.anniLiv=0;L.mesi=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,8)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L)){L.contratto={t:'piva',da:S.t};log('Ti metti in proprio: apri la partita IVA.','h')}L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;
     mod('felicita',8);segnaVita('promozione');log(`Promozione! Ora sei ${L.nome.toLowerCase()}, con una RAL di ${eur(L.stip)}.`,'g');
   }
@@ -753,6 +755,7 @@ function aggiornaStato(){
   if(!S.orient)S.orient=S.attrazione?(S.attrazione==='E'?'bi':S.attrazione===S.sesso?'omo':'etero'):pesata([['etero',94],['omo',3],['bi',3]]);
   if(!S.fatti.cittaNascita){S.fatti.cittaNascita=S.citta;S.fatti.provNascita=S.prov}
   iniziaLegami();
+  if(S.lavoro&&S.lavoro.sq===undefined)iniziaSquadra(true);   // salvataggi vecchi: capo e colleghi senza diario
 }
 function migra3(){
   const X=S;

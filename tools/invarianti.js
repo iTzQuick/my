@@ -75,6 +75,18 @@ window.INV={
   if(S.legami)for(const l of S.legami){if(l.a===l.b)no('legame con sé stessi',String(l.a));if(!in100(l.f))no('forza del legame fuori 0-100',String(l.f))}
   if(S.genit&&(!in100(S.genit.cal)||!in100(S.genit.reg)))no('stile da genitore non valido',JSON.stringify(S.genit));
   if(S.gruppi)for(const g of S.gruppi)if(new Set(g.m).size<g.m.length)no('persona due volte nello stesso gruppo',g.n);
+  // 9. lavoro vissuto (Fase 5.3a): un solo capo, al massimo 4 colleghi, tutti nel gruppo lavoro:<id>:<da>; nessuna squadra senza posto fisso
+  if(typeof lavInCorso==='function'){
+   const sq=S.relazioni.filter(lavInCorso),L=S.lavoro;
+   if(sq.filter(p=>p.lav.r==='capo').length>1)no('squadra: due capi',sq.filter(p=>p.lav.r==='capo').map(chi).join(', '));
+   if(sq.filter(p=>p.lav.r==='collega').length>4)no('squadra: troppi colleghi',String(sq.length));
+   if(L&&L.sq&&typeof squadraPossibile==='function'&&!squadraPossibile(L)&&sq.length)no('squadra con un lavoro senza squadra',L.id);
+   const G=L&&(S.gruppi||[]).find(g=>g.k===`lavoro:${L.id}:${L.da||0}`);
+   for(const p of sq)if(!G||!G.m.includes(p.id))no('collega fuori dal gruppo del lavoro',chi(p));
+   // se il lavoro finisce in un evento a fine mese, i colleghi si chiudono al mese dopo (meseSquadra): un mese di tolleranza, poi è un orfano vero
+   const W=this._orf||(this._orf=new WeakMap());
+   for(const p of S.relazioni)if(p.vivo&&p.lav&&!p.lav.via&&!p.lav.fine&&!lavInCorso(p)){if(!W.has(p))W.set(p,S.t);else if(S.t>W.get(p))no('collega orfano (il lavoro è finito e non è stato chiuso)',chi(p))}
+  }
   return out;
  }
 };

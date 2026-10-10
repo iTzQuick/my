@@ -116,14 +116,19 @@ function azLavoro(k){
   const L=S.lavoro;if(!L)return;
   const j=JOB[L.id];
   if(k==='sodo')return azione(una('sodo',0,()=>{eff({perf:[2,5]});S.bis.stress=clamp(S.bis.stress+5);return ['Un mese a testa bassa, sempre in anticipo. Il capo se ne accorge.','g']},14));
-  if(k==='aumento')return azione(una('aumento',0,()=>{if(L.perf>65&&chance(.5)){L.stip=Math.round(L.stip*1.07);return [`Aumento ottenuto! Nuova RAL: ${eur(L.stip)}.`,'g']}L.perf=clamp(L.perf-4);return ['«Non è il momento», ti risponde il capo.','b']}));
+  if(k==='aumento')return azione(una('aumento',0,()=>{if(L.perf>65&&chance(.5+capoEsito()*.05)){L.stip=Math.round(L.stip*1.07);return [`Aumento ottenuto! Nuova RAL: ${eur(L.stip)}.`,'g']}L.perf=clamp(L.perf-4);return ['«Non è il momento», ti risponde il capo.','b']}));
   if(k==='promo')return azione(una('promo',0,()=>{
     if(L.liv>=j.liv.length-1)return ['Sei già al livello più alto.','x'];
     const m=mancanti(j.promo&&j.promo[L.liv+1]);if(m.length)return [`Per salire di livello ti serve: ${m.join(', ')}.`,'x'];
-    if(L.anniLiv>=1&&chance((L.perf-45)/70*fattoreCarriera(L))){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L))L.contratto={t:'piva',da:S.t};L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
+    if(L.anniLiv>=1&&chance((L.perf-45)/70*fattoreCarriera(L)+capoEsito()*.05)){L.liv++;L.anniLiv=0;L.stip=Math.round(stipLiv(j,L.liv)*(1+r(0,6)/100)*fattoreGenere()*fattoreZona(j));if(PIVA_LIV[j.id]===L.liv&&!isPiva(L))L.contratto={t:'piva',da:S.t};L.nome=nomeJob(j,L.liv);S.ultimoLavoro=L.nome;mod('felicita',8);return [`Promozione! Ora sei ${L.nome.toLowerCase()}.`,'g']}
     L.perf=clamp(L.perf-3);return ['Per ora la promozione va a un collega.','b'];
   }));
-  if(k==='collega')return azione(una('collega',0,()=>{if(chance(.35)){const p=nuovoAmico(true);if(p)return [`Fai amicizia con ${p.nome}, ${gp(p,'un collega','una collega')}.`,'g']}return ['Pausa caffè un po\' imbarazzante.','']}));
+  if(k==='collega')return azione(una('collega',0,()=>{
+    const sq=squadra(),cs=sq.colleghi;
+    if(cs.length){const p=cs.slice().sort((a,b)=>a.rapporto-b.rapporto)[0];const ok=chance(.45+affinita(p)/250+pz('E')*.1);relD(p,ok?9:2);p.ultimo=S.t;
+      if(ok){ricorda(p,'Pausa caffè e due chiacchiere vere',2);return [`Pausa caffè con ${p.nome}: ${gp(p,'finalmente','finalmente')} parlate d'altro che di lavoro.`,'g']}
+      return [`Pausa caffè con ${p.nome}. Si parla del tempo e della macchinetta rotta.`,'']}
+    if(chance(.35)){const p=nuovoAmico(true);if(p)return [`Fai amicizia con ${p.nome}, ${gp(p,'un collega','una collega')}.`,'g']}return ['Pausa caffè un po\' imbarazzante.','']}));
   if(k==='licenziati')return showSheet({k:'Lavoro',t:'Ti licenzi?',p:`Lasci il posto da ${L.nome.toLowerCase()}.`,chiudi:true,scelte:[
     {l:'Sì, mi licenzio',sub:()=>`Ricevi ${S.anno>=1982?'il TFR':'la liquidazione'}, ma chi si dimette non ha ${S.anno>=2015?'la NASpI':'il sussidio di disoccupazione'}`,fx:()=>{pagaTFR();S.storico.push(L.nome);S.lavoro=null;mod('felicita',3);return ['Hai dato le dimissioni. Si volta pagina.','']}}]});
   if(k==='pensione'){coda.unshift({e:EV.pensione,d:{}});return next()}
@@ -159,8 +164,8 @@ function apriPersona(id){
   const rel=(a,b)=>{const d=r(a,b);p.rapporto=clamp(p.rapporto+d);p.ultimo=S.t;if(p.intim!==undefined){p.intim=clamp(p.intim+d*.5);p.pass=clamp(p.pass+d*.4)}};
   if(R==='Conoscente'){
     opt('Proponi di vedervi','vedi',0,()=>{if(chance(.3+affinita(p)/200+pz('E')*.12+(p.rapporto-30)/150)){p.ruolo='Amico';p.rapporto=clamp(p.rapporto+15);p.ultimo=S.t;return [`${S.eta<12?'Un pomeriggio al parco e diventate inseparabili.':S.eta<18?'Un gelato diventa un pomeriggio intero.':'Un caffè diventa una serata intera.'} Tu e ${p.nome} ora siete amici.`,'g']}p.rapporto=clamp(p.rapporto+4);return [`${p.nome} è gentile, ma ha sempre da fare.`,'']},6);
-    if(S.eta>=16&&single()&&(S.attrazione==='E'||S.attrazione===p.sesso||(!S.attrazione&&p.sesso!==S.sesso)))opt('Chiedi di uscire','esci_c',0,()=>{const c={nome:p.nome,cognome:p.cognome,sesso:p.sesso,eta:p.eta,asp:r(30,90),pers:p.pers,tr:p.tr};S.relazioni=S.relazioni.filter(x=>x!==p);return appuntamento(c,.05)},6);
-    o.push({l:'Lascia perdere',fx:()=>{S.relazioni=S.relazioni.filter(x=>x!==p);return [`${p.nome} esce dai tuoi contatti.`,'']}});
+    if(S.eta>=16&&single()&&!(p.lav&&p.lav.r==='capo')&&(S.attrazione==='E'||S.attrazione===p.sesso||(!S.attrazione&&p.sesso!==S.sesso)))opt('Chiedi di uscire','esci_c',0,()=>{const c={nome:p.nome,cognome:p.cognome,sesso:p.sesso,eta:p.eta,asp:r(30,90),pers:p.pers,tr:p.tr};S.relazioni=S.relazioni.filter(x=>x!==p);return appuntamento(c,.05)},6);
+    if(!lavInCorso(p))o.push({l:'Lascia perdere',fx:()=>{S.relazioni=S.relazioni.filter(x=>x!==p);return [`${p.nome} esce dai tuoi contatti.`,'']}});
     return showSheet({k:`Conoscente · ${p.eta} anni`,t:`${p.nome} ${p.cognome}`,p:schedaPersona(p),chiudi:true,scelte:o,d:{p}});
   }
   if(R==='Nemico'){

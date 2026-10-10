@@ -1,4 +1,5 @@
-"""Prova degli eventi della Fase 1 (ritmo): calendario (cal_), incontri (inc_) e, con un prefisso, qualsiasi altro gruppo.
+"""Prova degli eventi della Fase 1 (ritmo): calendario (cal_), incontri (inc_) e, con un prefisso, qualsiasi altro gruppo
+(col_ e prg_ della Fase 5.3a: capo e colleghi veri, anche una squadra sportiva).
 Per ogni evento prepara la situazione giusta (età, partner, neonato, lutto, nipoti, cane, lavoro a turni…),
 lo apre da maschio e da femmina e clicca ogni risposta. Segnala errori JS e testi non risolti.
 
@@ -81,6 +82,19 @@ JS = r'''
      mez_amici_figli:()=>{nuovaPersona('Figlio','F',3,S.cognome,{})},
      bim_castello_letto:()=>{nuovaPersona('Fratello','M',Math.max(1,eta-2),S.cognome,{rapporto:70})},rag_presenta:()=>{nuovaPersona('Partner',S.sesso==='M'?'F':'M',eta,null,{rapporto:60})}};
    if(SETUP[id])SETUP[id]();
+   // Fase 5.3a: capo e colleghi veri (anche una squadra sportiva, a turno) e i dati che gli eventi si aspettano
+   if(/^(col|prg)_/.test(id)){
+     if(i%3===2&&/^col_(promosso|nuovo_capo|confida|lite)$/.test(id)){S.lavoro=null;assumi(JOB.calc)}
+     completaSquadra(true);const sq=squadra(),capoEv=/^(col_capo|col_straord|col_nuovo|prg_)/.test(id);
+     p=capoEv?sq.capo:sq.colleghi[0];
+     if(id==='col_lite')d.q=sq.colleghi[1];
+     if(id==='col_copri')d.x={c:'ha una visita medica che non riesce a spostare'};
+     if(id==='col_confida')d.x={c:'ha avuto un\'offerta da un\'altra azienda e non sa se accettare'};
+     if(id==='prg_avvio')d.x={q:sq.colleghi[0].id};
+     if(id==='prg_imprevisto'||id==='prg_consegna')d.x={q:sq.colleghi[0].id,m:'insieme',s:1,k:['cliente','malattia','budget'][i%3]};
+     if(/^prg_riorg[23]$/.test(id))d.x={a:1,m:1};
+     if(id==='prg_riorg3'){S.mondo.crisi=i%2===0;S.lavoro.perf=i<4?20:80}
+   }
    // Fase 2: amici in un gruppo, ricordi vecchi, partner, figli dell'età giusta
    if(/^(leg|mem)_/.test(id)){if(!S.gruppi){S.gruppi=[];S.legami=[]}const A=nuovaPersona('Amico',i%2?'F':'M',eta,null,{rapporto:72});const B=nuovaPersona('Amico',i%2?'M':'F',eta+1,null,{rapporto:66});
      const G=gruppo(id==='leg_rimpatriata'?'medie':'festa');[A.id,B.id,amico.id].forEach(x=>{if(!G.m.includes(x))G.m.push(x)});if(id==='leg_rimpatriata')G.fine=S.t-150;d.g=G.id;

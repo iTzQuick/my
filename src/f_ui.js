@@ -323,6 +323,7 @@ function renderPersone(V){
   const ord=['Madre','Padre','Patrigno','Fratello'];
   const fam=R(ord).sort((a,b)=>ord.indexOf(a.ruolo)-ord.indexOf(b.ruolo));
   const amore=R(['Partner','Coniuge']),figli=R(['Figlio','Nipote']),amici=R(['Amico']).sort((a,b)=>(b.best?1:0)-(a.best?1:0)),ex=R(['Ex']);
+  const lavoroP=R(['Conoscente']).filter(lavInCorso).sort((a,b)=>(a.lav.r==='capo'?0:1)-(b.lav.r==='capo'?0:1));
   const nonni=R(['Nonno']),zii=R(['Zio','Cugino']).sort((a,b)=>a.ruolo.localeCompare(b.ruolo)),acq=R(['Suocero','Cognato']),nem=R(['Nemico']);
   const gruppo=(t,L)=>L.length?`<div class="sec">${t}</div><div class="list">${L.map(personaRow).join('')}</div>`:'';
   let h='<div class="sec">Famiglia</div>'+(fam.length?`<div class="list">${fam.map(personaRow).join('')}</div>`:'<div class="note">Nessun familiare in vita.</div>');
@@ -335,7 +336,8 @@ function renderPersone(V){
     h+=`<div class="list">${figli.map(personaRow).join('')}</div>`}
   h+=`<div class="sec">Amici</div>${amici.length?`<div class="list">${amici.map(personaRow).join('')}</div>`:'<div class="note">Non hai ancora amici.</div>'}`;
   if(S.eta>=6&&S.carcere===0)h+=`<button class="btn ghost" id="btnAmici" style="margin-top:8px" ${fatto('nuoviamici')?'disabled':''}>${fatto('nuoviamici')?attesa('nuoviamici'):'Fai nuove amicizie'}</button>`;
-  h+=gruppo('Conoscenti',R(['Conoscente']));
+  h+=gruppo(lavoroP.length?(sportSq()?'In squadra':'Al lavoro'):'',lavoroP);
+  h+=gruppo('Conoscenti',R(['Conoscente']).filter(p=>!lavInCorso(p)));
   const gr=(S.gruppi||[]).map(G=>[G,membriVivi(G).filter(x=>['Amico','Conoscente'].includes(x.ruolo))]).filter(x=>x[1].length>=2);
   if(gr.length)h+=`<div class="sec">I tuoi gruppi</div><div class="panel">${gr.map(([G,M])=>`<div class="kv"><span>${esc(G.n)}${gruppoAttivo(G)?'':' <small class="meta">· di una volta</small>'}</span><b class="meta">${esc(nomi(M.slice(0,4).map(x=>x.nome)))}${M.length>4?' e altri':''}</b></div>`).join('')}</div>`;
   h+=gruppo('Nemici',nem);

@@ -153,7 +153,7 @@ ev({id:'console',link:1,k:'Famiglia',t:'Niente console',x:'I tuoi genitori hanno
   {l:'Protesta e sbatti la porta',fx:()=>{S.routine.schermi=0;relGenitori(-8);return ['Console sequestrata per un mese.','b']}}]});
 ev({id:'lavoro_pesa',link:1,k:'Lavoro',t:'Il lavoro ti pesa',x:()=>`Fai ${S.lavoro.nome.toLowerCase()}, ma non è il lavoro per te. Ogni lunedì mattina è più difficile. ${'Il tuo profilo di interessi è '+codiceRiasec()+': '+interessi().slice(0,2).map(x=>RIASEC[x[0]].toLowerCase()).join(' e ')+'.'}`,c:[
   {l:'Inizia a guardarti intorno',fx:()=>{S.fatti.cercaAltro=S.t;return ['Aggiorni il curriculum. Le offerte sono nella scheda Lavoro.','']}},
-  {l:'Parla con il capo',fx:()=>{const L=S.lavoro;if(chance(.4+pz('E')*.15)){L.perf=clamp(L.perf+5);S.fatti.capoCattivo=0;return ['Il capo ti affida compiti più adatti a te.','g']}return ['«Qui facciamo tutti un po\' di tutto.»','b']}},
+  {l:'Parla con il capo',fx:()=>{const L=S.lavoro,c=squadra().capo,n=c?c.nome:'Il capo';if(chance(.4+pz('E')*.15+capoEsito()*.1)){L.perf=clamp(L.perf+5);if(c)relD(c,3);return [`${n} ti affida compiti più adatti a te.`,'g']}if(c)relD(c,-1);return ['«Qui facciamo tutti un po\' di tutto.»','b']}},
   {l:'Tieni duro',fx:()=>{S.tensione=(S.tensione||0)+4;return ['Lo stipendio arriva il 27. Si va avanti.','']}}]});
 ev({id:'capo_progetto',link:1,k:'Lavoro',t:'Un progetto importante',x:'Il capo ti chiama in ufficio: vuole affidarti un progetto delicato. Se va bene, si parla di promozione.',c:[
   {l:'Accetta',sub:'Tre mesi intensi',fx:()=>{const L=S.lavoro;S.bis.stress=clamp(S.bis.stress+12);if(chance(.45+pz('C')*.25+S.intelligenza/400)){L.perf=clamp(L.perf+15);L.anniLiv=Math.max(L.anniLiv,2);return ['Il progetto è un successo. Il tuo nome gira ai piani alti.','g']}L.perf=clamp(L.perf-8);return ['Scadenze mancate e una riunione imbarazzante.','b']}},
@@ -172,7 +172,7 @@ function emergenti(){
   if(S.eta>=30&&B.forma<30&&chance(.02)&&S.t-(F.medT||-99)>=24){F.medT=S.t;coda.push({e:EV.medico_forma,d:{}});return}
   if(S.anno>=1985&&S.eta>=9&&S.eta<17&&rOre('schermi')>=14&&iscritto()&&S.scuola.voto<48&&genitoriVivi()&&S.casa.tipo==='genitori'&&chance(.15)&&S.t-(F.consT||-99)>=12){F.consT=S.t;coda.push({e:EV.console,d:{}});return}
   if(S.lavoro&&!JOB[S.lavoro.id].pt&&soddLavoro()<38&&chance(.04)&&S.t-(F.pesaT||-99)>=18){F.pesaT=S.t;coda.push({e:EV.lavoro_pesa,d:{}});return}
-  if(S.lavoro&&!JOB[S.lavoro.id].pt&&S.lavoro.perf>=70&&chance(.012+pz('C')*.008)&&S.t-(F.progT||-99)>=24){F.progT=S.t;coda.push({e:EV.capo_progetto,d:{}});return}
+  if(S.lavoro&&!JOB[S.lavoro.id].pt&&S.lavoro.perf>=70&&chance(.012+pz('C')*.008)&&S.t-(F.progT||-99)>=24){F.progT=S.t;const sq=squadra();if(sq.capo&&sq.colleghi.length)coda.push({e:EV.prg_avvio,d:{p:sq.capo,x:{q:pick(sq.colleghi).id}}});else coda.push({e:EV.capo_progetto,d:{}});return}
   if(S.sonno<6.5&&B.energia<35&&chance(.15))log('Dormi troppo poco: ti trascini per tutta la giornata.','b');
   incontri();
 }
