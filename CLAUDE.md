@@ -32,6 +32,8 @@ python tools/lint_testi.py      # testi: parole da grandi da piccoli, segnaposto
 python tools/eta_azioni.py      # cosa si vede a 1, 4, 9, 15 e 17 anni in ogni scheda → tools/eta_azioni_out.md (per decidere le età minime)
 python tools/test_italia.py     # regole italiane: gravidanza, separazione e affido, adozione, eredità della casa, pensione, NASpI e TFR, storia vera, IRPEF, unione civile
 python tools/test_lavori.py     # lavori e contratti: requisiti raggiungibili, mestieri come in Italia, concorsi, elezioni, contratti a termine, partita IVA, part-time, divario, congedi
+python tools/ritmo.py 40        # Fase 1: eventi possibili per fascia d'età, catene di almeno 3 passi, eventi che si ripetono più di 10 volte per vita → «FASE 1: FATTA ✓»
+python tools/test_ritmo.py      # apre ogni evento cal_ e inc_ (o un altro prefisso: pic_ bim_ rag_ mez_ cat_) nella situazione giusta, M e F, e clicca ogni risposta (-v per leggere i testi)
 ```
 
 **Dopo ogni modifica:** `build.py` → controllo sintassi → `fuzz.py` → `lint_testi.py` (se tocchi testi o prezzi) → `invarianti.py` (almeno 100 vite se tocchi persone, famiglia, coppia o soldi) → `archivio_salvataggi.py` (se tocchi lo stato o i salvataggi) → `sim.py` (almeno 40 vite se tocchi formule o probabilità; `realismo.py` con 400+ vite se tocchi salute, morte, lavoro o famiglia: con meno vite la media dell'età alla morte oscilla di ±1,5 anni).
@@ -63,12 +65,18 @@ VitaMia/
 │  ├─ d5_adolescenza.js  36 eventi 13–17 anni che formano il carattere
 │  ├─ d6_adulti.js       31 eventi 18+ con scelte che formano il carattere (lavoro, coppia, figli, vecchiaia)
 │  ├─ d7_vita_italiana.js eventi delle regole italiane: affido dei figli, divorzio definitivo, adozione, la casa dei genitori
+│  ├─ d8_ritmo.js        RITMO DELL'ANNO: Natale, ferie, Capodanno ed elezioni (evento solo se c'è una novità, se no una riga di diario), 14 modelli di incontro (INC)
+│  ├─ d9_piccoli.js      62 eventi 1–6 anni (pic_)
+│  ├─ d10_ragazzi.js     eventi 6–17 anni (bim_, rag_): scuola, sacramenti (catechismo → comunione → cresima), pubertà, adolescenza
+│  ├─ d11_vita_adulta.js eventi 22–80 anni legati alla vita del mese (mez_): mutuo e casa, figli adolescenti, genitori anziani, colleghi, salute, stanchezza
+│  ├─ d12_catene.js      22 catene di 3–4 passi (cat_): la ristrutturazione, la vertenza, il figlio che torna a casa, il randagio, il romanzo…
 │  ├─ e_azioni.js        azioni del giocatore (studi, lavoro, azienda, persone, amore, case, auto, attività, carcere)
 │  ├─ e2_lusso.js        ricchezza e lascito (collezioni, beneficenza, onorificenze, fondazione, borse, esperienze, traguardi), cura degli animali, da amici a innamorati, attività per beni ed età
 │  ├─ f2_crea.js         schermata di creazione: certificato di nascita dal vivo + editor (Tu · Nascita · Famiglia · Aspetto), «Nasci» con timbro, battito e presentazione
 │  ├─ app/               manifest, service worker e icone della web app installabile (copiati in dist/app/)
 │  ├─ g_salva.js         salvataggi: localStorage, file, codice da copiare, salvataggio online (solo come artifact)
-│  └─ f_ui.js            interfaccia: render di tutte le schede, fogli (showSheet), carattere, settimana, creazione, morte, logo e intro
+│  ├─ f_ui.js            interfaccia: render di tutte le schede, fogli (showSheet), carattere, settimana, creazione, morte, logo e intro
+│  └─ f3_momenti.js      MOMENTI CHIAVE a tutto schermo (laurea, primo lavoro, matrimonio, nascita, pensione) e «il film della tua vita»
 ├─ tools/
 │  ├─ autopilota.js      pilota automatico guidato dal carattere (usato da test e Atlante)
 │  ├─ fuzz.py  sim.py  test_salva.py  test_eventi.py
@@ -81,6 +89,7 @@ VitaMia/
 │  ├─ icone_app.py  test_app.py   icone della web app / prova della web app offline
 │  ├─ realismo.py        tabella «my contro l'Italia» (vedi ANALISI.md)
 │  ├─ lint_testi.py  test_italia.py  test_lavori.py   controllo dei testi per età / regole italiane / lavori
+│  ├─ ritmo.py  test_ritmo.py   misura della Fase 1 (fasce d'età, catene, ripetizioni) / prova forzata degli eventi nuovi
 │  ├─ galleria_volti.py  tutti i tagli × età × carnagioni → grafica/volti.png
 ├─ atlante/              generatore dell'«Atlante di VitaMia» (database + grafici di tutto il gioco)
 │  ├─ estrai.py          legge EV, lavori, dati… dal gioco compilato → atlante/dati.json
@@ -111,7 +120,7 @@ Una sola variabile globale `S` (salvata come JSON, chiave `vitamia_save_v4`; `lo
 1. `t++`, avanza mese/anno, pulisce le azioni scadute, nuovo blocco di diario
 2. **gennaio** → `inizioAnno()`: mondo/Borsa, fama, nemici, beni, azienda, clan, pensioni e stipendi rivalutati, bilancio dell'anno
 3. **mese di nascita** → `eta++`, `compleanno()`: tappe, maturazione del carattere, attaccamento a 4 anni, aspirazioni a 18, pensione
-4. carcere → `meseNpc()` (vita degli altri) → `meseFamiglia()` (tentativi, gravidanza, parto) → animali → scuola → `calendario()` (settembre inizio scuola, giugno fine anno, Natale, ferie, propositi) → `storiaMese()` (fatti veri fino al 2026)
+4. carcere → `meseNpc()` (vita degli altri) → `meseFamiglia()` (tentativi, gravidanza, parto) → animali → scuola → `calendario()` (settembre inizio scuola, giugno fine anno; Natale, ferie, Capodanno in d8_ritmo.js) → `storiaMese()` (fatti veri fino al 2026)
 5. `meseLavoro()` → `meseItalia()` (TFR, contributi, NASpI, SFL) → `normalizzaRoutine()` → `meseRoutine()` (effetti delle ore) → `bisogni()` → `finanzeMese()` → `meseSalute()`
 6. conseguenze rimandate (`S.futuri`, in mesi) → `controllaMorte()` (rischio annuo diviso sui 12 mesi)
 7. eventi: `eventiMese()` (casuali: 16% sotto 13 anni, 13% fino a 17, 8,5% adulti; con persone 4,5%) → `emergenti()` → `impulsi()`; massimo 3 in coda
@@ -169,7 +178,14 @@ Definizione: `ev({id, min, max, w, once, rip, cond, chi, pc, link, auto, prig, t
 - `min/max` età; `w` peso; `once` una volta per vita; `rip` anni prima di ripetersi; `cond()` condizione; `chi:['Amico',…]` evento con una persona (in `d.p`); `link:1` solo se aperto da altro codice (non estratto a caso); `prig` solo in carcere.
 - `t` titolo, `x` testo (stringa o `d=>…`), `c` scelte (array o `d=>array`).
 - Scelta: `l` etichetta, `sub`, `cond`, `costo`, `p`+`si`/`no` (probabilità), oppure `e` (effetti: `f s i a k m voto perf rel bev gio` + abilità), `r` testo dell'esito, `pers` carattere, `fl` flag, `fut:[anni,id]` conseguenza rimandata, `pr:'reato'` processo, `fx(d)` codice libero che ritorna `[testo,'g'|'b'|'']`, `null` (chiude) o `KEEP` (lascia aperto il foglio).
-- Segnaposto nei testi: `{o}` desinenza del giocatore (o/a), `{P}` nome della persona, `{po}` sua desinenza, `{lui} {gli} {lo} {tuo} {Tuo}`, `{xe}` importo, `{nonno}`.
+- Segnaposto nei testi: `{o}` desinenza del giocatore (o/a), `{P}` nome della persona, `{po}` sua desinenza, `{lui} {Lui} {gli} {Gli} {lo} {Lo} {tuo} {Tuo}`, `{xe}` importo, `{nonno}`. Si risolvono in `t`, `x`, `l`, `sub` e `r` (passano da `T()`), **non** nei testi ritornati da un `fx`: lì scrivi i nomi (`${d.p.nome}`) o usa `T('…{o}…',d)`.
+
+### Ritmo, incontri e momenti (ROADMAP Fase 1: d8–d12, f3_momenti.js)
+- **Calendario senza ripetizioni** (`natale()`, `ferieAgosto()`, `capodanno()`, `elezioniPolitiche()` in d8_ritmo.js): ogni anno c'è una riga di diario costruita dalla situazione (con chi sei, i figli piccoli, i nipoti, il piatto della tua regione `TRAD_NATALE`, le tue ferie abituali `S.fatti.ferieAbit` con il costo per persona `costoFerie()`); un evento vero arriva solo con una **novità** (primo Natale in coppia o con il neonato, la «sedia vuota» dopo un lutto, il primo Natale lontano, da nonno, il turno a Natale; prime ferie tra amici, in coppia, con il neonato, da pensionato, dopo una separazione, figli che non vengono più, soldi che non bastano) oppure, di rado, per rimettere in discussione un'abitudine (`ferie` ogni 6+ anni, `natale_cal` ogni 6+, `propositi` ogni 5–7 anni, prima se c'è un motivo: forma, schermi, conto in rosso, voti). Alle elezioni la prima volta si sceglie, poi si vota per abitudine (`S.fatti.voto`) e solo 3 volte su 10 si riapre la scelta. «Il conto è in rosso» e «Sommerso dai debiti» tornano dopo 1, 2, 3, 4 anni.
+- **Incontri** (`incontri()` in c4, modelli `INC` in d8): 14 modi di conoscere qualcuno (`inc_scuola`, `inc_parco` per i piccoli, `inc_lavoro`, `inc_tramite` un amico di un amico, `inc_vicino`, `inc_treno`, `inc_cane`, `inc_genitori` fuori da scuola, `inc_corso`, `inc_festa`, `inc_volont`, `inc_online`, `inc_quartiere` dai 60 anni, `inc_viaggio` ad agosto), pesati da come passi la settimana; da single, dai 16 anni, una parte diventa `incontro_rom`. Chi ha già tanta gente intorno conosce meno persone nuove. `faiAmicizia(d,bonus,testo)` e `conosci(testo)` sono le risposte comuni.
+- **Catene** (d12_catene.js): ogni passo successivo è un evento `link` aperto con `fut:[anni,id]` o `futuro(anni,id,d)`; i dati passano in `d.x`, la persona in `d.p`. La condizione del passo si ricontrolla quando arriva.
+- **Persone morte negli eventi**: `next()` salta un evento se `d.p` non è vivo. Per parlare di chi non c'è più usa un altro campo (`d.m`, come in `cal_natale_lutto`). `mortePersona` segna `p.mortoT`; la fine di una coppia segna `S.fatti.fineCoppiaT`; ogni persona nuova ha `p.da` (da quando la conosci).
+- **Momenti chiave** (f3_momenti.js): `momento(tipo,{tit,sub,txt,pids})` li registra in `S.momenti`; laurea, primo lavoro, matrimonio, figlio e pensione si aprono a tutto schermo quando si chiude il foglio (`momentiDaMostrare`, in `next()`; l'avanti veloce si ferma), diploma, prima casa e primo nipote restano solo per il film. Alla morte parte una volta «Il film della tua vita» (`filmVita`: i momenti con il volto all'età di allora), poi resta un bottone nel necrologio; dalla scheda Vita, «I tuoi momenti». Come l'intro, non si aprono nei test automatici: per vederli `?anim=1`.
 
 ---
 
@@ -192,6 +208,8 @@ Definizione: `ev({id, min, max, w, once, rip, cond, chi, pc, link, auto, prig, t
 - **Traslochi del giocatore:** dopo aver cambiato `S.citta` chiama `dopoTrasloco(vecchiaCitta)` (chi vive nella nuova città smette di essere «lontano», chi resta nella vecchia lo diventa).
 - **Crescite composte:** ogni cosa che si moltiplica ogni mese deve avere un tetto (vedi follower: `tettoFollower()`, massimo `CAP_FOLLOWER` = 40 milioni; prima arrivavano a milioni di miliardi e con le collaborazioni rendevano soldi infiniti).
 - Le funzioni dei sistemi sono pensate per il mese: se aggiungi qualcosa di annuale, mettilo in `inizioAnno()` o in `compleanno()`.
+- **Nomi globali:** tutti i file condividono lo stesso spazio di nomi. Prima di creare una funzione o una costante nuova controlla che non esista già (`grep -n "const nome\|function nome" src/*.js`): nel 2026 `casaPropria` era già usata in e_azioni.js.
+- **Eventi che si ripetono:** un evento di calendario o di stato non deve arrivare più di ~10 volte in una vita (`ritmo.py` lo misura). Se succede spesso, trasformalo in una riga di diario con `varia()` e tieni l'evento per le novità.
 
 ### Come aggiungere un evento
 ```js
@@ -206,9 +224,9 @@ Poi: build → fuzz → prova l'evento forzandolo (`coda=[{e:EV.bam_esempio,d:{}
 
 ## Bilanciamento: valori di riferimento
 Con `python tools/sim.py 120` (pilota automatico, ottobre 2026) i valori attuali sono circa:
-- età mediana alla morte **~86** (media ~82); con `realismo.py 600`: media uomini ~82, donne ~84–86
-- patrimonio reale mediano a fine vita **~250.000 €** (molti ereditano la casa dei genitori)
-- tra 25 e 60 anni: felicità **~68**, stress **~22**, energia **~64**, socialità **~83**
+- età mediana alla morte **~86–90** (media ~84–87; con 120 vite oscilla di 2–3 anni); con `realismo.py 400`: media uomini ~81, donne ~86
+- patrimonio reale mediano a fine vita **~230.000 €** (molti ereditano la casa dei genitori; dal 2026 le ferie e i regali di Natale si pagano ogni anno)
+- tra 25 e 60 anni: felicità **~70**, stress **~22**, energia **~67**, socialità **~84**
 - correlazioni (carattere a 18 anni → media 25–60): Emotività → felicità −0,4 / stress +0,8; le altre tra 0 e +0,2 sulla felicità
 - stili di attaccamento: ~55% sicuro, ~29% evitante, ~12% ansioso, ~3% timoroso (dato reale: 59 / 25 / 11)
 - carattere dai 18 anni a fine vita (media): C **+13**, A **+13**, N **−7** (cala soprattutto tra 20 e 40 anni), O ed E **−3/−4**; ~19 «svolte» da adulto per vita. `sim.py` stampa queste righe: se un tratto deriva di +20 o più, qualcosa si accumula senza rientrare.
@@ -265,12 +283,13 @@ Se aggiungi un file di eventi in `src/`, aggiungilo anche alla lettura delle sez
 ---
 
 ## Numeri attuali
-461 eventi, ~1.220 risposte (422 con `pers`; solo 5 senza nessun effetto, volutamente); eventi per età: 0–5 → 42, 6–12 → 109, 13–17 → 129, 18–25 → 204, 26–40 → 202, 41–65 → 199, 66+ → 152. 81 lavori, 22 facoltà, 19 corsi, 9 attività in proprio, 48 attività, 7.904 comuni.
+733 eventi, ~2.000 risposte (~1.170 con `pers`); eventi possibili per età (`ritmo.py`): 0–5 → 104, 6–12 → 190, 13–17 → 160, 18–25 → 224, 26–40 → 247, 41–65 → 252, 66+ → 189; 29 catene di almeno 3 passi; nessun evento oltre le 10 volte per vita (i più frequenti: propositi, Natale, ferie ~8). 81 lavori, 22 facoltà, 19 corsi, 9 attività in proprio, 48 attività, 7.904 comuni.
 
 ## Idee e cose da fare
 La roadmap completa, con priorità e criteri di «fatto», è in **ROADMAP.md** (fasi 0–7: zero errori, ritmo, persone, Italia vera, corpo e mente, scopo, interfaccia, misura del realismo). La lista dettagliata di cosa manca e cosa non va (errori con il punto del codice, dati veri da usare, fonti) è in **ANALISI.md** (ottobre 2026): le correzioni del punto 3 sono fatte; restano le aggiunte del punto 4 (animali, viaggi, regioni, feste, sanità…); i nuovi lavori del punto 4.6, i contratti di lavoro e il divario uomo-donna sono fatti.
 - Carattere da adulti: fatto (d6_adulti.js, `pers` sulle richieste delle persone e su ~25 eventi adulti classici). Si potrebbe estendere ad altri eventi di d_eventi/d2 (per ora solo quelli dove la scelta dice chiaramente qualcosa del carattere).
-- Più eventi per la terza età e per i 26–65 legati alla vita mensile (lavoro, figli adolescenti, mutuo).
+- Fase 1 (ritmo e varietà) fatta nell'ottobre 2026: calendario, incontri, eventi 26–65, infanzia e adolescenza, catene, momenti chiave. Prossima nella ROADMAP: Fase 2 (persone vere).
+- Più eventi per la terza età legati alla vita del mese (nipoti, salute, solitudine, il circolo).
 - Le persone potrebbero conoscersi tra loro (amici in comune, gruppi).
 - Un «pilota automatico» giocabile: far vivere il personaggio da solo secondo il carattere (la base c'è in `tools/autopilota.js`).
 - Simulazione di «tutti i tipi di persona» (Big Five × attaccamento × interessi): l'idea di partenza del progetto, mai avviata.

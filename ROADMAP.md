@@ -21,6 +21,8 @@ Ogni fase ha una priorità (🔴 alta · 🟠 media · 🟢 bassa), una stima di
 >
 > **9 ottobre 2026, sera — Fase 0 quasi chiusa:** invarianti ogni mese (`tools/invarianti.py`, anche dentro `fuzz.py`), archivio di 18 salvataggi di 3 versioni vecchie (`tools/archivio_salvataggi.py`), picchi delle crescite, lint dei testi completo, «Segnala un problema». Gli invarianti hanno trovato e fatto correggere 6 errori (fratelli nati a pochi mesi, partner adulti per ragazzi di 15–17 anni, suoceri di 129 anni, cugini con zii troppo giovani, conviventi «lontani», lavoro sotto l'età minima nel controllo); il lint ha trovato ~110 importi che non seguivano l'inflazione e un segnaposto sbagliato. Resta la 0.5 (età delle azioni), da decidere insieme con `tools/eta_azioni_out.md`.
 
+> **10 ottobre 2026 — Fase 1 fatta:** calendario senza ripetizioni (Natale, ferie, Capodanno, elezioni), 14 modi di conoscere qualcuno, 36 eventi della vita del mese tra i 26 e i 65 anni, 62 eventi 1–6 anni e ~75 tra i 6 e i 17 (con sacramenti e pubertà), 22 catene nuove (29 in tutto), momenti chiave a tutto schermo e il film della vita. `tools/ritmo.py` dice «FASE 1: FATTA ✓».
+
 ---
 
 ## Fase 0 — Zero errori (🔴, da fare per prima, M)
@@ -38,24 +40,26 @@ Le prove di Noemi hanno mostrato che gli errori più frequenti non sono crash, m
 
 ---
 
-## Fase 1 — Ritmo e varietà (🔴, M)
-Oggi una vita media ha circa 440 eventi, ma alcuni si ripetono troppo (dati della simulazione, per vita; fino al 9/10/2026 `sim.py` contava due volte ogni evento, domanda ed esito):
+## Fase 1 — Ritmo e varietà (🔴, M) — ✅ fatta il 10 ottobre 2026
+Prima una vita media aveva eventi che si ripetevano troppo (simulazione, volte per vita): «Una persona nuova» ~43, le ferie d'agosto ~29, i buoni propositi ~25, Natale ~18, il conto in rosso ~15, le elezioni ~14. Dopo la Fase 1 (`python tools/ritmo.py 40`): nessun evento oltre le 10 volte; i più frequenti sono propositi, Natale e ferie (~8), poi gli incontri, divisi in 14 modelli.
 
-| Evento | Volte per vita |
-|---|---|
-| Una persona nuova | ~45 |
-| Le ferie d'agosto | ~29 |
-| I buoni propositi | ~26 |
-| Natale | ~18 |
-| Il conto è in rosso | ~17 |
+| | Prima | Dopo |
+|---|---|---|
+| Eventi possibili 0–5 anni | 42 | 104 |
+| 6–12 | 109 | 190 |
+| 13–17 | 129 | 160 |
+| 18–25 / 26–40 / 41–65 / 66+ | 204 / 202 / 199 / 152 | 224 / 247 / 252 / 189 |
+| Catene di almeno 3 passi | 5 | 29 |
+| Finestre da cliccare per anno, da adulti | ~11 | ~10 (Natale e ferie normali vanno nel diario) |
 
-- 1.1 **Eventi del calendario non ogni anno**: le ferie e Natale diventano un riassunto nel diario negli anni «normali», ed eventi veri solo quando c'è una novità (primo Natale col partner, ferie col neonato…).
-- 1.2 **Incontri vari**: dieci modelli diversi invece di uno (lo conosci tramite un amico, ti siede accanto in treno, è il nuovo vicino…) e frequenza che cala se hai già tante persone.
-- 1.3 **Più eventi tra i 26 e i 65 anni legati alla vita del mese**: mutuo, figli adolescenti, genitori che invecchiano, colleghi, salute, stanchezza.
-- 1.4 **Catene lunghe**: oggi sono 7. Obiettivo 25 (la causa di lavoro, la ristrutturazione infinita, il figlio che torna a casa a 35 anni…).
-- 1.5 **Momenti chiave «cinematici»** come la nascita (timbro, animazione, presentazione): laurea, primo lavoro, matrimonio, nascita di un figlio, pensione, morte con il «film della vita».
+- 1.1 ✅ **Calendario senza ripetizioni** (d8_ritmo.js): Natale, ferie, Capodanno ed elezioni sono una riga di diario costruita dalla situazione (con chi sei, figli, nipoti, piatto della regione, ferie abituali con il costo per persona) e diventano un evento solo con una novità: primo Natale in coppia, con il neonato, da nonno, lontano da casa, «la sedia vuota» dopo un lutto, il turno a Natale, Natale da soli; prime ferie tra amici, in coppia, con il neonato, da pensionato, dopo una separazione, figli che non vengono più, soldi che non bastano. Alle elezioni si vota per abitudine.
+- 1.2 ✅ **Incontri vari**: 14 modelli (a scuola, al parco, in pausa pranzo, tramite un amico, sul pianerottolo, in treno, al parco dei cani, fuori da scuola dei figli, al corso, a una festa, al volontariato, online, al bar sotto casa, in vacanza), pesati da come passi la settimana; chi ha già tante persone intorno ne conosce meno.
+- 1.3 ✅ **Vita del mese tra i 26 e i 65 anni** (d11_vita_adulta.js, 36 eventi): la rata che sale (2022–23), il condominio, la caldaia, la bolletta del 2022; figli che scelgono la scuola, si chiudono in camera, fanno coming out, partono per l'estero, chiedono aiuto per l'affitto; genitori che cadono, non devono più guidare, si perdono, restano soli in una casa troppo grande; colleghi che rubano il merito, il capo più giovane, i messaggi delle 22; menopausa, prostata, insonnia, il 730.
+- 1.4 ✅ **Catene lunghe**: 29 (obiettivo 25). Nuove: la ristrutturazione infinita, la vertenza di lavoro, il figlio che torna a casa, il randagio, la capanna (con il patto vent'anni dopo), l'orto, il romanzo, il primo amore ritrovato, la bottega del nonno, il figlio e la canna, il coro, il rudere in collina, il crociato, lo studente giapponese, la tesi, la vicina Ada, la compagnia teatrale, la maratona, il furto d'identità, i gattini, il viaggio dei sogni, l'amico depresso, i sacramenti, la lettera a sé stessi.
+- 1.5 ✅ **Momenti chiave** (f3_momenti.js): laurea, primo lavoro, matrimonio, nascita, pensione a tutto schermo (simbolo animato, volti, frase); alla morte «Il film della tua vita» con il volto che invecchia; dalla scheda Vita, «I tuoi momenti».
+- Anche l'infanzia e l'adolescenza (d9_piccoli.js, d10_ragazzi.js): 62 eventi 1–6 anni, ~75 eventi 6–17 con i sacramenti (catechismo → comunione → cresima, in due famiglie su tre), la pubertà, l'esame di terza media, il debito, lo sciopero per il clima, l'alternanza scuola-lavoro, il tema scritto dall'intelligenza artificiale.
 
-*Fatto quando*: nessun evento casuale supera le 10 volte per vita (escluse le scelte del giocatore), e ogni fascia d'età ha almeno 150 eventi possibili.
+*Fatto quando*: nessun evento casuale supera le 10 volte per vita, ogni fascia d'età ha almeno 150 eventi possibili (0–5 anni almeno 100: a quell'età si sceglie poco) e le catene sono almeno 25. Lo controlla `python tools/ritmo.py 40`.
 
 ---
 
@@ -127,7 +131,7 @@ Una **tabella di realismo** che la simulazione stampa a ogni build, confrontando
 
 ## Ordine consigliato
 1. **Fase 0 + Fase 7** (affidabilità e misura): sono le fondamenta, e ogni cosa dopo diventa più sicura.
-2. **Fase 1** (ritmo): è il miglioramento che si sente di più giocando.
+2. ✅ **Fase 1** (ritmo): fatta il 10 ottobre 2026.
 3. **Fase 2** (persone): la differenza tra un BitLife e un simulatore vero.
 4. Poi Fasi 5, 4, 3, 6, secondo quello che emerge dalle prove con Noemi.
 

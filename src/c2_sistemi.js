@@ -34,7 +34,7 @@ function annoMondo(){
   }
   if(vero)return;
   if(anno%4===2&&chance(.07)){notizia('L\'Italia vince i Mondiali di calcio! Si festeggia in tutte le piazze.');mod('felicita',5)}
-  if((anno-2022)%5===0&&S.eta>=18&&S.carcere===0)coda.push({e:EV.elezioni,d:{}});
+  if((anno-2022)%5===0)elezioniPolitiche();
   const L=luogo();
   if(['Centro','Sud','Isole'].includes(L.zona)&&chance(.006))coda.push({e:EV.terremoto,d:{}});
   if(chance(.006))coda.push({e:EV.alluvione,d:{}});

@@ -50,6 +50,7 @@ function meseFamiglia(){
       const ces=chance(.3),n=G.gem?2:1,nati=[];
       for(let i=0;i<n;i++)nati.push(nasceFiglio(p,i?pick(['M','F']):G.ses,true));
       const nomi=nati.map(f=>f.nome).join(' e ');
+      momento('figlio',{tit:nomi,sub:n===2?'Due gemelli':`È nat${gp(nati[0],'o','a')}`,txt:`${n===2?'Pesano':'Pesa'} ${nati.map(()=>(r(n===2?22:28,n===2?30:40)/10).toFixed(1).replace('.',',')).join(' e ')} kg.${ces?' Parto cesareo, ma state tutti bene.':''}`,pids:nati.map(f=>f.id)});
       log(`${n===2?`Sono nati due gemelli: ${nomi}!`:`È nat${gp(nati[0],'o','a')} ${nomi}!`}${ces?' Parto cesareo, ma state tutti bene.':''}`,'g');
       if(p&&p.vivo&&!['Partner','Coniuge'].includes(p.ruolo))nati.forEach(f=>{if(!G.tu)f.conEx=true});
       if(S.lavoro&&!JOB[S.lavoro.id].pt&&!isPiva(S.lavoro)){
@@ -103,7 +104,7 @@ function divorzia(p){
   const base=p.soldiNozze!==undefined?p.soldiNozze:Math.round(S.soldi*.2);
   const quota=Math.max(0,Math.round((S.soldi-avv-base)*.5));
   soldi(-avv-quota);
-  p.ruolo='Ex';p.conv=false;p.exConiuge=true;mod('felicita',-12);segnaVita('divorzio');pesa(16,6);rimuoviSuoceri(p);if(chance(.3))p.rancore=r(40,70);
+  p.ruolo='Ex';p.conv=false;p.exConiuge=true;S.fatti.fineCoppiaT=S.t;mod('felicita',-12);segnaVita('divorzio');pesa(16,6);rimuoviSuoceri(p);if(chance(.3))p.rancore=r(40,70);
   S.fatti.separazione={pid:p.id,fino:S.t+(giud?12:6)};
   futuro(giud?1:.5,'divorzio_definitivo',{p});
   const minori=vivi(['Figlio']).filter(f=>f.eta<18&&!f.conEx);

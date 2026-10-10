@@ -82,6 +82,7 @@ function T(s,d){
       case 'gli':return gp(p,'gli','le');
       case 'Gli':return gp(p,'Gli','Le');
       case 'lo':return gp(p,'lo','la');
+      case 'Lo':return gp(p,'Lo','La');
       case 'tuo':return p?tuoR(p):'';
       case 'Tuo':return p?cap(tuoR(p)):'';
       case 'nonno':return g('nonno','nonna');
@@ -104,7 +105,7 @@ const ESTRANEI=['Amico','Partner','Nemico','Conoscente'];
 function nomeEstraneo(sesso,annoN){if(annoN<1975||!chance(.08))return null;const g0=pick(NOMI_STRANIERI);return {nome:pick(g0[sesso==='F'?'F':'M']),cognome:pick(g0.c)}}
 function nuovaPersona(ruolo,sesso,eta,cognome,x){
   const aN=S.anno-Math.max(0,eta),st=!cognome&&ESTRANEI.includes(ruolo)&&!(x&&x.nome)?nomeEstraneo(sesso,aN):null;
-  const p={id:S.nextId++,ruolo,sesso,nome:st?st.nome:nomeLibero(sesso,aN),cognome:cognome||(st?st.cognome:pick(COGNOMI)),eta:Math.max(0,eta),rapporto:r(55,85),vivo:true,tr:0,mn:eta<=0&&S.t>0?S.mese:r(0,11)};
+  const p={id:S.nextId++,ruolo,sesso,nome:st?st.nome:nomeLibero(sesso,aN),cognome:cognome||(st?st.cognome:pick(COGNOMI)),eta:Math.max(0,eta),rapporto:r(55,85),vivo:true,tr:0,da:S.t,mn:eta<=0&&S.t>0?S.mese:r(0,11)};
   Object.assign(p,x||{});
   if(!p.pers)p.pers=x&&x.tr!==undefined?persDaTr(x.tr):nuovoCarattere(x&&x.genitori);
   delete p.genitori;
@@ -177,6 +178,7 @@ function requisitiJob(j){
   return m;
 }
 function assumi(j){
+  const primo=!S.fatti.primoLavoro&&!S.lavoro&&!S.storico.length&&!j.pt&&S.vivo&&S.eta>=15;
   if(S.lavoro){pagaTFR();S.storico.push(S.lavoro.nome)}
   S.naspi=null;S.sfl=null;
   let liv=0;if(j.boost&&S.istr.cert.includes(j.boost.cert))liv=j.boost.liv;
@@ -184,6 +186,8 @@ function assumi(j){
   if(chance(ptIniziale(j)))S.lavoro.ptv=true;
   if(S.vivo)log(`Contratto: ${descrContratto(S.lavoro).toLowerCase()}${S.lavoro.ptv&&S.lavoro.contratto.t!=='piva'&&!/part-time/.test(descrContratto(S.lavoro))?' · part-time':''}.`,'h');
   S.ultimoLavoro=S.lavoro.nome;
+  if(!j.pt)S.fatti.primoLavoro=1;
+  if(primo)momento('lavoro',{tit:S.lavoro.nome,sub:descrContratto(S.lavoro),txt:`Stipendio: ${eur(ralEff(S.lavoro)/12)} lordi al mese. Il primo lavoro vero.`});
 }
 /* vol: lo lasci tu (niente NASpI) */
 function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L)}}   // la partita IVA non ha la NASpI
@@ -323,7 +327,7 @@ function continuaCome(pid){
   else if(e>=19){sc.stato='finita';
     if(f.studio&&f.studio!=='licenza'){S.istr.liv=2;S.istr.dip=pick(SUPERIORI).n}
     if(f.studio&&f.studio.startsWith('laurea:')){S.istr.liv=3;S.istr.lauree.push({n:f.studio.slice(7),liv:'triennale',voto:r(90,110)})}
-    if(f.lavoro&&JOB[f.lavoro]&&e>=20){assumi(JOB[f.lavoro]);S.lavoro.anni=Math.max(0,e-24)}
+    if(f.lavoro&&JOB[f.lavoro]&&e>=20){S.fatti.primoLavoro=1;assumi(JOB[f.lavoro]);S.lavoro.anni=Math.max(0,e-24)}
   }
   if(e>=25||(e>=18&&!S.relazioni.some(p=>p.ruolo==='Madre'||p.ruolo==='Padre'))){S.casa=affittoBase('Bilocale');if(S.relazioni.some(p=>p.ruolo==='Coniuge'))S.relazioni.find(p=>p.ruolo==='Coniuge').conv=true}
   if(e>=18&&chance(.7))S.patente=true;
@@ -414,7 +418,8 @@ function tappe(){
 }
 function morteP(eta,sal,sesso){return Math.min(.95,.00034*Math.exp(.095*Math.max(0,eta-30))*fattoreSesso(sesso)+Math.max(0,45-sal)/400)}
 function mortePersona(p){
-  p.vivo=false;const conv=p.conv;p.conv=false;
+  p.vivo=false;p.mortoT=S.t;const conv=p.conv;p.conv=false;
+  if(['Coniuge','Partner'].includes(p.ruolo))S.fatti.fineCoppiaT=S.t;
   if(['Madre','Padre'].includes(p.ruolo)){const o=S.relazioni.find(x=>x.vivo&&x.ruolo===(p.ruolo==='Madre'?'Padre':'Madre'));if(o&&o.coppia==='sposato')o.coppia='vedovo'}
   const lutto={Madre:18,Padre:18,Coniuge:22,Partner:18,Figlio:30,Fratello:14,Nonno:8,Amico:8,Ex:2,Nipote:12,Zio:4,Cugino:4,Suocero:4,Cognato:3,Patrigno:10,Nemico:0}[p.ruolo]??6;
   if(p.ruolo==='Nemico'){log(`${p.nome}, ${gp(p,'il tuo nemico','la tua nemica')}, è mort${gp(p,'o','a')}.`,'h');return}
@@ -470,7 +475,9 @@ function fineCorso(){
     if(sc.voto<35&&sc.boc<2){sc.anni=1;sc.boc++;mod('felicita',-10);log(`Non superi la maturità. Dovrai ripetere l'ultimo anno.`,'b');return}
     const v=Math.min(100,Math.round(60+sc.voto*.4+r(-3,3)));
     I.liv=Math.max(I.liv,2);I.dip=st==='serale'?'Istituto tecnico economico':sc.tipo;sc.stato='finita';mod('felicita',8);
-    log(`Maturità superata: diploma ${st==='serale'?'serale ':''}di ${I.dip} con ${v}/100${v===100&&chance(.4)?' e lode':''}.`,'g');
+    const lodeD=v===100&&chance(.4);
+    log(`Maturità superata: diploma ${st==='serale'?'serale ':''}di ${I.dip} con ${v}/100${lodeD?' e lode':''}.`,'g');
+    momento('diploma',{tit:`Diploma: ${I.dip}`,sub:`${v}/100${lodeD?' e lode':''}`});
     if(st==='superiori')coda.push({e:EV.dopo_diploma,d:{}});
     return;
   }
@@ -480,7 +487,9 @@ function fineCorso(){
     const liv=st==='magistrale'?'magistrale':(sc.cu?'ciclo unico':'triennale');
     I.lauree.push({n:sc.tipo,liv,voto:v});I.liv=Math.max(I.liv,liv==='triennale'?3:4);
     sc.stato='finita';S.fatti.fuorisede=false;S.fatti.borsa=undefined;mod('felicita',12);segnaVita('laurea');
-    log(`Ti laurei ${liv==='triennale'?'':'(magistrale) '}in ${sc.tipo} con ${v}/110${v===110&&chance(.5)?' e lode':''}. Corona d'alloro e festa con tutti.`,'g');
+    const lode=v===110&&chance(.5);
+    log(`Ti laurei ${liv==='triennale'?'':'(magistrale) '}in ${sc.tipo} con ${v}/110${lode?' e lode':''}. Corona d'alloro e festa con tutti.`,'g');
+    momento('laurea',{tit:`${g('Dottore','Dottoressa')} in ${sc.tipo}`,sub:`${v}/110${lode?' e lode':''} · laurea ${liv}`,txt:'Corona d\'alloro, foto con i parenti e una festa che non dimenticherai.'});
     S.fatti.ultimoVoto=v;
     coda.push({e:liv==='triennale'?EV.dopo_triennale:EV.dopo_magistrale,d:{x:sc.tipo}});
     return;
@@ -579,7 +588,7 @@ function finanzeMese(){
   t+=(S.fatti.extraMese||0)-(S.fatti.spesaSvago||0);
   S.fatti.ultimoMese=t;S.fatti.bilAnno=(S.fatti.bilAnno||0)+t;
   if(S.soldi<-P(5000)&&S.eta>=18&&chance(.08))log('I debiti ti tolgono il sonno.','b');
-  if(S.soldi<-P(25000)&&S.eta>=18&&!coda.some(q=>q.e.id==='debiti')&&S.t-(S.fatti.debitiT||-99)>=12){S.fatti.debitiT=S.t;coda.push({e:EV.debiti,d:{}})}
+  if(S.soldi<-P(25000)&&S.eta>=18&&!coda.some(q=>q.e.id==='debiti')&&S.t-(S.fatti.debitiT||-99)>=Math.min(48,12*(1+(S.fatti.debitiV||0)))){S.fatti.debitiT=S.t;S.fatti.debitiV=(S.fatti.debitiV||0)+1;coda.push({e:EV.debiti,d:{}})}
 }
 function casaMia(){return S.casa.tipo==='proprieta'?S.prop.find(p=>p.id===S.casa.pid):null}
 function affittoBase(t,citta,prov){const a=AFFITTI.find(x=>x.t===t)||AFFITTI[1];const c=citta?cittaInfo(citta,prov):luogo();return {tipo:'affitto',n:a.t,costo:Math.round(a.mq*c.mq*.075*(a.k||1)*ip()/100)*100}}

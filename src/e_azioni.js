@@ -272,7 +272,8 @@ function cercaAmore(){
 }
 function sposa(p,fel){
   p.ruolo='Coniuge';if(!p.conv)convivi(p);p.rapporto=clamp(p.rapporto+10);p.imp=clamp((p.imp||60)+20);mod('felicita',fel);segnaVita('matrimonio');S.fatti.sposato=true;creaSuoceri(p);
-  p.nozze=S.t;p.soldiNozze=S.soldi;pesa(6,2);   // anche i cambiamenti belli stressano (Holmes e Rahe: matrimonio 50 su 100)
+  p.nozze=S.t;p.soldiNozze=S.soldi;pesa(6,2);
+  momento('matrimonio',{tit:`${S.nome} e ${p.nome}`,sub:p.sesso===S.sesso?'Unione civile':'Sposi',txt:pick(['Il sì più emozionante della tua vita, e un pranzo che finisce a mezzanotte.','Riso, lacrime, il primo ballo e una zia che piange più di tutti.','Fiori, promesse e un brindisi con tutte le persone che ami.']),pids:[p.id]});   // anche i cambiamenti belli stressano (Holmes e Rahe: matrimonio 50 su 100)
   return [p.sesso===S.sesso?`Celebrate l'unione civile! Il giorno più bello della tua vita insieme a ${p.nome}.`:`Vi sposate! Il giorno più bello della tua vita insieme a ${p.nome}.`,'g'];
 }
 function nasceFiglio(p,ses,silenzio){
@@ -285,7 +286,7 @@ function nasceFiglio(p,ses,silenzio){
 }
 function chiudiRelazione(p,testo){
   if(p.ruolo==='Coniuge')return divorzia(p);
-  p.ruolo='Ex';p.conv=false;mod('felicita',-6);pesa(Math.round(6+p.rapporto/8),4);rimuoviSuoceri(p);
+  p.ruolo='Ex';p.conv=false;S.fatti.fineCoppiaT=S.t;mod('felicita',-6);pesa(Math.round(6+p.rapporto/8),4);rimuoviSuoceri(p);
   return [T(testo,{p}),'b'];
 }
 function nuoveAmicizie(){
@@ -330,7 +331,8 @@ function dettaglioCasa(i){
   const compra=mutuo=>{
     M.casa.splice(i,1);
     const p={id:S.nextId++,tipo:h.t,citta:S.citta,valore:h.prezzo,stato:h.stato,lusso:h.lusso,mutuo:mutuo?{residuo:h.prezzo-ant,rata,anni:25}:null};
-    S.prop.push(p);let t=`Compri un ${h.t.toLowerCase()} a ${S.citta}${mutuo?` con un mutuo da ${eur(rata)} l'anno per 25 anni`:''}.`;
+    S.prop.push(p);if(!S.fatti.primaCasa){S.fatti.primaCasa=1;momento('casa',{tit:`${h.t} a ${S.citta}`,sub:mutuo?'Con un mutuo di 25 anni':'Pagata in contanti'})}
+    let t=`Compri un ${h.t.toLowerCase()} a ${S.citta}${mutuo?` con un mutuo da ${eur(rata)} l'anno per 25 anni`:''}.`;
     if(S.casa.tipo!=='proprieta'){S.casa={tipo:'proprieta',pid:p.id};t+=' Ti trasferisci subito.'}
     mod('felicita',12);return [t,'g'];
   };

@@ -242,18 +242,21 @@ function vitaNpc(p){
 }
 
 /* ---------- Incontri ---------- */
+/* Quattordici modi di conoscere qualcuno (INC in d8_ritmo.js): a scuola, al lavoro, tramite un amico, sul pianerottolo,
+   in treno, al parco dei cani, fuori dalla scuola dei figli… Il modello dipende da come passi il tempo.
+   Chi ha già tanta gente intorno conosce meno persone nuove (sat). */
 function incontri(){
-  if(S.eta<6||S.carcere>0||coda.length)return;
-  const ctx=[];
-  const u=rOre('uscite'),h=rOre('hobby'),v=rOre('volont'),am=rOre('amici'),sp=rOre('sport');
-  if(u)ctx.push(['uscite',u*1.2]);if(h)ctx.push(['hobby',h]);if(v)ctx.push(['volont',v*1.3]);if(sp>=3)ctx.push(['sport',sp*.6]);if(am)ctx.push(['amici',am*.4]);
-  if(S.lavoro)ctx.push(['lavoro',3]);if(iscritto()&&S.scuola.stato!=='asilo')ctx.push(['scuola',4]);
+  if(S.eta<3||S.carcere>0||coda.length)return;
+  const ctx=Object.keys(INC).map(id=>[id,INC[id].w()]).filter(x=>x[1]>0);
+  if(!ctx.length)return;
   const tot=ctx.reduce((s,x)=>s+x[1],0);
-  const pr=Math.min(.12,tot*.003*(.6+S.pers.E/100))*(vivi(['Amico','Conoscente']).length>14?.4:1);
-  if(!chance(pr))return;
-  const dove=pesata(ctx);
-  const rom=S.eta>=16&&single()&&chance(['uscite','hobby','volont','sport'].includes(dove)?.45:.25);
-  coda.push({e:rom?EV.incontro_rom:EV.incontro_amico,d:{x:dove}});
+  const n=vivi(['Amico','Conoscente']).filter(p=>!p.lontano).length;
+  const sat=n<3?1.3:n<7?1:n<12?.6:n<18?.35:.15;
+  if(!chance(Math.min(.07,tot*.0024*(.6+S.pers.E/100))*sat))return;
+  const x=pesata(ctx),m=INC[x],d={x};
+  if(x==='tramite')d.p=pick(vivi(['Amico']).filter(a=>a.rapporto>=50&&!a.lontano));
+  const rom=S.eta>=16&&single()&&m.rom&&chance(m.rom);
+  coda.push({e:rom?EV.incontro_rom:EV['inc_'+x],d});
 }
 const DOVE={uscite:['a una festa','in un locale','a un aperitivo','a un concerto'],hobby:['al corso','in palestra, tra un esercizio e l\'altro','al tuo gruppo di '+'hobby'],volont:['al volontariato','a una raccolta fondi'],sport:['al campo','in piscina','al parco, correndo'],amici:['a cena da amici','a una grigliata tra amici'],lavoro:['al lavoro','in pausa caffè','a una riunione'],scuola:['a scuola','in classe','in biblioteca']};
 function doveTesto(x){if(x==='hobby'){const hb=HOBBY.find(z=>z.id===S.hobby);return hb?`al corso di ${hb.n.toLowerCase()}`:'al corso'}return pick(DOVE[x]||['in giro'])}

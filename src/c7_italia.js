@@ -39,7 +39,7 @@ function storiaMese(){
     notizia(s.t);if(s.fx)s.fx();
     if(s.ev&&EV[s.ev]&&(!s.dove||s.dove())&&S.carcere===0)coda.push({e:EV[s.ev],d:{}});
   }
-  if(ELEZIONI_VERE.some(([a,m])=>a===S.anno&&m===S.mese)&&S.eta>=18&&S.carcere===0)coda.push({e:EV.elezioni,d:{}});
+  if(ELEZIONI_VERE.some(([a,m])=>a===S.anno&&m===S.mese))elezioniPolitiche();
 }
 
 /* ---------- Contratti di lavoro ----------
@@ -171,6 +171,7 @@ function vaiInPensione(auto){
   if(S.lavoro){S.storico.push(S.lavoro.nome);S.lavoro=null}
   S.pensione=Math.max(1,pensioneCalcolata());S.fatti.pensioneTipo=tipo;
   log(`${auto?'Arriva la pensione':'Vai in pensione'} (${tipo==='anticipata'?'anticipata':'di vecchiaia'}, ${Math.round(S.contributi)} anni di contributi): ${eur(S.pensione/13)} netti al mese per 13 mensilità.`,'g');
+  momento('pensione',{tit:'In pensione',sub:`Dopo ${Math.round(S.contributi)} anni di contributi`,txt:`${eur(S.pensione/13)} netti al mese. ${S.ultimoLavoro?`L'ultimo giorno da ${S.ultimoLavoro.toLowerCase()}: una torta, un regalo dai colleghi e la scrivania vuota.`:'Da domani il tempo è tutto tuo.'}`});
 }
 /* Assegno sociale: dai 67 anni a chi ha redditi bassi (7.101 € l'anno nel 2026) */
 const ASSEGNO_SOCIALE=7101;

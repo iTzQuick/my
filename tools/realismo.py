@@ -6,7 +6,8 @@ import pathlib, os, json, sys, statistics as st
 from collections import Counter
 from playwright.sync_api import sync_playwright
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-GAME = (ROOT/'dist'/'vitamia.html').as_uri()
+import os
+GAME = pathlib.Path(os.environ['GAME']).resolve().as_uri() if os.environ.get('GAME') else (ROOT/'dist'/'vitamia.html').as_uri()
 N = int(sys.argv[1]) if len(sys.argv) > 1 else 60
 AP = (ROOT/'tools'/'autopilota.js').read_text(encoding='utf-8')
 JS = r'''

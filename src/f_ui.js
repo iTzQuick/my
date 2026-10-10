@@ -61,6 +61,7 @@ function next(){
     return;
   }
   sheetOpen=false;$('#scrim').hidden=true;render();
+  if(momentiDaMostrare.length&&S&&S.vivo)mostraMomento();
 }
 
 /* ---------- Testata ---------- */
@@ -125,7 +126,7 @@ function renderVita(V){
     <div class="frase">${esc(umoreFrase())}</div>
     ${!SALVA.locale&&!SALVA.db?`<div class="avviso">Questo browser non conserva la partita: se chiudi la pagina la perdi. <button class="chip" id="btnAvvSalva">Salvala</button></div>`:''}
     ${S.eta>=3?`<div class="needs">${needBar('Energia',B.energia,'--salute')}${needBar('Stress',B.stress,'',1)}${needBar('Socialità',B.soc,'--aspetto')}${needBar('Forma',B.forma,'--intel')}</div>`:''}
-    <div class="row-btns"><button class="chip" id="btnCar">Carattere: ${esc(descrPers(S.pers,S.sesso))}</button>${S.eta>=6&&S.carcere===0?'<button class="chip" id="btnSett">La tua settimana</button>':''}</div>
+    <div class="row-btns"><button class="chip" id="btnCar">Carattere: ${esc(descrPers(S.pers,S.sesso))}</button>${S.eta>=6&&S.carcere===0?'<button class="chip" id="btnSett">La tua settimana</button>':''}${(S.momenti||[]).length?`<button class="chip" id="btnMom">I tuoi momenti (${S.momenti.length})</button>`:''}</div>
     <div class="row-btns ff"><span class="meta">Avanti veloce</span><button class="chip" data-ff="3">3 mesi</button><button class="chip" data-ff="6">6 mesi</button><button class="chip" data-ff="12">1 anno</button></div></div>`;
   const mondo=`<div class="mondo"><div class="mondo-h"><span>Il mondo · ${S.anno}</span><span>Inflazione ${(M.infl*100).toFixed(1).replace('.',',')}% · prezzi ×${M.ip.toFixed(2).replace('.',',')}</span></div>${st.length?`<div class="tags">${st.map(x=>`<span class="tag bad">${x}</span>`).join('')}</div>`:''}${ult.map(n=>`<div class="news"><b>${n.anno}</b> ${esc(n.t)}</div>`).join('')}</div>`;
   // diario: raggruppa per anno di età
@@ -141,6 +142,7 @@ function renderVita(V){
   V.innerHTML=(S.eta>=6?mondo:'')+diario+(tags.length?`<div class="tags" style="padding:10px 0 2px">${tags.map(([n,b])=>`<span class="tag${b?' bad':''}">${esc(n)}</span>`).join('')}</div>`:'')+ora;
   const bc=$('#btnCar');if(bc)bc.onclick=mostraCarattere;
   const bav=$('#btnAvvSalva');if(bav)bav.onclick=apriSalvataggi;
+  const bm=$('#btnMom');if(bm)bm.onclick=()=>filmVita(false);
   const bs=$('#btnSett');if(bs)bs.onclick=()=>{tab='attivita';attTab='settimana';render();$('#view').scrollTop=0};
   V.querySelectorAll('[data-ff]').forEach(b=>b.onclick=()=>avanti(+b.dataset.ff));
   requestAnimationFrame(()=>{V.scrollTop=V.scrollHeight});
@@ -495,9 +497,11 @@ function renderMorte(V){
    ${S.fama>0?kv('Fama',S.fama+'/100'):''}${S.social.follower?kv('Follower',nf(S.social.follower)):''}
    ${kv('Ultima residenza',esc(nomeLuogo(S.citta,S.prov)))}
   </div>
-  <div class="btns">${eredi.map(p=>`<button class="btn" data-erede="${p.id}">Continua come ${esc(p.nome)} (${p.eta} anni)</button>`).join('')}
+  <div class="btns"><button class="btn ghost" id="btnFilm">Il film della tua vita</button>${eredi.map(p=>`<button class="btn" data-erede="${p.id}">Continua come ${esc(p.nome)} (${p.eta} anni)</button>`).join('')}
   <button class="btn ${eredi.length?'ghost':''}" id="btnRinasci">Vivi una vita nuova</button></div></div>`;
   V.querySelectorAll('[data-erede]').forEach(b=>b.onclick=()=>continuaCome(+b.dataset.erede));
+  momentiDaMostrare=[];$('#btnFilm').onclick=()=>filmVita(true);
+  if(!S.filmVisto&&animMomenti()){S.filmVisto=1;save();setTimeout(()=>filmVita(true),600)}
   $('#btnRinasci').onclick=()=>{S=null;save();render()};
 }
 function render(){

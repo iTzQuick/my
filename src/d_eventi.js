@@ -557,7 +557,7 @@ ev({id:'fig_casa',min:45,max:85,chi:['Figlio'],pc:p=>p.eta>=26&&p.eta<=45,cond:(
   {l:'Presta 20.000 €',costo:()=>P(20000),x:20000,e:{rel:10},fut:[3,'restituzione'],r:'Firmate una scrittura privata.',k:''},
   {l:'Non posso',e:{rel:-8},r:'{P} capisce, ma resta delus{po}.'}]});
 ev({id:'fig_nipote',min:45,max:95,chi:['Figlio'],pc:p=>p.eta>=24&&p.eta<=45&&(p.sposato||['coppia','sposato'].includes(p.coppia))&&!coppiaStessoSesso(p),t:'Diventi {nonno}!',x:'{Tuo} {P} aspetta un bambino.',c:[
-  {l:'Che gioia!',fx:d=>{const n=nuovaPersona('Nipote',pick(['M','F']),0,d.p.sesso==='M'?d.p.cognome:pick(COGNOMI),{rapporto:r(70,95),gen:d.p.id});mod('felicita',12);return [`È nat${gp(n,'o','a')} ${n.nome}. Sei ${g('nonno','nonna')}!`,'g']}}]});
+  {l:'Che gioia!',fx:d=>{const n=nuovaPersona('Nipote',pick(['M','F']),0,d.p.sesso==='M'?d.p.cognome:pick(COGNOMI),{rapporto:r(70,95),gen:d.p.id});mod('felicita',12);if(!S.fatti.primoNipote){S.fatti.primoNipote=1;momento('nipote',{tit:n.nome,sub:g('Diventi nonno','Diventi nonna'),pids:[n.id]})}return [`È nat${gp(n,'o','a')} ${n.nome}. Sei ${g('nonno','nonna')}!`,'g']}}]});
 ev({id:'fig_ospita',min:70,max:100,chi:['Figlio'],pc:p=>p.eta>=30&&p.rapporto>=50,cond:()=>S.casa.tipo!=='figlio',t:'Vieni a stare da noi',x:'{Tuo} {P} ti propone di andare a vivere da {lui}.',c:[
   {l:'Accetta',e:{f:6,rel:8},fx:()=>{S.casa={tipo:'figlio'}},r:'Ti trasferisci da {P}. I nipoti sono felicissimi.'},
   {l:'Preferisco casa mia',e:{rel:-2},r:'Grazie, ma te la cavi ancora benissimo.'}]});

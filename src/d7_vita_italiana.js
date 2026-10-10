@@ -29,6 +29,7 @@ ev({id:'adozione_arriva',link:1,k:'Famiglia',t:'La telefonata',x:d=>d.p&&d.p.viv
     const cog=S.sesso==='M'?S.cognome:(d.p.sesso==='M'?d.p.cognome:S.cognome);
     const f=nuovaPersona('Figlio',pick(['M','F']),eta,cog,{rapporto:r(60,85),adottato:true});
     mod('felicita',14);d.p.rapporto=clamp(d.p.rapporto+10);segnaVita('figlio');pesa(5,2);
+    momento('figlio',{tit:f.nome,sub:'Adozione',txt:`Ha ${eta} ${eta===1?'anno':'anni'}. Una famiglia nuova, tutta da scrivere.`,pids:[f.id]});
     return [`${f.nome}, ${eta} ${eta===1?'anno':'anni'}, entra nella vostra famiglia. All'inizio ti guarda in silenzio, poi ti prende la mano.`,'g']}}]}});
 ev({id:'adozione_niente',link:1,auto:{fx:()=>{S.adozione=null;pesa(8,4);mod('felicita',-6)},r:'Dopo anni di attesa la chiamata non arriva. L\'adozione resta un sogno.',k:'b'}});
 

@@ -505,15 +505,11 @@ function calendario(){
   if(m===5&&S.carcere===0)fineScuola();
   if(m===11){
     if(S.lavoro&&!JOB[S.lavoro.id].pt&&!S.fatti.tred){S.fatti.tred=1;log(`Arriva la tredicesima: a dicembre lo stipendio è doppio.`,'h')}
-    if(e>=4&&S.carcere===0&&!coda.length&&chance(.25))coda.push({e:EV.natale_cal,d:{}});
-    else if(S.carcere===0&&chance(.4))log(varia('natale',TESTI.natale),'');
+    natale();   // d8_ritmo.js: un evento solo se c'è una novità, altrimenti una riga di diario
   }
-  if(m===0&&e>=14&&S.carcere===0&&chance(.35))coda.push({e:EV.propositi,d:{}});
+  if(m===0)capodanno();
   if(m===1&&partnerAttuale()&&e>=16&&chance(.25))log(varia('sv',['San Valentino con {P}: cena fuori e ristorante pieno di coppie.','A San Valentino {P} ti fa una sorpresa.','San Valentino a casa, pizza e film con {P}.','Per San Valentino tu e {P} vi scambiate regali fatti a mano.']).replace('{P}',partnerAttuale().nome),'g');
-  if(m===7&&S.carcere===0){
-    if(e>=18&&!coda.length&&chance(.5))coda.push({e:EV.ferie,d:{}});
-    else if(e<14)log(varia('estateB',TESTI.estateB),'g');
-  }
+  if(m===7)ferieAgosto();
   // propositi: il carattere decide se li mantieni
   const Pp=S.proposito;
   if(Pp&&Pp.anno===S.anno&&m>=2&&!Pp.fine&&chance(.22-pz('C')*.16)){
@@ -527,7 +523,7 @@ function avanti(n){
   for(let i=0;i<n;i++){
     if(!S||!S.vivo||sheetOpen)break;
     mese(true);
-    if(sheetOpen||coda.length)break;
+    if(sheetOpen||coda.length||momentiDaMostrare.length)break;
   }
   render();
 }
