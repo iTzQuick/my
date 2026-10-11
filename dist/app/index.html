@@ -1242,7 +1242,7 @@ function statoBase(o){
     lavoro:null,storico:[],ultimoLavoro:'',contributi:0,pensione:0,azienda:null,borsa:{},costoBorsa:{},prestiti:[],social:{attivo:false,follower:0,comprati:0},fama:0,crim:{exp:0,noto:0,clan:null,colpi:0},galera:null,
     casa:{tipo:'genitori'},prop:[],veicoli:[],mercato:null,
     patente:false,fedina:[],carcere:0,latitante:false,dip:{fumo:false,alcol:false,gioco:false},
-    malattie:[],relazioni:[],animali:[],fatti:{},ultimi:{},futuri:[],azioni:{},log:[{t:o.t||0,anno:o.anno||aN+eta,mese:o.mese!==undefined?o.mese:mn,eta,righe:[]}],nextId:1,vivo:true,causa:'',attrazione:null,orient:pesata([['etero',94],['omo',3],['bi',3]])};
+    malattie:[],relazioni:[],animali:[],fatti:{},ultimi:{},futuri:[],azioni:{},log:[{t:o.t||0,anno:o.anno||aN+eta,mese:o.mese!==undefined?o.mese:mn,eta,righe:[]}],nextId:1,vivo:true,causa:'',attrazione:null,orient:o.orient||pesata([['etero',94],['omo',3],['bi',3]])};
 }
 /* o: {sesso,nome,cognome,citta,prov} e, dalla schermata di creazione, anche
    anno, meseN, giorno, look, note {ora,peso,segno}, fam {classe, madre{nome,cognome,eta,look}, padre{nome,eta,look}, fratelli[{sesso,nome,eta}]} */
@@ -1310,22 +1310,36 @@ function patrimonio(X){
   t+=valoreCollezioni(X);
   return Math.round(t);
 }
+/* Una persona della vita precedente vista dall'erede: gli stessi dati, senza ciò che riguardava il rapporto con chi è morto (ricordi, coppia,
+   squadra, passi già fatti) e con le date riportate sui mesi di vita dell'erede (dt = differenza tra i due S.t). */
+const CAMPI_DEFUNTO=['lav','nv','nozze','soldiNozze','dal','intim','pass','imp','crisiN','crisiT','conv','prestito','gen','conEx','alterni','casaRegalata'];
+const DATE_NPC=['da','dalC','lavT','luttoT','neoT','sepT','nuovoT','trasfT','pensT'];
+function parenteErede(p,ruolo,rapporto,dt){
+  const q={...p,ruolo,rapporto,ricordi:[],ultimo:S.t};
+  for(const k of CAMPI_DEFUNTO)delete q[k];
+  for(const k of DATE_NPC)if(q[k]!==undefined)q[k]=k==='da'?Math.max(0,q[k]+dt):q[k]+dt;
+  return q;
+}
 function continuaCome(pid){
   const old=S,f=old.relazioni.find(p=>p.id===pid);if(!f)return;
   const figli=old.relazioni.filter(p=>p.vivo&&p.ruolo==='Figlio');
   const qs=quoteSuccessione(old).find(x=>x[0]===f),lordo=Math.max(0,patrimonio(old)*.96*(qs?qs[1]:1/Math.max(1,figli.length)));   // successione legittima
   const quota=Math.round(lordo-impostaSucc(lordo));
-  const classe=quota>300000?'agiata':quota>40000?'media':'umile';
+  const classe=quota>P(300000)?'agiata':quota>P(40000)?'media':'umile';   // soglie ai prezzi dell'anno
+  const sposato=f.coppia==='sposato'&&f.eta>=22,ps=f.pSesso||(f.sesso==='F'?'M':'F');   // il coniuge che aveva da persona del gioco (pNome, pSesso)
+  const orient=f.orient||(sposato||f.pSesso?(ps===f.sesso?'omo':'etero'):null);
   const look=lookDi(f);
-  S=statoBase({nome:f.nome,cognome:f.cognome,sesso:f.sesso,citta:old.citta,prov:old.prov,mondo:old.mondo,eta:f.eta,annoNascita:old.anno-f.eta-(old.mese<(f.mn||0)?1:0),anno:old.anno,mese:old.mese,meseNascita:f.mn||0,t:f.eta*12,pers:f.pers,look,gen:old.gen+1,soldi:quota,classe,
+  S=statoBase({nome:f.nome,cognome:f.cognome,sesso:f.sesso,citta:old.citta,prov:old.prov,mondo:old.mondo,eta:f.eta,annoNascita:old.anno-f.eta-(old.mese<(f.mn||0)?1:0),anno:old.anno,mese:old.mese,meseNascita:f.mn||0,t:f.eta*12,pers:f.pers,look,gen:old.gen+1,soldi:quota,classe,orient,
     int:clamp(old.intelligenza+r(-25,20),5,100),asp:clamp(old.aspetto+r(-25,20),5,100)});
-  S.nextId=old.nextId;
-  const con=old.relazioni.find(p=>p.vivo&&p.ruolo==='Coniuge');
-  if(con)S.relazioni.push({...con,ruolo:con.sesso==='F'?'Madre':'Padre',rapporto:r(55,90),conv:false});
-  figli.filter(p=>p.id!==pid).forEach(p=>S.relazioni.push({...p,ruolo:'Fratello',rapporto:r(45,85)}));
-  old.relazioni.filter(p=>p.vivo&&(p.ruolo==='Madre'||p.ruolo==='Padre')).forEach(p=>S.relazioni.push({...p,ruolo:'Nonno',rapporto:r(55,90)}));
-  old.relazioni.filter(p=>p.vivo&&p.ruolo==='Nipote'&&p.gen===pid).forEach(p=>S.relazioni.push({...p,ruolo:'Figlio',rapporto:r(65,95)}));
-  if(f.sposato&&f.eta>=22)nuovaPersona('Coniuge',f.sesso==='F'?'M':'F',f.eta+r(-3,3),null,{rapporto:r(55,85),conv:true});
+  S.nextId=old.nextId;S.fatti.cittaNascita=old.citta;S.fatti.provNascita=old.prov;
+  const dt=S.t-old.t,con=old.relazioni.find(p=>p.vivo&&p.ruolo==='Coniuge');
+  if(con)S.relazioni.push(parenteErede(con,con.sesso==='F'?'Madre':'Padre',r(55,90),dt));
+  figli.filter(p=>p.id!==pid).forEach(p=>S.relazioni.push(parenteErede(p,'Fratello',r(45,85),dt)));
+  old.relazioni.filter(p=>p.vivo&&(p.ruolo==='Madre'||p.ruolo==='Padre')).forEach(p=>S.relazioni.push(parenteErede(p,'Nonno',r(55,90),dt)));
+  old.relazioni.filter(p=>p.vivo&&p.ruolo==='Nipote'&&p.gen===pid).forEach(p=>S.relazioni.push(parenteErede(p,'Figlio',r(65,95),dt)));
+  S.relazioni.forEach(p=>{if(p.pId&&!S.relazioni.some(q=>q.id===p.pId))p.pId=null});   // il compagno era una persona che l'erede non conosce
+  if(sposato)nuovaPersona('Coniuge',ps,Math.max(18,f.eta+r(-3,3)),null,{rapporto:r(55,85),conv:true,...(f.pNome?{nome:f.pNome}:{})});
+  if(S.orient!=='etero'&&S.eta>=18)S.attrazione=S.orient==='bi'?'E':S.sesso;   // «Chi ti piace» arriva solo tra i 14 e i 17 anni
   const e=S.eta,sc=S.scuola;
   if(e>=14)S.istr.liv=1;
   if(e>=3&&e<6)sc.stato='asilo';
@@ -1337,7 +1351,7 @@ function continuaCome(pid){
     if(f.studio&&f.studio.startsWith('laurea:')){S.istr.liv=3;S.istr.lauree.push({n:f.studio.slice(7),liv:'triennale',voto:r(90,110)})}
     if(f.lavoro&&JOB[f.lavoro]&&e>=20){S.fatti.primoLavoro=1;assumi(JOB[f.lavoro]);S.lavoro.anni=Math.max(0,e-24)}
   }
-  if(e>=25||(e>=18&&!S.relazioni.some(p=>p.ruolo==='Madre'||p.ruolo==='Padre'))){S.casa=affittoBase('Bilocale');if(S.relazioni.some(p=>p.ruolo==='Coniuge'))S.relazioni.find(p=>p.ruolo==='Coniuge').conv=true}
+  if(e>=25||sposato||(e>=18&&!S.relazioni.some(p=>p.ruolo==='Madre'||p.ruolo==='Padre'))){S.casa=affittoBase('Bilocale');if(S.relazioni.some(p=>p.ruolo==='Coniuge'))S.relazioni.find(p=>p.ruolo==='Coniuge').conv=true}
   if(e>=18&&chance(.7))S.patente=true;
   S.fatti.hobbyChiesto=e>6;
   S.routine=routineDefault();if(S.eta>=4)formaAttaccamento();
@@ -9528,7 +9542,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='430621f6';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='55238c81';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 
