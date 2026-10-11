@@ -175,6 +175,13 @@ PF.update({"()=>.45+pz('E')*.25":"45%, di più se sei estroverso/a","()=>.4+pz('
 "()=>.45+pz('C')*.35":"45%, di più se sei coscienzioso/a","()=>.5+pz('O')*.3":"50%, di più se sei aperto/a"})
 PC.update({"p=>p.rapporto>=70&&amorePossibile(p)&&ricambia(p)":"è un amico o un'amica con rapporto almeno 70, ti piace, ricambia e ha un'età compatibile"})
 # ottobre 2026: famiglia, regole italiane, storia vera
+COND.update({"()=>settoriPossibili().length>0":"Esiste un altro settore in cui puoi ripartire con un corso di riqualificazione",
+"()=>proprioPossibile()":"Puoi metterti in proprio: almeno 2 anni di lavoro, un mestiere con partita IVA o un'attività adatta, tra 24 e 58 anni",
+"()=>!!S.lavoro&&!S.azienda":"Hai un lavoro e nessuna attività in proprio",
+"()=>!!S.vivo":"Sempre",
+"()=>S.eta>=22&&S.eta<=58&&!S.pensione&&S.carcere===0&&settoriPossibili().length>0&&S.t-(S.fatti.carSettoreT===undefined?-999:S.fatti.carSettoreT)>=72":"Hai tra 22 e 58 anni, non sei in pensione né in carcere, c'è un altro settore possibile e sono passati almeno 6 anni dall'ultima volta",
+"d=>d.x&&d.x.k==='piva'&&!!S.lavoro&&isPiva(S.lavoro)":"Sei in partita IVA",
+"d=>d.x&&d.x.k==='az'&&!!S.azienda":"Hai un'attività in proprio"})
 COND.update({"()=>aspAttive().length<3&&aspLiberi().length>0":"Hai meno di 3 sogni ancora da realizzare e ne restano da scegliere","()=>aspAttive().length>0&&aspLiberi().length>0":"Hai almeno un sogno ancora da realizzare e ne restano da scegliere","()=>aspAttive().length>0":"Hai almeno un sogno ancora da realizzare","()=>aspAttive().length===0":"Hai già realizzato tutti i tuoi sogni",
 "()=>!!S.orient&&S.orient!=='etero'":"Non sei eterosessuale (orientamento deciso alla nascita)","()=>!S.provano&&!S.gravidanza":"Non state già provando ad avere un figlio e non aspettate un bambino",
 "()=>!inSeparazione()":"Non sei in attesa di un divorzio","()=>S.anno>=2010":"Dal 2010 in poi","()=>S.eta<12":"Hai meno di 12 anni","()=>S.eta<16":"Hai meno di 16 anni","()=>S.eta>=12":"Hai almeno 12 anni",

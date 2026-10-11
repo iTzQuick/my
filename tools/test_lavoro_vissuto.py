@@ -86,6 +86,13 @@ JS_BASE = r'''async ()=>{
  // 7) persone nella lista e nella scheda
  nuova(30,'imp');completaSquadra(true);
  const el=document.createElement('div');renderPersone(el);if(!/Al lavoro/.test(el.innerHTML))ko.push('scheda Persone senza «Al lavoro»');
+ // 8) i passi delle catene arrivano da futuro() e saltano la condizione: se nel frattempo hai perso il lavoro non devono rompersi
+ const apri=(id,d)=>{coda.push({e:EV[id],d:d||{}});next();return [...document.querySelectorAll('#shA button:not([disabled])')]};
+ const chiudi=()=>{let g=0;while(!document.querySelector('#scrim').hidden&&g++<20){const b=document.querySelector('#shA button:not([disabled])');if(!b)break;b.click()}};
+ nuova(35,'imp');completaSquadra(true);const capo8=squadra().capo,col8=squadra().colleghi[0];S.lavoro=null;
+ for(const [id,x] of [['prg_imprevisto',{q:col8.id,m:'guida',s:1,k:'cliente'}],['prg_imprevisto',{q:col8.id,m:'solo',s:0,k:'malattia'}],['prg_consegna',{q:col8.id,m:'insieme',s:1}],['prg_riorg2',{a:1,m:1}],['prg_riorg3',{a:1,m:1}],['prg_riorg3',{a:0,m:0}]]){
+   for(let i=0;i<3;i++){const bs=apri(id,{p:capo8,x:{...x},_fut:1});if(!bs.length){ko.push(id+' senza lavoro: nessuna scelta');break}if(bs[i%bs.length])bs[i%bs.length].click();chiudi()}
+ }
  return {errs,ko};
 }'''
 JS_VITE = r'''(N)=>{

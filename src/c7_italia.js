@@ -86,7 +86,7 @@ const PIVA=['avv','comm','arc','psi','notaio','agcom','guida','taxi','pt','mus',
 const PIVA_LIV={idra:2,elet:2,mecc:2,fale:2,pane:2,macel:2,past:2,este:2,fisio:2,vet:2,dent:2,bracc:2,camion:2};   // il livello in cui ci si mette in proprio
 const STAGIONALI=['anim','bagn','bracc'];
 const SPORTIVI=['calc','volley','cicl','tennis'];
-const ralEff=L=>L?L.stip*(L.ptv?.6:1):0;                     // stipendio vero, con il part-time
+const ralEff=L=>L?L.stip*(L.ptv?.6:1)*fattoreProprio(L):0;                     // stipendio vero, con il part-time
 const isPiva=L=>!!(L&&L.contratto&&L.contratto.t==='piva');
 const fattoreGenere=()=>S.sesso==='F'?.96:1;                 // a parità di ora le donne guadagnano circa il 5% in meno (ISTAT 2022: 5,6%)
 function contrattoIniziale(j,liv){
@@ -108,7 +108,7 @@ function descrContratto0(L){
   const pt=L.ptv?' · part-time':'';
   if(c.t==='det')return `A tempo determinato fino a ${quando(c.fine)}${c.pror?` (proroga ${c.pror})`:''}${pt}`;
   if(c.t==='app')return `Apprendistato fino a ${quando(c.fine)}${pt}`;
-  if(c.t==='piva')return `Partita IVA${(S.t-(c.da||S.t))<60?' · regime forfettario al 5% (primi 5 anni)':' · regime forfettario'}`;
+  if(c.t==='piva'){const nuova=(S.t-(c.da||S.t))<60;return `${S.anno>=1973?'Partita IVA':'Lavoro autonomo'} · ${S.anno>=2015?'regime forfettario':'tassazione agevolata'}${nuova?(S.anno>=2015?' al 5% (primi 5 anni)':' (primi 5 anni)'):''}`}
   if(c.t==='carica')return 'Carica elettiva: ogni 5 anni si vota';
   return 'Tempo indeterminato'+pt;
 }

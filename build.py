@@ -4,8 +4,8 @@ da caricare su Netlify (app.netlify.com/drop) per installare «my» sul telefono
 import pathlib, hashlib, shutil, zipfile
 ROOT=pathlib.Path(__file__).resolve().parent
 src=ROOT/'src'
-FILES=['b_dati.js','b2_comuni.js','b3_luoghi.js','b4_dati2.js','c_motore.js','c2_sistemi.js','c3_vita.js','c4_persone.js','c5_aspetto.js','c6_famiglia.js','c7_italia.js','c8_legami.js','c9_epoca.js','c10_squadra.js',
-       'd_eventi.js','d2_eventi2.js','d3_emergenti.js','d4_infanzia.js','d5_adolescenza.js','d6_adulti.js','d7_vita_italiana.js','d8_ritmo.js','d9_piccoli.js','d10_ragazzi.js','d11_vita_adulta.js','d12_catene.js','d13_persone.js','d14_italia.js','d15_lavoro.js','e_azioni.js','e2_lusso.js','g_salva.js','f2_crea.js','f_ui.js','f3_momenti.js']
+FILES=['b_dati.js','b2_comuni.js','b3_luoghi.js','b4_dati2.js','c_motore.js','c2_sistemi.js','c3_vita.js','c4_persone.js','c5_aspetto.js','c6_famiglia.js','c7_italia.js','c8_legami.js','c9_epoca.js','c10_squadra.js','c11_carriera.js',
+       'd_eventi.js','d2_eventi2.js','d3_emergenti.js','d4_infanzia.js','d5_adolescenza.js','d6_adulti.js','d7_vita_italiana.js','d8_ritmo.js','d9_piccoli.js','d10_ragazzi.js','d11_vita_adulta.js','d12_catene.js','d13_persone.js','d14_italia.js','d15_lavoro.js','d16_carriera.js','e_azioni.js','e2_lusso.js','g_salva.js','f2_crea.js','f_ui.js','f3_momenti.js']
 shell=(src/'a_shell.html').read_text(encoding='utf-8')
 js='\n'.join((src/f).read_text(encoding='utf-8') for f in FILES)
 js=js.replace("const VERSIONE='sviluppo'","const VERSIONE='"+hashlib.sha1(js.encode('utf-8')).hexdigest()[:8]+"'",1)   # impronta dei sorgenti, per «Segnala un problema»

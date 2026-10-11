@@ -7,7 +7,7 @@ import json,re
 from playwright.sync_api import sync_playwright
 import sys;sys.path.insert(0,str(ROOT/'atlante'))
 from mappe import COND,PC,PF
-srcEv=open(ROOT/'src'/'d_eventi.js').read()+'\n'+open(ROOT/'src'/'d2_eventi2.js').read()+'\n'+open(ROOT/'src'/'d3_emergenti.js').read()+'\n'+open(ROOT/'src'/'d4_infanzia.js').read()+'\n'+open(ROOT/'src'/'d5_adolescenza.js').read()+'\n'+open(ROOT/'src'/'d6_adulti.js').read()+'\n'+open(ROOT/'src'/'d7_vita_italiana.js').read()+'\n'+open(ROOT/'src'/'d8_ritmo.js').read()+'\n'+open(ROOT/'src'/'d9_piccoli.js').read()+'\n'+open(ROOT/'src'/'d10_ragazzi.js').read()+'\n'+open(ROOT/'src'/'d11_vita_adulta.js').read()+'\n'+open(ROOT/'src'/'d12_catene.js').read()+'\n'+open(ROOT/'src'/'d13_persone.js').read()+'\n'+open(ROOT/'src'/'d15_lavoro.js').read()+'\n'+open(ROOT/'src'/'e2_lusso.js').read()
+srcEv=open(ROOT/'src'/'d_eventi.js').read()+'\n'+open(ROOT/'src'/'d2_eventi2.js').read()+'\n'+open(ROOT/'src'/'d3_emergenti.js').read()+'\n'+open(ROOT/'src'/'d4_infanzia.js').read()+'\n'+open(ROOT/'src'/'d5_adolescenza.js').read()+'\n'+open(ROOT/'src'/'d6_adulti.js').read()+'\n'+open(ROOT/'src'/'d7_vita_italiana.js').read()+'\n'+open(ROOT/'src'/'d8_ritmo.js').read()+'\n'+open(ROOT/'src'/'d9_piccoli.js').read()+'\n'+open(ROOT/'src'/'d10_ragazzi.js').read()+'\n'+open(ROOT/'src'/'d11_vita_adulta.js').read()+'\n'+open(ROOT/'src'/'d12_catene.js').read()+'\n'+open(ROOT/'src'/'d13_persone.js').read()+'\n'+open(ROOT/'src'/'d15_lavoro.js').read()+'\n'+open(ROOT/'src'/'d16_carriera.js').read()+'\n'+open(ROOT/'src'/'e2_lusso.js').read()
 sez={};cur='Sistema'
 for line in srcEv.split('\n'):
     m=re.match(r"/\* -+ (.+?) -+ \*/",line.strip())

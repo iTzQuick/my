@@ -138,7 +138,7 @@ function soddLavoro(){
   const j=JOB[L.id];
   const m=matchLavoro(L.id);
   const paga=Math.min(25,netto(L.stip)/P(1000));
-  return clamp(m*.55+paga+(L.perf-50)*.2+(L.liv*3)+Math.round(capoEsito()*10));
+  return clamp(m*.55+paga+(L.perf-50)*.2+(L.liv*3)+Math.round(capoEsito()*10)+(L.cambioSett!==undefined&&S.t-L.cambioSett<36?8:0));
 }
 
 /* ---------- Routine settimanale ---------- */

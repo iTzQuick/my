@@ -198,7 +198,7 @@ function assumi(j){
   iniziaSquadra(false);   // il capo e i colleghi (c10_squadra.js)
 }
 /* vol: lo lasci tu (niente NASpI) */
-function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L);if(S.legami)bisognoAiuto('lavoro')}}   // la partita IVA non ha la NASpI
+function licenzia(testo,vol){if(!S.lavoro)return;const L=S.lavoro;log(testo,vol?'h':'b');pagaTFR();S.storico.push(L.nome);S.lavoro=null;if(!vol){mod('felicita',-12);pesa(10,5);if(!isPiva(L))avviaNaspi(L);if(S.legami)bisognoAiuto('lavoro');if(S.eta>=22&&S.eta<=55&&chance(.15))futuro(.25,'car_settore',{})}}   // la partita IVA non ha la NASpI
 function lavoroPerFiglio(p){
   if(p.studio&&p.studio.startsWith('laurea:')){const f=p.studio.slice(7);const ok=LAVORI.filter(j=>j.req&&j.req.lau&&j.req.lau.includes(f)&&!j.req.abil&&!j.req.liv);if(ok.length)return pick(ok).id;return 'imp'}
   if(p.studio==='diploma')return pick(['imp','tec','com','agi','rec','cam','ope','segr','cass','callc','post','agcom']);

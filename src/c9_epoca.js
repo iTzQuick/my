@@ -28,6 +28,7 @@ const EPOCA=[
   [/\b(walkman|videocassett\w*|vhs|telecomando|serie tv)\b/i,1980],
   [/\b(divorzi\w*|divorziat\w*)\b/i,1971],
   [/\b(interrail)\b/i,1972],
+  [/\bpartita iva\b/i,1973],
   [/\b(tv|televisione|televisor\w*|carosello)\b/i,1956]
 ];
 /* da che anno un testo ha senso (0 = sempre) */

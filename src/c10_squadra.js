@@ -12,7 +12,7 @@
    Gli sportivi hanno un allenatore e i compagni di squadra. Gli eventi sono in d15_lavoro.js (col_ e prg_). */
 const SENZA_SQUADRA=['vol','rip'];
 const squadraPossibile=L=>!!L&&!!JOB[L.id]&&!SENZA_SQUADRA.includes(L.id)&&!isPiva(L)&&!(L.contratto&&L.contratto.t==='carica')&&!JOB[L.id].elez;
-const lavInCorso=p=>!!(p&&p.vivo&&p.lav&&!p.lav.via&&S&&S.lavoro&&S.lavoro.sq&&p.lav.id===S.lavoro.id&&p.lav.da===S.lavoro.da);
+const lavInCorso=p=>!!(p&&p.vivo&&p.lav&&!p.lav.via&&S&&S.lavoro&&S.lavoro.sq&&p.lav.id===S.lavoro.id&&p.lav.da===S.lavoro.da&&squadraPossibile(S.lavoro));   // se il contratto diventa partita IVA a metà mese la squadra è già finita
 const sportSq=()=>!!S.lavoro&&SPORTIVI.includes(S.lavoro.id);
 function squadra(){
   const v=S.relazioni.filter(lavInCorso);
@@ -70,9 +70,9 @@ function iniziaSquadra(silenzioso){
 function completaSquadra(silenzioso){
   const L=S.lavoro;if(!L)return;
   if(L.sq===undefined){iniziaSquadra(true);return}
-  if(!L.sq)return;
+  if(!L.sq||!squadraPossibile(L))return;
   if(!squadra().capo)arrivoCapo(L,true);
-  while(squadra().colleghi.length<L.sq.n){const p=arrivoCollega(L,true);if(silenzioso)p.rapporto=r(38,62)}
+  for(let k=0;k<8&&squadra().colleghi.length<L.sq.n;k++){const p=arrivoCollega(L,true);if(silenzioso)p.rapporto=r(38,62)}
   if(silenzioso)for(const p of S.relazioni.filter(lavInCorso))if(p.lav.r==='capo')p.rapporto=r(38,62);
 }
 function vaViaDalLavoro(p,txt,k){
