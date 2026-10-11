@@ -293,6 +293,7 @@ function costoAssistenza(p,tipo){
 /* ---------- Eredità dei genitori: i soldi e, spesso, la casa ---------- */
 /* Quote di famiglie proprietarie per reddito: dal 43% (più povere) al 94% (più ricche) — Banca d'Italia 2022 */
 function ereditaGenitori(){
+  if(S.fatti.eredAttesa){const A=S.fatti.eredAttesa;delete S.fatti.eredAttesa;ereditaAttesa(A);return}   // seconda generazione: la parte vera del genitore rimasto (c15_eredita.js)
   const fr=vivi(['Fratello']);const n=fr.length+1;
   const b={umile:[2000,15000],media:[25000,110000],agiata:[180000,700000]}[S.classe];
   const cash=Math.round(P(r(b[0],b[1]))/n);

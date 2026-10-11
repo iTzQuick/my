@@ -1315,13 +1315,12 @@ function parenteErede(p,ruolo,rapporto,dt){
 function continuaCome(pid){
   const old=S,f=old.relazioni.find(p=>p.id===pid);if(!f)return;
   const figli=old.relazioni.filter(p=>p.vivo&&p.ruolo==='Figlio');
-  const qs=quoteSuccessione(old).find(x=>x[0]===f),lordo=Math.max(0,patrimonio(old)*.96*(qs?qs[1]:1/Math.max(1,figli.length)));   // successione legittima
-  const quota=Math.round(lordo-impostaSucc(lordo));
+  const R=ripartoEredita(old,pid),quota=R.mia?Math.max(0,R.mia.x):0;   // la tua parte della massa, tolti debiti, spese e imposta (c15_eredita.js)
   const classe=quota>P(300000)?'agiata':quota>P(40000)?'media':'umile';   // soglie ai prezzi dell'anno
   const sposato=f.coppia==='sposato'&&f.eta>=22,ps=f.pSesso||(f.sesso==='F'?'M':'F');   // il coniuge che aveva da persona del gioco (pNome, pSesso)
   const orient=f.orient||(sposato||f.pSesso?(ps===f.sesso?'omo':'etero'):null);
   const look=lookDi(f);
-  S=statoBase({nome:f.nome,cognome:f.cognome,sesso:f.sesso,citta:old.citta,prov:old.prov,mondo:old.mondo,eta:f.eta,annoNascita:old.anno-f.eta-(old.mese<(f.mn||0)?1:0),anno:old.anno,mese:old.mese,meseNascita:f.mn||0,t:f.eta*12,pers:f.pers,look,gen:old.gen+1,soldi:quota,classe,orient,
+  S=statoBase({nome:f.nome,cognome:f.cognome,sesso:f.sesso,citta:old.citta,prov:old.prov,mondo:old.mondo,eta:f.eta,annoNascita:old.anno-f.eta-(old.mese<(f.mn||0)?1:0),anno:old.anno,mese:old.mese,meseNascita:f.mn||0,t:f.eta*12+(old.mese-(f.mn||0)+12)%12,pers:f.pers,look,gen:old.gen+1,soldi:quota,classe,orient,
     int:clamp(old.intelligenza+r(-25,20),5,100),asp:clamp(old.aspetto+r(-25,20),5,100)});
   S.nextId=old.nextId;S.fatti.cittaNascita=old.citta;S.fatti.provNascita=old.prov;
   const dt=S.t-old.t,con=old.relazioni.find(p=>p.vivo&&p.ruolo==='Coniuge');
@@ -1348,8 +1347,8 @@ function continuaCome(pid){
   S.fatti.hobbyChiesto=e>6;
   S.routine=routineDefault();if(S.eta>=4)formaAttaccamento();
   log(`Continui la storia della famiglia come ${S.nome}, ${g('figlio','figlia')} di ${old.nome}. Generazione ${S.gen}.`,'g');
-  if(quota>0)log(`Erediti ${eur(quota)}${qs&&qs[1]<1?`: la tua parte (${Math.round(qs[1]*100)}%) secondo la legge`:''}.`,'g');
-  tab='vita';coda=[];save();render();
+  coda=[];apriSuccessione(old,R);
+  tab='vita';save();render();if(coda.length)next();
 }
 
 /* ---------- Passare un mese ---------- */
@@ -1369,7 +1368,7 @@ function mese(silenzioso){
   if(S.carcere===0)meseScuola();
   calendario();
   storiaMese();
-  meseLavoro();meseSquadra();meseEstero();
+  meseLavoro();meseSquadra();meseEstero();successionePendente();
   meseItalia();
   normalizzaRoutine();
   meseRoutine();
@@ -3554,6 +3553,7 @@ function costoAssistenza(p,tipo){
 /* ---------- Eredità dei genitori: i soldi e, spesso, la casa ---------- */
 /* Quote di famiglie proprietarie per reddito: dal 43% (più povere) al 94% (più ricche) — Banca d'Italia 2022 */
 function ereditaGenitori(){
+  if(S.fatti.eredAttesa){const A=S.fatti.eredAttesa;delete S.fatti.eredAttesa;ereditaAttesa(A);return}   // seconda generazione: la parte vera del genitore rimasto (c15_eredita.js)
   const fr=vivi(['Fratello']);const n=fr.length+1;
   const b={umile:[2000,15000],media:[25000,110000],agiata:[180000,700000]}[S.classe];
   const cash=Math.round(P(r(b[0],b[1]))/n);
@@ -4932,6 +4932,100 @@ function testoStoria(p,k){
 function funeraleNonno(p){
   const t=testoStoria(p,'f');if(!t)return;
   log(`Al funerale di ${p.nome}: ${t}${nv(p,'raccontata')?' Tu sai da dove viene.':''}`,'h');
+}
+
+/* ================= EREDITÀ TRA GENERAZIONI (ROADMAP Fase 5.4) =================
+   Blocco 1: la successione vera quando continui come un figlio. L'inventario di ciò che il genitore lascia (`massaEreditaria`), il riparto tra
+   tutti gli eredi con le spese e l'imposta (`ripartoEredita`), i debiti (accettare, beneficio d'inventario, rinuncia: evento `ered_debiti` in
+   d19_eredita.js) e la parte del genitore rimasto, che arriva quando muore anche lui (`S.fatti.eredAttesa`).
+   S.fatti.eredita = {da, daS, anno, attivo, passivo, netto, q, x, imposta, debito, scelta:'pura'|'beneficio'|'rinuncia'|null, pend?, test?}.
+
+   Semplificazioni (scelte consapevoli):
+   - tutto viene venduto e diviso in denaro, azienda compresa: i debiti del defunto si pagano con i suoi beni e agli eredi va il netto;
+   - il patrimonio è tutto di chi muore (niente comunione dei beni con il coniuge);
+   - se i debiti superano i beni, gli altri eredi (persone del gioco) accettano con beneficio d'inventario: i debiti non seguono mai loro;
+   - la rinuncia (art. 519) è totale: la tua parte passa ai tuoi figli per rappresentazione (art. 467), debiti compresi, e senza figli si
+     accresce agli altri eredi (art. 522); per te, in ogni caso, niente beni e niente debiti;
+   - l'imposta di successione ha le regole di oggi in tutti gli anni, tranne il 2001–2006 in cui non c'era. */
+
+const SPESE_SUCC=.04;                 // notaio, pratiche e vendita dei beni
+const ANNI_DEB=10,TASSO_DEB=.05;      // il debito ereditato si paga a rate
+
+/* l'inventario: beni e debiti di chi muore, voce per voce (il netto è il `patrimonio`) */
+function massaEreditaria(X){
+  X=X||S;
+  const beni={contanti:Math.max(0,X.soldi),titoli:valoreBorsa(X),immobili:0,veicoli:0,azienda:X.azienda?valoreAzienda(X.azienda):0,collezioni:valoreCollezioni(X)};
+  const debiti={conto:Math.max(0,-X.soldi),prestiti:residuoPrestiti(X),mutui:0,finanziamenti:0};
+  for(const p of X.prop){beni.immobili+=p.valore;if(p.mutuo)debiti.mutui+=p.mutuo.residuo}
+  for(const c of X.veicoli){beni.veicoli+=c.valore;if(c.prestito)debiti.finanziamenti+=c.prestito.rata*c.prestito.anni}
+  const somma=o=>Object.values(o).reduce((s,x)=>s+x,0),attivo=Math.round(somma(beni)),netto=Math.round(somma(beni)-somma(debiti));
+  return {beni,debiti,attivo,passivo:attivo-netto,netto};
+}
+/* imposta di successione secondo il grado di parentela (d.lgs. 346/1990, dal 2006): coniuge e parenti in linea retta 4% oltre un milione a testa
+   (`impostaSucc`), fratelli e sorelle 6% oltre 100.000 €, tutti gli altri 8%; enti di beneficenza e fondazioni non la pagano */
+function impostaEredita(x,ruolo){
+  if(['Coniuge','Figlio','Nipote','Madre','Padre'].includes(ruolo))return impostaSucc(x);
+  if(ruolo==='Ente'||ruolo==='Stato'||(S.anno>=2001&&S.anno<2007))return 0;
+  return Math.round(ruolo==='Fratello'?Math.max(0,x-P(1e5))*.06:x*.08);
+}
+/* Il riparto dell'eredità di X tra tutti gli eredi. `scelta` è quella dell'erede che giochi (pid): 'pura' (accetta), 'beneficio', 'rinuncia'.
+   Ritorna {M, righe:[{p,q,lordo,imposta,x}], spese, imposte, scoperto, mia}: x è quello che ognuno riceve davvero (negativo = debiti da pagare),
+   `scoperto` i debiti che nessuno paga. Vale sempre: somma delle x + imposte + spese − scoperto = M.netto.
+   L'imposta si calcola sulla parte di ognuno al netto dei debiti. */
+function ripartoEredita(X,pid,scelta){
+  X=X||S;const M=massaEreditaria(X),N=M.netto;
+  // chi rinuncia non eredita: al suo posto i suoi figli (i `Nipote` con gen = lui), altrimenti la parte va agli altri
+  const Q=quoteSuccessione(scelta==='rinuncia'?{...X,relazioni:X.relazioni.map(p=>p.id===pid?{...p,vivo:false}:p)}:X);
+  const righe=[];let spese=0,imposte=0,scoperto=0;
+  if(N>0){
+    spese=Math.round(N*SPESE_SUCC);const D=N-spese;
+    if(!Q.length)righe.push({p:{id:'stato',nome:'Lo Stato',ruolo:'Stato',vivo:true},q:1,lordo:D,imposta:0,x:D});   // nessun erede: allo Stato (art. 586)
+    for(const [p,q] of Q){const lordo=Math.floor(D*q),imposta=Math.min(lordo,impostaEredita(lordo,p.ruolo));righe.push({p,q,lordo,imposta,x:lordo-imposta});imposte+=imposta}
+    spese+=D-righe.reduce((s,r)=>s+r.lordo,0);   // gli spiccioli degli arrotondamenti restano tra le spese
+  }else{
+    // più debiti che beni: solo chi accetta senza beneficio d'inventario paga la sua parte (art. 752); il resto i creditori non lo vedono
+    for(const [p,q] of Q){const x=p.id===pid&&(scelta||'pura')==='pura'?-Math.floor(-N*q):0;righe.push({p,q,lordo:x,imposta:0,x})}
+    scoperto=righe.reduce((s,r)=>s+r.x,0)-N;
+  }
+  return {M,righe,spese,imposte,scoperto,mia:righe.find(r=>r.p.id===pid)||null};
+}
+
+/* dopo `continuaCome`: scrive nel diario che cosa lascia il genitore, mette da parte la quota del genitore rimasto e, se i debiti superano i beni,
+   apre la scelta (i minorenni accettano sempre con beneficio d'inventario, art. 471) */
+function apriSuccessione(old,R){
+  const M=R.M,mia=R.mia,pct=mia?Math.round(mia.q*100):0;
+  const E=S.fatti.eredita={da:old.nome,daS:old.sesso,anno:S.anno,attivo:M.attivo,passivo:M.passivo,netto:M.netto,q:mia?mia.q:0,x:mia?Math.max(0,mia.x):0,imposta:mia?mia.imposta:0,debito:0,scelta:'pura'};
+  if(destinatariTest(old).length)E.test=1;
+  const con=old.relazioni.find(p=>p.vivo&&p.ruolo==='Coniuge'),rc=con&&R.righe.find(r=>r.p.id===con.id);
+  if(con)S.fatti.eredAttesa={pid:con.id,x:rc?Math.max(0,rc.x):0,ip:S.mondo.ip};   // la sua parte: la dividerete quando non ci sarà più
+  if(M.passivo>0)log(`${old.nome} lascia beni per ${eur(M.attivo)} e debiti per ${eur(M.passivo)}.`,'h');
+  if(E.x>0)log(`Erediti ${eur(E.x)}${mia.q<1?`: la tua parte (${pct}%) secondo ${E.test?'il testamento':'la legge'}`:''}${E.imposta?`, tolta l'imposta di successione (${eur(E.imposta)})`:''}.`,'g');
+  if(M.netto<0&&mia&&mia.x<0){
+    if(S.eta<18){E.scelta='beneficio';log('I debiti superano i beni. Sei minorenne: per legge l\'eredità si accetta per te con beneficio d\'inventario, e i debiti restano fuori dalla tua vita.','h')}
+    else{E.debito=-mia.x;E.scelta=null;E.pend=1;coda.push({e:EV.ered_debiti,d:{}})}
+  }
+}
+/* la scelta davanti a un'eredità di debiti: solo chi accetta senza beneficio d'inventario si porta a casa la sua parte di debiti */
+function scegliEredita(scelta){
+  const E=S.fatti.eredita;if(!E||!E.pend)return 0;
+  delete E.pend;E.scelta=scelta;
+  const deb=E.debito;if(scelta!=='pura'){E.debito=0;return 0}
+  if(deb>0)S.prestiti.push({n:'Debito ereditato',residuo:deb,rata:rataMutuo(deb,ANNI_DEB,TASSO_DEB),anni:ANNI_DEB,tasso:TASSO_DEB});
+  return deb;
+}
+/* se il foglio si è chiuso senza una scelta (partita ricaricata), la domanda torna il mese dopo */
+function successionePendente(){
+  const E=S.fatti.eredita;
+  if(E&&E.pend&&S.vivo&&!coda.some(q=>q.e.id==='ered_debiti'))coda.push({e:EV.ered_debiti,d:{}});
+}
+/* quando muore anche il genitore rimasto: tu e i tuoi fratelli dividete quello che aveva avuto dall'eredità (ai prezzi di oggi) */
+function ereditaAttesa(A){
+  const fr=vivi(['Fratello']),n=fr.length+1,tot=Math.round(A.x*S.mondo.ip/(A.ip||S.mondo.ip));
+  const lordo=Math.floor((tot-Math.round(tot*SPESE_SUCC))/n),x=lordo-Math.min(lordo,impostaSucc(lordo));
+  if(x>0){soldi(x);log(`Erediti ${eur(x)}: la tua parte di quello che era rimasto in famiglia${n>1?`, divisa in ${n}`:''}.`,'g')}
+  if(S.casa.tipo==='genitori'&&S.eta>=18){S.casa=affittoBase('Monolocale');log('La casa dei tuoi non c\'è più: prendi un monolocale tutto tuo.','h')}
+  if(fr.length&&x>0&&chance(.25))coda.push({e:EV.fra_eredita,d:{p:pick(fr)}});
+  return x;
 }
 
 /* ================= EVENTI =================
@@ -8830,6 +8924,29 @@ ev({id:'vi_stop',link:1,t:'L\'ultimo viaggio',x:()=>`Il medico è stato chiaro: 
   {l:'Le dai ai nipoti',cond:()=>vivi(['Nipote']).length>0,fx:()=>{vivi(['Nipote']).forEach(p=>{relD(p,5);ricorda(p,'Ti ha dato le foto dei suoi viaggi, con i nomi sul retro',2)})},e:{f:4},pers:{A:2},r:'Sul retro hai scritto data e luogo. Lo faceva anche tua madre, e non lo sapevi.'},
   {l:'Ti arrabbi con il medico',e:{f:-3},pers:{N:2},r:'Dici che ne sa meno di te, e poi per tre giorni non mangi la minestra.'}]});
 
+/* ================= EVENTI DELL'EREDITÀ TRA GENERAZIONI (ROADMAP Fase 5.4) =================
+   Blocco 1: `ered_debiti`, quando il genitore lascia più debiti che beni. La logica è in c15_eredita.js; lo apre `apriSuccessione()`
+   appena continui come un figlio maggiorenne (per i minorenni la legge sceglie il beneficio d'inventario). */
+
+const genitoreMorto=()=>{const E=S.fatti.eredita||{};return E.daS==='F'?'tua madre':'tuo padre'};
+ev({id:'ered_debiti',link:1,k:'Famiglia',t:'Un\'eredità di debiti',cond:()=>!!(S.fatti.eredita&&S.fatti.eredita.pend),
+  x:()=>{const E=S.fatti.eredita;return `Dal notaio i conti di ${genitoreMorto()} sono presto fatti: beni per ${eur(E.attivo)}, debiti per ${eur(E.passivo)}. Venduto tutto, ne restano da pagare. La tua parte è il ${Math.round(E.q*100)}%: ${eur(E.debito)} di debiti che l'eredità non copre. Puoi accettare e pagare di tasca tua, accettare «con beneficio d'inventario» (rispondi solo con quello che erediti, cioè niente) oppure rinunciare.`},
+  c:()=>{
+    const E=S.fatti.eredita,figli=vivi(['Figlio']),fr=vivi(['Fratello']);
+    return [
+      {l:'Accetti e paghi i debiti',sub:`${eur(E.debito)} in ${ANNI_DEB} anni: ${eur(rataMutuo(E.debito,ANNI_DEB,TASSO_DEB))} l'anno`,_incl:0,pers:{C:3,A:1},fx:()=>{
+        const deb=scegliEredita('pura');S.karma=clamp(S.karma+5);mod('felicita',-3);pesa(4,1);
+        return [`Firmi. I creditori di ${genitoreMorto()} diventano i tuoi: ${eur(deb)}, una rata alla volta. Nessuno potrà dire che in famiglia non si pagano i debiti.`,'']}},
+      {l:'Accetti con beneficio d\'inventario',sub:'Non erediti niente e non devi niente: ai creditori vanno solo i suoi beni',_incl:0,pers:{C:2},fx:()=>{
+        scegliEredita('beneficio');
+        return ['Il notaio fa l\'inventario, i beni vanno ai creditori e i conti si chiudono lì. Resti erede, ma dei debiti non ti arriva niente: le spese le paga l\'eredità.','g']}},
+      {l:'Rinunci all\'eredità',sub:figli.length?'La tua parte, debiti compresi, passa ai tuoi figli':fr.length?'La tua parte, debiti compresi, passa agli altri eredi':'Niente beni e niente debiti',_incl:0,fx:()=>{
+        scegliEredita('rinuncia');
+        if(figli.length)return [`Firmi la rinuncia in tribunale. Per legge al tuo posto subentrano i tuoi figli: ${figli.some(f=>f.eta<18)?'per i minorenni decide il giudice, che accetta con beneficio d\'inventario':'dovranno accettare con beneficio d\'inventario o rinunciare anche loro'}. Altre carte, altri bolli, ma nessun debito.`,''];
+        if(fr.length){fr.forEach(f=>relD(f,-4));return ['Firmi la rinuncia in tribunale: non sei più erede. La tua parte, con i suoi debiti, torna sul tavolo dei tuoi fratelli, che non la prendono bene.','']}
+        return ['Firmi la rinuncia in tribunale: non sei più erede. Niente beni, niente debiti, e nemmeno una fotografia da portare via.','']}}];
+  }});
+
 /* ================= AZIONI ================= */
 function fatto(k){return !!S.azioni[k]}
 function cdAzione(k){
@@ -9534,7 +9651,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='55238c81';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='9806f3e4';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 

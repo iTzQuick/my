@@ -340,13 +340,12 @@ function parenteErede(p,ruolo,rapporto,dt){
 function continuaCome(pid){
   const old=S,f=old.relazioni.find(p=>p.id===pid);if(!f)return;
   const figli=old.relazioni.filter(p=>p.vivo&&p.ruolo==='Figlio');
-  const qs=quoteSuccessione(old).find(x=>x[0]===f),lordo=Math.max(0,patrimonio(old)*.96*(qs?qs[1]:1/Math.max(1,figli.length)));   // successione legittima
-  const quota=Math.round(lordo-impostaSucc(lordo));
+  const R=ripartoEredita(old,pid),quota=R.mia?Math.max(0,R.mia.x):0;   // la tua parte della massa, tolti debiti, spese e imposta (c15_eredita.js)
   const classe=quota>P(300000)?'agiata':quota>P(40000)?'media':'umile';   // soglie ai prezzi dell'anno
   const sposato=f.coppia==='sposato'&&f.eta>=22,ps=f.pSesso||(f.sesso==='F'?'M':'F');   // il coniuge che aveva da persona del gioco (pNome, pSesso)
   const orient=f.orient||(sposato||f.pSesso?(ps===f.sesso?'omo':'etero'):null);
   const look=lookDi(f);
-  S=statoBase({nome:f.nome,cognome:f.cognome,sesso:f.sesso,citta:old.citta,prov:old.prov,mondo:old.mondo,eta:f.eta,annoNascita:old.anno-f.eta-(old.mese<(f.mn||0)?1:0),anno:old.anno,mese:old.mese,meseNascita:f.mn||0,t:f.eta*12,pers:f.pers,look,gen:old.gen+1,soldi:quota,classe,orient,
+  S=statoBase({nome:f.nome,cognome:f.cognome,sesso:f.sesso,citta:old.citta,prov:old.prov,mondo:old.mondo,eta:f.eta,annoNascita:old.anno-f.eta-(old.mese<(f.mn||0)?1:0),anno:old.anno,mese:old.mese,meseNascita:f.mn||0,t:f.eta*12+(old.mese-(f.mn||0)+12)%12,pers:f.pers,look,gen:old.gen+1,soldi:quota,classe,orient,
     int:clamp(old.intelligenza+r(-25,20),5,100),asp:clamp(old.aspetto+r(-25,20),5,100)});
   S.nextId=old.nextId;S.fatti.cittaNascita=old.citta;S.fatti.provNascita=old.prov;
   const dt=S.t-old.t,con=old.relazioni.find(p=>p.vivo&&p.ruolo==='Coniuge');
@@ -373,8 +372,8 @@ function continuaCome(pid){
   S.fatti.hobbyChiesto=e>6;
   S.routine=routineDefault();if(S.eta>=4)formaAttaccamento();
   log(`Continui la storia della famiglia come ${S.nome}, ${g('figlio','figlia')} di ${old.nome}. Generazione ${S.gen}.`,'g');
-  if(quota>0)log(`Erediti ${eur(quota)}${qs&&qs[1]<1?`: la tua parte (${Math.round(qs[1]*100)}%) secondo la legge`:''}.`,'g');
-  tab='vita';coda=[];save();render();
+  coda=[];apriSuccessione(old,R);
+  tab='vita';save();render();if(coda.length)next();
 }
 
 /* ---------- Passare un mese ---------- */
@@ -394,7 +393,7 @@ function mese(silenzioso){
   if(S.carcere===0)meseScuola();
   calendario();
   storiaMese();
-  meseLavoro();meseSquadra();meseEstero();
+  meseLavoro();meseSquadra();meseEstero();successionePendente();
   meseItalia();
   normalizzaRoutine();
   meseRoutine();

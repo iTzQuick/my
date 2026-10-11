@@ -27,6 +27,8 @@ window.AP={
   if(tit==='In proprio?'){const b=L.find(x=>/nel tuo mestiere/.test(x.textContent));if(b&&chance(1/3)){b.click();return true}}
   // emigrare (car_estero): accetta circa 1 proposta su 3, altrimenti resta
   if(tit==='Partire?'){const b=L.filter(x=>/\(.+\): /.test(x.textContent)&&!/non ancora/.test(x.textContent));if(b.length&&chance(.35)){pick(b).click();return true}const n=L.find(x=>/^Resti/.test(x.textContent));if(n){n.click();return true}}
+  // un'eredità di debiti (ered_debiti): quasi tutti scelgono il beneficio d'inventario; chi è molto coscienzioso e amichevole a volte paga, qualcuno rinuncia
+  if(tit==='Un\'eredità di debiti'){const pu=.08+Math.max(0,S.pers.C+S.pers.A-110)/300,k=Math.random();const b=L.find(x=>k<pu?/^Accetti e paghi/.test(x.textContent):k<pu+.2?/^Rinunci/.test(x.textContent):/beneficio/.test(x.textContent));if(b){b.click();return true}}
   // a chi sei attratt*: secondo l'orientamento (S.orient), non a caso
   const bU=L.find(x=>x.textContent.startsWith('Uomini')),bD=L.find(x=>x.textContent.startsWith('Donne'));
   if(bU&&bD){const o=S.orient||'etero';const t=o==='bi'?L.find(x=>x.textContent.startsWith('Entrambi')):((o==='omo')===(S.sesso==='M')?bU:bD);(t||bD).click();return true}
