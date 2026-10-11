@@ -515,6 +515,7 @@ function renderMorte(V){
    ${kv('Ultimo lavoro',esc(S.ultimoLavoro||'Nessuno'))}
    ${kv('Patrimonio',eur(patrimonio()))}
    ${patrimonio()>0?kv('Eredità',esc(testoSuccessione())):''}
+   ${testoDesiderio()?kv('Ultimo desiderio',esc(testoDesiderio())):''}
    ${kv('Coniuge',con?esc(con.nome):'—')}
    ${kv('Figli',figli.length)}${nip?kv('Nipoti',nip):''}
    ${kv('Fedina penale',S.fedina.length?'Sporca':'Pulita')}

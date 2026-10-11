@@ -395,9 +395,6 @@ ev({id:'pensione_hobby',min:62,max:95,cond:()=>!S.lavoro,t:'Tempo libero',x:'Hai
 ev({id:'truffa_anziani',min:70,max:100,t:'Il finto tecnico',x:'Uno sconosciuto alla porta dice di essere un tecnico del gas e deve controllare la casa.',c:[
   {l:'Fallo entrare',p:.3,si:{r:'Era davvero un tecnico. Che sollievo.',k:''},no:{fx:()=>{const x=r(500,3000);soldi(-x);mod('felicita',-8);return [`Mentre controllava, il complice ti ha rubato ${eur(x)}.`,'b']}}},
   {l:'Chiama i carabinieri',e:{f:4,k:2},r:'Lo arrestano. Era un truffatore.'}]});
-ev({id:'testamento',min:65,max:100,once:1,t:'Il testamento',x:'Il notaio ti consiglia di fare testamento.',c:[
-  {l:'Fallo',costo:()=>P(500),fl:'testamento',e:{f:2},r:'Tutto in ordine. Ti senti più leggero.'},
-  {l:'Non ora',pers:{C:-1},r:'Ci penserai.'}]});
 ev({id:'caduta',min:72,max:100,t:'Una caduta',x:'Scivoli sul pavimento bagnato del bagno.',c:[
   {l:'Fisioterapia',costo:()=>P(800),e:{s:-4},r:'Qualche mese di esercizi e torni in piedi.'},
   {l:'Stringi i denti',e:{s:-10},r:'Ci metti tanto a riprenderti.'}]});

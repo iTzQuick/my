@@ -389,7 +389,7 @@ function assegnoFigli(){
 /* Successione legittima (codice civile, artt. 565–586), senza testamento: coniuge (o unito civilmente) e un figlio metà a testa;
    coniuge e più figli: un terzo al coniuge e il resto ai figli; solo il coniuge: due terzi a lui e un terzo ai genitori o ai fratelli;
    né coniuge né figli: genitori e fratelli. Chi convive senza essere sposato non eredita. */
-function quoteSuccessione(X){
+function quoteLegge(X){
   X=X||S;const v=R=>X.relazioni.filter(p=>p.vivo&&R.includes(p.ruolo));
   const con=v(['Coniuge'])[0],figli=v(['Figlio']),gen=v(['Madre','Padre']),fr=v(['Fratello']),q=[];
   if(figli.length){const qc=con?(figli.length===1?1/2:1/3):0;if(con)q.push([con,qc]);for(const f of figli)q.push([f,(1-qc)/figli.length])}
@@ -400,8 +400,8 @@ function quoteSuccessione(X){
 }
 function testoSuccessione(){
   const q=quoteSuccessione();if(!q.length)return 'ad altri parenti o, se non ce ne sono, allo Stato';
-  const rel=p=>({Coniuge:gp(p,'marito','moglie'),Figlio:gp(p,'figlio','figlia'),Madre:'madre',Padre:'padre',Fratello:gp(p,'fratello','sorella')})[p.ruolo]||'';
-  return q.map(([p,x])=>`${p.nome} (${rel(p)}) ${Math.round(x*100)}%`).join(' · ');
+  const rel=p=>({Coniuge:gp(p,'marito','moglie'),Partner:gp(p,'compagno','compagna'),Figlio:gp(p,'figlio','figlia'),Nipote:gp(p,'nipote','nipote'),Madre:'madre',Padre:'padre',Fratello:gp(p,'fratello','sorella'),Amico:gp(p,'amico','amica')})[p.ruolo]||'';
+  return q.map(([p,x])=>`${p.nome}${rel(p)?` (${rel(p)})`:''} ${Math.round(x*100)}%`).join(' · ');
 }
 /* imposta di successione per coniuge e figli: 4% oltre un milione a testa (abolita dal 2001 al 2006) */
 const impostaSucc=x=>S.anno>=2001&&S.anno<2007?0:Math.round(Math.max(0,x-P(1e6))*.04);
