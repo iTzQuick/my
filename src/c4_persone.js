@@ -174,6 +174,7 @@ const partnerDi=(p,sposati)=>`${(p.pSesso||(p.sesso==='F'?'M':'F'))==='M'?(sposa
 function nuovoCompagnoNpc(p){const ps=sessoCompagnoNpc(p);p.pSesso=ps;p.pNome=pick(nomiPer(ps,S.anno-p.eta+r(-3,3)));p.coppia='coppia';p.dalC=S.t;p.nuovoT=S.t;p.pId=null}
 function compleannoNpc(p){
   if(p.ruolo==='Figlio')annoFiglio(p);
+  if(p.ruolo==='Nipote')annoNipote(p);
   const e=p.eta;
   if(p.stato==='bambino'&&e>=6)p.stato='studente';
   if(p.stato==='studente'&&e>=19&&p.ruolo!=='Figlio'&&chance(e>=24?.9:.4)){p.stato=chance(.85)?'lavora':'disoccupato';if(p.stato==='lavora')p.lavoro=lavoroPerNpc(p)}
@@ -235,7 +236,8 @@ function vitaNpc(p){
   else if(['coppia','sposato'].includes(p.coppia)&&chance(.003*(1+(A.N-50)/60-(A.A-50)/80))){const sp=p.coppia==='sposato';p.coppia='separato';p.umore=clamp(p.umore-25);p.sepT=S.t;if(p.pId)separaNpc(p);
     if(!(p.rapporto>=55&&chance(.4)&&richiesta('r_separazione',p)))annuncia(p,`${cap(tuoR(p))} ${p.nome} si ${sp?'separa':'lascia'} ${partnerDi(p,sp)}.`,'b')}
   if(['sposato','coppia'].includes(p.coppia)&&!coppiaStessoSesso(p)&&e<44&&(p.figliN||0)<4&&chance(p.coppia==='sposato'?.009:S.t-(p.dalC||0)>=18?.006:0)){p.figliN=(p.figliN||0)+1;p.neoT=S.t;if(p.pId){const q=persona(p.pId);if(q){q.figliN=(q.figliN||0)+1;q.neoT=S.t}}
-    if(['Fratello'].includes(p.ruolo)){annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}: sei diventat${g('o','a')} zi${g('o','a')}!`,'g');mod('felicita',4)}
+    if(p.ruolo==='Figlio')nasceNipote(p);
+    else if(['Fratello'].includes(p.ruolo)){annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}: sei diventat${g('o','a')} zi${g('o','a')}!`,'g');mod('felicita',4)}
     else annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}.`,'g')}
   // trasloco
   if(!p.lontano&&e>=20&&e<50&&['Amico','Fratello','Cugino','Figlio'].includes(p.ruolo)&&!lavInCorso(p)&&chance(.0018)){p.lontano=true;p.trasfT=S.t;

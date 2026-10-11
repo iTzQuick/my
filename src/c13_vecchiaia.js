@@ -127,3 +127,19 @@ function vecchiaiaAnno(){
   if(F.desEta===undefined)F.desEta=r(75,80);
   if(!F.desiderio&&!F.desiderioRif&&S.eta>=F.desEta&&S.eta<=88&&desideriPossibili().length&&!coda.some(q=>q.e===EV.ult_desiderio))coda.push({e:EV.ult_desiderio,d:{}});
 }
+
+/* ---------- Nipoti con una vita propria (blocco 2) ---------- */
+/* Un tuo figlio ha un bambino: nasce un Nipote vero (gen = id del genitore) e si apre `fig_nipote`.
+   Gli eventi `nip_` seguono la sua età; i passi già vissuti con ogni nipote stanno in p.nv. S.fatti.nonnoStile: presente, richiesta, distante. */
+const nv=(p,k)=>p&&p.nv&&p.nv[k];
+const nvSet=(p,k,v)=>{if(p){p.nv=p.nv||{};p.nv[k]=v===undefined?1:v}};
+function nasceNipote(f){
+  const n=nuovaPersona('Nipote',pick(['M','F']),0,f.sesso==='M'?f.cognome:pick(COGNOMI),{rapporto:f.lontano?r(45,70):r(65,92),gen:f.id});
+  coda.push({e:EV.fig_nipote,d:{p:f,x:{n:n.id}}});
+  return n;
+}
+function annoNipote(p){
+  if(p.vivo&&p.eta===18&&!nv(p,'diciotto')&&!coda.some(q=>q.e===EV.nip_diciotto)){nvSet(p,'diciotto');coda.push({e:EV.nip_diciotto,d:{p}})}
+}
+const stileNonno=()=>S.fatti.nonnoStile||'richiesta';
+const genitoreDi=p=>p&&p.gen!==undefined?persona(p.gen):null;

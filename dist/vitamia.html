@@ -2911,6 +2911,7 @@ const partnerDi=(p,sposati)=>`${(p.pSesso||(p.sesso==='F'?'M':'F'))==='M'?(sposa
 function nuovoCompagnoNpc(p){const ps=sessoCompagnoNpc(p);p.pSesso=ps;p.pNome=pick(nomiPer(ps,S.anno-p.eta+r(-3,3)));p.coppia='coppia';p.dalC=S.t;p.nuovoT=S.t;p.pId=null}
 function compleannoNpc(p){
   if(p.ruolo==='Figlio')annoFiglio(p);
+  if(p.ruolo==='Nipote')annoNipote(p);
   const e=p.eta;
   if(p.stato==='bambino'&&e>=6)p.stato='studente';
   if(p.stato==='studente'&&e>=19&&p.ruolo!=='Figlio'&&chance(e>=24?.9:.4)){p.stato=chance(.85)?'lavora':'disoccupato';if(p.stato==='lavora')p.lavoro=lavoroPerNpc(p)}
@@ -2972,7 +2973,8 @@ function vitaNpc(p){
   else if(['coppia','sposato'].includes(p.coppia)&&chance(.003*(1+(A.N-50)/60-(A.A-50)/80))){const sp=p.coppia==='sposato';p.coppia='separato';p.umore=clamp(p.umore-25);p.sepT=S.t;if(p.pId)separaNpc(p);
     if(!(p.rapporto>=55&&chance(.4)&&richiesta('r_separazione',p)))annuncia(p,`${cap(tuoR(p))} ${p.nome} si ${sp?'separa':'lascia'} ${partnerDi(p,sp)}.`,'b')}
   if(['sposato','coppia'].includes(p.coppia)&&!coppiaStessoSesso(p)&&e<44&&(p.figliN||0)<4&&chance(p.coppia==='sposato'?.009:S.t-(p.dalC||0)>=18?.006:0)){p.figliN=(p.figliN||0)+1;p.neoT=S.t;if(p.pId){const q=persona(p.pId);if(q){q.figliN=(q.figliN||0)+1;q.neoT=S.t}}
-    if(['Fratello'].includes(p.ruolo)){annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}: sei diventat${g('o','a')} zi${g('o','a')}!`,'g');mod('felicita',4)}
+    if(p.ruolo==='Figlio')nasceNipote(p);
+    else if(['Fratello'].includes(p.ruolo)){annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}: sei diventat${g('o','a')} zi${g('o','a')}!`,'g');mod('felicita',4)}
     else annuncia(p,`${p.nome} ha avuto ${pick(['un bambino','una bambina'])}.`,'g')}
   // trasloco
   if(!p.lontano&&e>=20&&e<50&&['Amico','Fratello','Cugino','Figlio'].includes(p.ruolo)&&!lavInCorso(p)&&chance(.0018)){p.lontano=true;p.trasfT=S.t;
@@ -4628,6 +4630,22 @@ function vecchiaiaAnno(){
   if(!F.desiderio&&!F.desiderioRif&&S.eta>=F.desEta&&S.eta<=88&&desideriPossibili().length&&!coda.some(q=>q.e===EV.ult_desiderio))coda.push({e:EV.ult_desiderio,d:{}});
 }
 
+/* ---------- Nipoti con una vita propria (blocco 2) ---------- */
+/* Un tuo figlio ha un bambino: nasce un Nipote vero (gen = id del genitore) e si apre `fig_nipote`.
+   Gli eventi `nip_` seguono la sua età; i passi già vissuti con ogni nipote stanno in p.nv. S.fatti.nonnoStile: presente, richiesta, distante. */
+const nv=(p,k)=>p&&p.nv&&p.nv[k];
+const nvSet=(p,k,v)=>{if(p){p.nv=p.nv||{};p.nv[k]=v===undefined?1:v}};
+function nasceNipote(f){
+  const n=nuovaPersona('Nipote',pick(['M','F']),0,f.sesso==='M'?f.cognome:pick(COGNOMI),{rapporto:f.lontano?r(45,70):r(65,92),gen:f.id});
+  coda.push({e:EV.fig_nipote,d:{p:f,x:{n:n.id}}});
+  return n;
+}
+function annoNipote(p){
+  if(p.vivo&&p.eta===18&&!nv(p,'diciotto')&&!coda.some(q=>q.e===EV.nip_diciotto)){nvSet(p,'diciotto');coda.push({e:EV.nip_diciotto,d:{p}})}
+}
+const stileNonno=()=>S.fatti.nonnoStile||'richiesta';
+const genitoreDi=p=>p&&p.gen!==undefined?persona(p.gen):null;
+
 /* ================= EVENTI =================
  Campi evento: id, min, max, w (peso), once, rip (anni prima di ripetersi), cond(d), chi (ruoli persona), pc(p), link (solo come conseguenza), prig (in carcere), auto (conseguenza silenziosa)
  t titolo, x testo, c scelte. Segnaposto: {o} desinenza tua, {P} nome persona, {po} desinenza persona, {Tuo}/{tuo} "Tua sorella", {lui} {gli} {lo}, {xe} importo
@@ -5183,8 +5201,6 @@ ev({id:'fig_casa',min:45,max:85,chi:['Figlio'],pc:p=>p.eta>=26&&p.eta<=45,cond:(
   {l:'Regala 20.000 €',costo:()=>P(20000),e:{rel:18,k:3},r:'{P} ti abbraccia commoss{po}.'},
   {l:'Presta 20.000 €',costo:()=>P(20000),x:20000,e:{rel:10},fut:[3,'restituzione'],r:'Firmate una scrittura privata.',k:''},
   {l:'Non posso',e:{rel:-8},r:'{P} capisce, ma resta delus{po}.'}]});
-ev({id:'fig_nipote',min:45,max:95,chi:['Figlio'],pc:p=>p.eta>=24&&p.eta<=45&&(p.sposato||['coppia','sposato'].includes(p.coppia))&&!coppiaStessoSesso(p),t:'Diventi {nonno}!',x:'{Tuo} {P} aspetta un bambino.',c:[
-  {l:'Che gioia!',fx:d=>{const n=nuovaPersona('Nipote',pick(['M','F']),0,d.p.sesso==='M'?d.p.cognome:pick(COGNOMI),{rapporto:r(70,95),gen:d.p.id});mod('felicita',12);if(!S.fatti.primoNipote){S.fatti.primoNipote=1;momento('nipote',{tit:n.nome,sub:g('Diventi nonno','Diventi nonna'),pids:[n.id]})}return [`È nat${gp(n,'o','a')} ${n.nome}. Sei ${g('nonno','nonna')}!`,'g']}}]});
 ev({id:'fig_ospita',min:70,max:100,chi:['Figlio'],pc:p=>p.eta>=30&&p.rapporto>=50,cond:()=>S.casa.tipo!=='figlio',t:'Vieni a stare da noi',x:'{Tuo} {P} ti propone di andare a vivere da {lui}.',c:[
   {l:'Accetta',e:{f:6,rel:8},fx:()=>{S.casa={tipo:'figlio'}},r:'Ti trasferisci da {P}. I nipoti sono felicissimi.'},
   {l:'Preferisco casa mia',e:{rel:-2},r:'Grazie, ma te la cavi ancora benissimo.'}]});
@@ -8378,6 +8394,61 @@ ev({id:'ult_realizza',link:1,t:'Il momento',cond:()=>!!S.fatti.desiderio&&!S.fat
   {l:'Lo fai adesso',sub:()=>{const c=DES[S.fatti.desiderio.id].costo();return c?eur(c):''},costo:()=>DES[S.fatti.desiderio.id].costo(),_incl:0,fx:d=>{const D=S.fatti.desiderio;D.fatto=S.t;return DES[D.id].fx(Object.assign({},D,{p:d.p}))}},
   {l:'Non ancora',_incl:0,fx:d=>{const D=S.fatti.desiderio;if(!D.rinv){D.rinv=1;futuro(.5,'ult_realizza',{p:d.p});return ['Rimandi. Ma non per sempre, ti dici.','']}return ['Lo lasci andare, con un po\' di malinconia.','']}}]});
 
+/* ---------- Nipoti: dalla nascita ai pronipoti (blocco 2). Ogni passo con un nipote si fa una volta (p.nv) ---------- */
+ev({id:'fig_nipote',link:1,min:40,max:100,t:'Diventi {nonno}!',x:d=>{const n=persona(d.x.n);return `${d.p.nome} ha avuto ${n.sesso==='M'?'un maschietto':'una femminuccia'}: si chiama ${n.nome}. Ti chiamano alle tre di notte per dirtelo, e tu non hai mai dormito meno di così.`},c:[
+  {l:'Voglio esserci sempre',sub:'Un nonno presente',pers:{A:2},fx:d=>nasceNonno(d,'presente')},
+  {l:'Ci sono quando serve',sub:'Né invadente né assente',fx:d=>nasceNonno(d,'richiesta')},
+  {l:'Meglio da lontano',sub:'Hai già dato: i nipoti si godono a piccole dosi',pers:{E:-1},fx:d=>nasceNonno(d,'distante')}]});
+function nasceNonno(d,stile){
+  const n=persona(d.x.n);S.fatti.nonnoStile=stile;
+  mod('felicita',stile==='distante'?8:12);n.rapporto=clamp(n.rapporto+(stile==='presente'?10:stile==='distante'?-12:0));
+  if(!S.fatti.primoNipote){S.fatti.primoNipote=1;momento('nipote',{tit:n.nome,sub:g('Diventi nonno','Diventi nonna'),pids:[n.id]})}
+  return [`È nat${gp(n,'o','a')} ${n.nome}. Sei ${g('nonno','nonna')}!${stile==='presente'?' Appena puoi, vai a trovarl'+gp(n,'o','a')+'.':stile==='distante'?' Lo vedrai alle feste.':''}`,'g'];
+}
+
+ev({id:'nip_dai_nonni',min:40,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=3&&p.eta<=10&&!p.lontano&&stileNonno()!=='distante',t:'Un fine settimana da te',x:'{P} dorme da te per il fine settimana. Alle nove di sera è ancora svegli{po}, in pigiama, con il libro in mano: «Ancora una storia».',c:[
+  {l:'Una storia, poi un\'altra',e:{f:4},fx:d=>{relD(d.p,6);ricorda(d.p,'Ti raccontava le storie fino a tardi',2)},pers:{A:1,O:1},r:'Ti addormenti prima di {lui}. Al mattino ti rimbocca le coperte.'},
+  {l:'Giocate a carte fino a tardi',e:{f:3},fx:d=>{relD(d.p,8);S.bis.energia=clamp(S.bis.energia-5);ricorda(d.p,'Avete giocato a carte fino a mezzanotte',2)},pers:{E:1},r:'Ti batte tre volte su quattro. Sospetti che bari.'},
+  {l:'Si va a letto, è tardi',fx:d=>{relD(d.p,-1)},pers:{C:1},r:'Protesta per cinque minuti, poi crolla.'}]});
+
+ev({id:'nip_comunione',min:40,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=8&&p.eta<=10&&!nv(p,'com'),t:'La prima comunione',x:d=>{nvSet(d.p,'com');return '{P} fa la prima comunione. Il vestito è nuovo, i capelli pettinati con la riga, e continua a girarsi per vedere se ci sei.'},c:[
+  {l:'Un regalo importante',sub:()=>eur(P(150)),costo:()=>P(150),fx:d=>{relD(d.p,10);ricorda(d.p,'Ti ha fatto un bel regalo il giorno della sua comunione',2)},e:{f:3},r:'Ti abbraccia così forte che gli cade il fiocco.'},
+  {l:'Un pensiero e il pranzo insieme',fx:d=>{relD(d.p,5);ricorda(d.p,'Eri alla sua comunione',2)},e:{f:3},r:'Il pranzo dura quattro ore. I bambini scappano dopo il secondo.'},
+  {l:'Non riesci ad andare',fx:d=>{relD(d.p,-8);ricorda(d.p,'Non sei venuto alla sua comunione',-2)},pers:{A:-1},r:'Mandi un biglietto. Lo sa lui, lo sai tu.'}]});
+
+ev({id:'nip_tema',min:40,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=7&&p.eta<=12&&!nv(p,'tema')&&p.rapporto>=40,t:'Il tema',x:d=>{nvSet(d.p,'tema');return '{P} ha un tema per la scuola: «Intervista a una persona anziana della famiglia». Ha scelto te, e tiene la penna come un microfono.'},c:[
+  {l:'Racconti la tua infanzia con cura',fx:d=>{relD(d.p,8);ricorda(d.p,'Ti ha intervistato per un tema: gli hai raccontato tutto',3)},e:{f:5},pers:{A:1,O:1},r:'Dopo due ore ha riempito tre fogli e ha un\'idea nuova del tempo.'},
+  {l:'Solo le cose belle',fx:d=>{relD(d.p,5);ricorda(d.p,'Ti ha intervistato per un tema',1)},e:{f:3},r:'Tutto sole e merende. Prende nota senza fare domande.'},
+  {l:'«Chiedi a tua madre»',fx:d=>{relD(d.p,-4)},pers:{C:-1},r:'Resta un po\' deluso: aveva già scritto la prima riga.'}]});
+
+ev({id:'nip_segreto',min:40,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=13&&p.eta<=17&&!nv(p,'segr')&&p.rapporto>=55,t:'Un segreto',x:d=>{nvSet(d.p,'segr');return '{P} ti prende da parte, in cucina, a voce bassa: '+pick(['ha una persona del cuore e non lo ha detto a nessuno','vorrebbe lasciare la scuola','ha fatto una cavolata con il motorino e ha paura di dirlo','ha il terrore di non essere all\'altezza di nessuno'])+'. «Non dirlo a nessuno, ti prego.»'},c:[
+  {l:'Ascolti e tieni il segreto',fx:d=>{relD(d.p,14);ricorda(d.p,'Ti ha confidato un segreto e non l\'hai detto a nessuno',3)},e:{f:3},pers:{A:2},r:'Parla per un\'ora. Alla fine ti dice: «Sei l\'unica persona a cui potevo dirlo».'},
+  {l:'Lo convinci a parlarne con i genitori',fx:d=>{relD(d.p,5);const gn=genitoreDi(d.p);if(gn)relD(gn,4);ricorda(d.p,'Ti ha confidato un segreto e ti ha dato retta',2)},pers:{C:2},r:'«Vengo con te, se vuoi.» Non ce n\'è bisogno. Ma ti ringrazia.'},
+  {l:'Lo dici subito ai suoi',fx:d=>{relD(d.p,-18);const gn=genitoreDi(d.p);if(gn)relD(gn,6);ricorda(d.p,'Hai raccontato il suo segreto ai genitori',-3)},pers:{A:-1,C:1},r:'Hai fatto quello che ritenevi giusto. Non ti parla per un po\'.'}]});
+
+ev({id:'nip_diciotto',link:1,t:'Diciotto anni',cond:d=>!d.p||d.p.vivo,x:d=>{const p=d.p,agg=aggettivi(p.pers,p.sesso,2).join(' e ')||(p.sesso==='F'?'equilibrata':'equilibrato'),a=affinita(p);return `${p.nome} compie 18 anni: è ${gp(p,'un ragazzo','una ragazza')} ${agg}. ${a>=65?'Ti somiglia più di quanto ammetta.':a<=40?'Non avete molto in comune, e si vede, ma vi volete bene lo stesso.':'Con te si trova bene, e non lo dice mai.'}`},c:[
+  {l:'Un regalo per i diciotto anni',sub:()=>eur(P(300)),costo:()=>P(300),fx:d=>{relD(d.p,10);ricorda(d.p,'Ti ha dato un regalo per i suoi diciotto anni',2)},e:{f:3},r:'Lo apre davanti a tutti. Poi viene a ringraziarti senza fretta.'},
+  {l:'Una lettera scritta a mano',fx:d=>{relD(d.p,9);ricorda(d.p,'Ti ha scritto una lettera per i suoi diciotto anni',3)},e:{f:4},pers:{O:1},r:'La legge da solo, in camera. Ti chiama la sera, e non sa bene cosa dire.'},
+  {l:'Un abbraccio basta',fx:d=>{relD(d.p,4)},e:{f:2},r:'Basta, sì. Le parole non erano il tuo forte.'}]});
+
+ev({id:'nip_soldi',min:40,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=19&&p.eta<=28&&!nv(p,'soldi')&&p.rapporto>=45,t:'Una mano',x:d=>{nvSet(d.p,'soldi');return '{P} ti chiama con la voce di chi ha provato tre volte la frase: gli servono dei soldi per '+pick(['la patente','un anticipo per l\'affitto','un corso che lo porterebbe lontano','un computer per lavorare'])+'.'},c:[
+  {l:'Lo aiuti',sub:()=>eur(P(1500)),costo:()=>P(1500),fx:d=>{relD(d.p,12);ricorda(d.p,'Ti ha aiutato quando ne avevi bisogno',3)},e:{f:4},pers:{A:2},r:'«Te li ridò, giuro.» Sai che lo farà, o non lo farà, e ti va bene uguale.'},
+  {l:'Gli dai una mano a cavarsela da solo',fx:d=>{relD(d.p,6);ricorda(d.p,'Ti ha dato un consiglio invece dei soldi',1)},pers:{C:1},r:'Lo aiuti a fare un preventivo. Non è quello che sperava, ma ti ascolta.'},
+  {l:'Dici di no',fx:d=>{relD(d.p,-8);ricorda(d.p,'Hai detto di no quando ti ha chiesto aiuto',-2)},pers:{A:-1},r:'«Capisco.» Non capisce, ma è educato.'}]});
+
+ev({id:'nip_laurea',min:50,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=22&&p.eta<=27&&!nv(p,'lau')&&p.id%3!==0,t:'La corona d\'alloro',x:d=>{nvSet(d.p,'lau');return '{P} si laurea. Nell\'aula c\'è il solito brusio di famiglie, e tu sei in terza fila con il vestito buono. Quando lo chiamano ti commuovi, ma non lo dai a vedere.'},c:[
+  {l:'Gli fai un regalo',sub:()=>eur(P(200)),costo:()=>P(200),fx:d=>{relD(d.p,9);ricorda(d.p,'Eri alla sua laurea',3)},e:{f:6},r:'Ti presenta ai professori come {nonno}: ti si stringe la gola.'},
+  {l:'Ci sei, e basta',fx:d=>{relD(d.p,6);ricorda(d.p,'Eri alla sua laurea',2)},e:{f:5},r:'Alla fine dice a tutti: «Lui c\'era».'},
+  {l:'Non vieni',fx:d=>{relD(d.p,-8);ricorda(d.p,'Non sei venuto alla sua laurea',-2)},r:'Manda una foto della corona d\'alloro, con un messaggio breve.'}]});
+
+ev({id:'nip_nozze',min:55,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=26&&p.eta<=40&&!nv(p,'noz')&&p.rapporto>=40,t:'Il matrimonio del nipote',x:d=>{nvSet(d.p,'noz');return '{P} si sposa. Ti hanno messo al tavolo d\'onore: «Il posto più bello». Tra una portata e l\'altra ti accorgi di quanta gente è venuta anche per via di te.'},c:[
+  {l:'Fai un brindisi',fx:d=>{relD(d.p,10);ricorda(d.p,'Hai fatto un brindisi al suo matrimonio',3)},e:{f:7},pers:{E:2},r:'Parli due minuti e tutti ridono. Sulla fine non ride nessuno, ed è bellissimo.'},
+  {l:'Balli con la sposa',fx:d=>{relD(d.p,8);ricorda(d.p,'Hai ballato al suo matrimonio',2)},e:{f:6},r:'Un liscio da manuale. Gli invitati fanno il cerchio.'},
+  {l:'Resti al tuo tavolo, tra gli anziani',fx:d=>{relD(d.p,3)},e:{f:3},r:'Vi raccontate com\'era il mondo. Alla fine qualcuno ti porta il dolce.'}]});
+
+ev({id:'nip_pronipote',min:62,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=27&&p.eta<=42&&!nv(p,'pron')&&p.rapporto>=35,t:'Diventi {nonno}, di nuovo',x:d=>{nvSet(d.p,'pron');return '{P} ti chiama con una voce strana: «Devo dirti una cosa». Ti siedi. Hai capito prima ancora che finisca la frase.'},c:[
+  {l:'Piangi, e non te ne vergogni',fx:d=>{S.fatti.pronipoti=(S.fatti.pronipoti||0)+1;relD(d.p,8);ricorda(d.p,'Hai pianto di gioia quando ti ha detto del bambino',3);if(S.fatti.pronipoti===1)momento('nipote',{tit:'Un pronipote',sub:g('Diventi bisnonno','Diventi bisnonna'),pids:[d.p.id]})},e:{f:12},r:'Un pronipote. Un\'altra generazione che non conoscevi, e che porta un pezzo di te.'}]});
+
 /* ================= AZIONI ================= */
 function fatto(k){return !!S.azioni[k]}
 function cdAzione(k){
@@ -9082,7 +9153,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='42c7c170';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='84bc9a71';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 

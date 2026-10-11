@@ -109,6 +109,31 @@ JS_BASE = r'''async ()=>{
  nuova(77);pers('Figlio',45,'F');pers('Nipote',10,'F');
  for(const id of ['testamento','testamento_dispo','testamento_rivedi','ult_desiderio','ult_realizza']){
    try{for(let i=0;i<3;i++){S.testamento=S.testamento||{t:0,eta:70,dest:[]};S.fatti.desiderio=S.fatti.desiderio||{id:'memorie',testo:'x',t:0};S.fatti.desiderio.fatto=0;apri(id,{x:{nome:'Anna'}});chiudi()}}catch(x){ko.push(id+': '+x.message)}}
+ // 6) nipoti con una vita propria
+ nuova(65);S.soldi=P(50000);let fi=pers('Figlio',35,'F',80);fi.coppia='sposato';let nn=nasceNipote(fi);
+ if(nn.ruolo!=='Nipote'||nn.gen!==fi.id||nn.eta!==0)ko.push('nasceNipote');
+ if(!coda.some(x=>x.e===EV.fig_nipote))ko.push('nasceNipote non apre fig_nipote');
+ coda.length=0;
+ for(const stile of ['presente','richiesta','distante']){nuova(65);fi=pers('Figlio',35,'F',80);nn=nasceNipote(fi);coda.length=0;const b=apri('fig_nipote',{p:fi,x:{n:nn.id}});
+   const i=['presente','richiesta','distante'].indexOf(stile);if(b.length!==3){ko.push('fig_nipote: '+b.length+' scelte');continue}b[i].click();chiudi();
+   if(S.fatti.nonnoStile!==stile)ko.push('nonnoStile '+stile+' -> '+S.fatti.nonnoStile);if(!S.fatti.primoNipote)ko.push('momento primoNipote')}
+ const EVN=[['nip_dai_nonni',6],['nip_comunione',9],['nip_tema',9],['nip_segreto',15],['nip_diciotto',18],['nip_soldi',22],['nip_laurea',24],['nip_nozze',30],['nip_pronipote',32]];
+ for(const [id,eta] of EVN){
+   for(let i=0;i<3;i++){nuova(75);S.soldi=P(50000);fi=pers('Figlio',45,'F',80);const n=nuovaPersona('Nipote',i===1?'M':'F',eta,null,{rapporto:75,gen:fi.id});n.id=n.id;
+     const e=EV[id];if(!e){ko.push(id+' manca');break}
+     if(!e.link){if(!(e.pc?e.pc(n):true))ko.push(id+': pc falso a '+eta+' anni (rapporto '+n.rapporto+')');if(S.eta<e.min||S.eta>e.max)ko.push(id+': età '+S.eta+' fuori da min/max')}
+     const bs=apri(id,{p:n});if(bs.length<1){ko.push(id+': senza scelte');continue}
+     for(let k=0;k<bs.length;k++){nuova(75);S.soldi=P(50000);fi=pers('Figlio',45,'F',80);const m=nuovaPersona('Nipote',i===1?'M':'F',eta,null,{rapporto:75,gen:fi.id});const b2=apri(id,{p:m});if(b2[k])b2[k].click();chiudi()}
+     const n2=nuovaPersona('Nipote','F',eta,null,{rapporto:75,gen:fi.id});apri(id,{p:n2});if(!['nip_diciotto'].includes(id)&&!nv(n2,id.replace('nip_','').slice(0,4)==='dai_'?'x':{nip_comunione:'com',nip_tema:'tema',nip_segreto:'segr',nip_soldi:'soldi',nip_laurea:'lau',nip_nozze:'noz',nip_pronipote:'pron'}[id]||'x')&&id!=='nip_dai_nonni')ko.push(id+': non segna p.nv');chiudi()}
+ }
+ // a 18 anni compare nip_diciotto, una volta sola
+ nuova(75);fi=pers('Figlio',45,'F',80);nn=nuovaPersona('Nipote','F',18,null,{rapporto:75,gen:fi.id});coda.length=0;annoNipote(nn);annoNipote(nn);if(coda.filter(x=>x.e===EV.nip_diciotto).length!==1)ko.push('nip_diciotto: '+coda.length);
+ // segreto detto ai genitori: il nipote si arrabbia, il genitore no
+ nuova(75);fi=pers('Figlio',45,'F',60);nn=nuovaPersona('Nipote','M',15,null,{rapporto:80,gen:fi.id});let b3=apri('nip_segreto',{p:nn});b3[2].click();chiudi();
+ if(!(nn.rapporto<70)||!(fi.rapporto>=60))ko.push('segreto svelato: nipote '+nn.rapporto+' figlio '+fi.rapporto);
+ // un figlio senza coppia non ha nipoti; con coppia, nel tempo, sì
+ nuova(60);fi=pers('Figlio',30,'F',80);fi.coppia='sposato';fi.pId=undefined;let ha=0;for(let i=0;i<3000&&!ha;i++){S.t++;vitaNpc(fi);if(S.relazioni.some(p=>p.ruolo==='Nipote'))ha=1}
+ if(!ha)ko.push('un figlio sposato non ha mai nipoti in 250 anni');
  return {errs,ko};
 }'''
 JS_VITE = r'''(N)=>{
@@ -124,7 +149,7 @@ JS_VITE = r'''(N)=>{
      if(S.testamento)test=1;if(S.fatti.desiderio)des=S.fatti.desiderio.fatto?'fatto':'no';
      if(S.eta>=70){const q=quoteSuccessione();if(q.length&&Math.abs(q.reduce((s,y)=>s+y[1],0)-1)>1e-6)ko.push('quote non sommano a 1: '+q.reduce((s,y)=>s+y[1],0))}
      if(typeof INV!=='undefined'){const i=INV.controlla();if(i.length)ko.push(i.slice(0,2).map(z=>z.join(': ')).join(' | '))}}
-   ris.push({eta:S.eta,test,des,rif:S.fatti.desiderioRif?1:0});
+   const nips=S.relazioni.filter(p=>p.ruolo==='Nipote');ris.push({eta:S.eta,test,des,rif:S.fatti.desiderioRif?1:0,nip:nips.length,pas:nips.reduce((a,p)=>a+Object.keys(p.nv||{}).length,0),stile:S.fatti.nonnoStile||''});
   }catch(e){errs.push(e.message+' | '+(e.stack||'').split('\n').slice(0,3).join(' / '))}
  }
  return {errs,ko:[...new Set(ko)].slice(0,6),ris};
@@ -144,6 +169,9 @@ V = v['ris']
 if V:
     old = [x for x in V if x['eta'] >= 70]
     print(f"{len(V)} vite, {len(old)} oltre i 70 anni: testamento fatto {100*sum(x['test'] for x in old)/max(1,len(old)):.0f}% · ultimo desiderio scelto {100*sum(1 for x in old if x['des'])/max(1,len(old)):.0f}% (realizzato {sum(1 for x in old if x['des']=='fatto')}, non ce l'ha fatta {sum(1 for x in old if x['des']=='no')}) · «nessuno» {sum(x['rif'] for x in old)}")
+if V:
+    cn = [x for x in V if x['nip']]
+    print(f"nipoti: {len(cn)} vite su {len(V)} hanno nipoti (in media {sum(x['nip'] for x in cn)/max(1,len(cn)):.1f}), passi vissuti per vita con nipoti {sum(x['pas'] for x in cn)/max(1,len(cn)):.1f}; stile: " + ', '.join(f"{k} {sum(1 for x in cn if x['stile']==k)}" for k in ('presente','richiesta','distante')))
 print('violazioni nelle vite:', v['ko'] or 'nessuna ✓')
 print('errori JS:', (r['errs'] + pe + v['errs']) or 'nessuno')
 sys.exit(1 if r['ko'] or v['ko'] or r['errs'] or pe or v['errs'] else 0)
