@@ -3643,10 +3643,20 @@ function assegnoFigli(){
 /* Successione legittima (codice civile, artt. 565–586), senza testamento: coniuge (o unito civilmente) e un figlio metà a testa;
    coniuge e più figli: un terzo al coniuge e il resto ai figli; solo il coniuge: due terzi a lui e un terzo ai genitori o ai fratelli;
    né coniuge né figli: genitori e fratelli. Chi convive senza essere sposato non eredita. */
+/* Rappresentazione (artt. 467–468): un figlio morto prima di te è rappresentato dai suoi figli, i tuoi nipoti, che si dividono la sua quota.
+   Ogni «stirpe» è l'elenco di chi eredita al posto di un figlio: lui, se è vivo, altrimenti i suoi figli vivi (nessuno: la stirpe non c'è). */
+function stirpiFigli(X){
+  X=X||S;const out=[];
+  for(const f of X.relazioni.filter(p=>p.ruolo==='Figlio')){
+    if(f.vivo)out.push([f]);
+    else{const n=X.relazioni.filter(p=>p.vivo&&p.ruolo==='Nipote'&&p.gen===f.id);if(n.length)out.push(n)}
+  }
+  return out;
+}
 function quoteLegge(X){
   X=X||S;const v=R=>X.relazioni.filter(p=>p.vivo&&R.includes(p.ruolo));
-  const con=v(['Coniuge'])[0],figli=v(['Figlio']),gen=v(['Madre','Padre']),fr=v(['Fratello']),q=[];
-  if(figli.length){const qc=con?(figli.length===1?1/2:1/3):0;if(con)q.push([con,qc]);for(const f of figli)q.push([f,(1-qc)/figli.length])}
+  const con=v(['Coniuge'])[0],st=stirpiFigli(X),gen=v(['Madre','Padre']),fr=v(['Fratello']),q=[];
+  if(st.length){const qc=con?(st.length===1?1/2:1/3):0;if(con)q.push([con,qc]);for(const s of st)for(const f of s)q.push([f,(1-qc)/st.length/s.length])}
   else if(con){const a=gen.length?gen:fr;q.push([con,a.length?2/3:1]);for(const x of a)q.push([x,1/3/a.length])}
   else if(gen.length&&fr.length){for(const x of gen)q.push([x,.5/gen.length]);for(const x of fr)q.push([x,.5/fr.length])}
   else{const a=gen.length?gen:fr;for(const x of a)q.push([x,1/a.length])}
@@ -4516,15 +4526,15 @@ function meseEstero(){
    Gli eventi sono in d18_vecchiaia.js. */
 
 /* ---------- Testamento ---------- */
-/* Quote riservate ai legittimari (codice civile, artt. 536–544): coniuge e un figlio 1/3 + 1/3, coniuge e più figli 1/4 + 1/2,
+/* Quote riservate ai legittimari (codice civile, artt. 536–544; un figlio morto è rappresentato dai suoi figli, artt. 467–468): coniuge e un figlio 1/3 + 1/3, coniuge e più figli 1/4 + 1/2,
    solo figli 1/2 (uno) o 2/3 (più), solo coniuge 1/2 (1/4 ai genitori, se ci sono), solo genitori 1/3. Fratelli, nipoti e amici
    non hanno una quota riservata. Il resto è la «quota disponibile». */
 function legittima(X){
   X=X||S;const v=R=>X.relazioni.filter(p=>p.vivo&&R.includes(p.ruolo));
-  const con=v(['Coniuge'])[0],figli=v(['Figlio']),gen=v(['Madre','Padre']),q=[];
-  if(figli.length){
-    const tf=con?(figli.length===1?1/3:1/2):(figli.length===1?1/2:2/3),qc=con?(figli.length===1?1/3:1/4):0;
-    if(con)q.push([con,qc]);for(const f of figli)q.push([f,tf/figli.length]);
+  const con=v(['Coniuge'])[0],st=stirpiFigli(X),gen=v(['Madre','Padre']),q=[];   // un figlio morto è rappresentato dai suoi figli (artt. 467–468)
+  if(st.length){
+    const tf=con?(st.length===1?1/3:1/2):(st.length===1?1/2:2/3),qc=con?(st.length===1?1/3:1/4):0;
+    if(con)q.push([con,qc]);for(const s of st)for(const f of s)q.push([f,tf/st.length/s.length]);
   }else if(con){q.push([con,.5]);for(const x of gen)q.push([x,.25/gen.length])}
   else for(const x of gen)q.push([x,1/3/gen.length]);
   return q;
@@ -4557,7 +4567,7 @@ function quoteSuccessione(X){
 }
 function testoLegittima(){
   const L=legittima();if(!L.length)return 'Non hai eredi che la legge tuteli: puoi lasciare tutto a chi vuoi.';
-  const ruoli=[...new Set(L.map(([p])=>p.ruolo))],nome={Coniuge:gp(L.find(x=>x[0].ruolo==='Coniuge')?.[0]||{sesso:'M'},'al marito','alla moglie'),Figlio:'ai figli',Madre:'ai genitori',Padre:'ai genitori'};
+  const ruoli=[...new Set(L.map(([p])=>p.ruolo))],nome={Coniuge:gp(L.find(x=>x[0].ruolo==='Coniuge')?.[0]||{sesso:'M'},'al marito','alla moglie'),Figlio:'ai figli',Nipote:'ai nipoti, che prendono il posto di un figlio morto',Madre:'ai genitori',Padre:'ai genitori'};
   const lista=[...new Set(ruoli.map(r=>nome[r]))],tot=Math.round(L.reduce((s,x)=>s+x[1],0)*100);
   return `La legge riserva il ${tot}% dell'eredità ${lista.join(' e ')} (la «legittima»): nessun testamento può toglierlo. Il resto, il ${100-tot}%, è la quota disponibile e la lasci a chi vuoi.`;
 }
@@ -9339,7 +9349,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='eb1a76cc';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='8090fdae';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 

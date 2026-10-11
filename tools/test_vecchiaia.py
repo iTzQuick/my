@@ -49,6 +49,24 @@ JS_BASE = r'''async ()=>{
  S.testamento.dest=[{ente:'fondazione'}];if(!q1(quoteSuccessione())||quoteSuccessione().some(x=>x[0].ruolo==='Ente'))ko.push('fondazione inesistente: ignorata');
  S.testamento.dest=[{pid:f.id}];q=quoteSuccessione();if(!near(q.find(x=>x[0]===f)[1],.5))ko.push('al figlio: 1/4 + 1/4');
  nuova(80);const a2=pers('Amico',79,'M',90);S.testamento={t:0,eta:80,dest:[{pid:a2.id}]};q=quoteSuccessione();if(q.length!==1||!near(q[0][1],1))ko.push('senza legittimari, tutto all\'amico');
+ // 2b) rappresentazione: un figlio morto prima di te è rappresentato dai suoi figli (artt. 467-468)
+ nuova(78);c=pers('Coniuge',75,'F');f=pers('Figlio',50,'M');f2=pers('Figlio',46,'F');f2.vivo=false;
+ const r1=nuovaPersona('Nipote','F',15,null,{rapporto:70,gen:f2.id}),r2=nuovaPersona('Nipote','M',12,null,{rapporto:70,gen:f2.id}),z1=nuovaPersona('Nipote','F',9,null,{rapporto:70,gen:f.id});
+ q=quoteLegge();if(!q1(q))ko.push('rappresentazione (legge): somma '+somma(q));
+ if(!near(q.find(x=>x[0]===c)[1],1/3)||!near(q.find(x=>x[0]===f)[1],1/3))ko.push('rappresentazione (legge): coniuge e figlio 1/3 ciascuno');
+ if(!near(q.find(x=>x[0]===r1)[1],1/6)||!near(q.find(x=>x[0]===r2)[1],1/6))ko.push('rappresentazione (legge): i nipoti del figlio morto dividono il suo terzo: '+q.map(x=>x[1].toFixed(3)).join(','));
+ if(q.some(x=>x[0]===z1))ko.push('rappresentazione: il nipote di un figlio vivo non eredita per legge');
+ L=legittima();if(!near(somma(L),.75)||!near(L.find(x=>x[0]===r1)[1],1/8)||!near(L.find(x=>x[0]===c)[1],1/4))ko.push('rappresentazione (legittima): '+L.map(x=>x[1]).join(','));
+ S.testamento={t:0,eta:78,dest:[{nipoti:1}]};q=quoteSuccessione();
+ if(!q1(q)||!near(q.find(x=>x[0]===r1)[1],1/8+1/12)||!near(q.find(x=>x[0]===z1)[1],1/12))ko.push('rappresentazione con testamento ai nipoti: '+q.map(x=>x[1].toFixed(3)).join(','));
+ delete S.testamento;
+ if(!/ai nipoti/.test(testoLegittima())||!/morto/.test(testoLegittima()))ko.push('testoLegittima senza i nipoti rappresentanti: '+testoLegittima());
+ if(!/(figlia|figlio)\)/.test(testoSuccessione())&&!/nipote\)/.test(testoSuccessione()))ko.push('testoSuccessione: '+testoSuccessione());
+ nuova(78);f2=pers('Figlio',46,'F');f2.vivo=false;f=pers('Figlio',50,'M');q=quoteLegge();if(q.length!==1||!near(q[0][1],1))ko.push('un figlio morto senza figli non conta');
+ nuova(78);f2=pers('Figlio',46,'F');f2.vivo=false;const u1=nuovaPersona('Nipote','F',15,null,{rapporto:70,gen:f2.id}),u2=nuovaPersona('Nipote','M',12,null,{rapporto:70,gen:f2.id});
+ q=quoteLegge();if(!q1(q)||q.length!==2||!near(q[0][1],.5))ko.push('solo i nipoti di un figlio morto: metà ciascuno');
+ L=legittima();if(!near(somma(L),.5))ko.push('un solo figlio morto rappresentato: la legittima è 1/2');
+ pers('Madre',90,'F');q=quoteLegge();if(q.some(x=>x[0].ruolo==='Madre'))ko.push('i nipoti escludono i genitori');
  // 3) l'evento: Fai testamento -> scelta -> S.testamento
  nuova(70);c=pers('Coniuge',68,'F');f=pers('Figlio',40,'M');pers('Nipote',9,'F');S.soldi=P(5000);
  let bs=apri('testamento');const txt=document.body.innerText;

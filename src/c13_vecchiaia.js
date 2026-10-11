@@ -3,15 +3,15 @@
    Gli eventi sono in d18_vecchiaia.js. */
 
 /* ---------- Testamento ---------- */
-/* Quote riservate ai legittimari (codice civile, artt. 536–544): coniuge e un figlio 1/3 + 1/3, coniuge e più figli 1/4 + 1/2,
+/* Quote riservate ai legittimari (codice civile, artt. 536–544; un figlio morto è rappresentato dai suoi figli, artt. 467–468): coniuge e un figlio 1/3 + 1/3, coniuge e più figli 1/4 + 1/2,
    solo figli 1/2 (uno) o 2/3 (più), solo coniuge 1/2 (1/4 ai genitori, se ci sono), solo genitori 1/3. Fratelli, nipoti e amici
    non hanno una quota riservata. Il resto è la «quota disponibile». */
 function legittima(X){
   X=X||S;const v=R=>X.relazioni.filter(p=>p.vivo&&R.includes(p.ruolo));
-  const con=v(['Coniuge'])[0],figli=v(['Figlio']),gen=v(['Madre','Padre']),q=[];
-  if(figli.length){
-    const tf=con?(figli.length===1?1/3:1/2):(figli.length===1?1/2:2/3),qc=con?(figli.length===1?1/3:1/4):0;
-    if(con)q.push([con,qc]);for(const f of figli)q.push([f,tf/figli.length]);
+  const con=v(['Coniuge'])[0],st=stirpiFigli(X),gen=v(['Madre','Padre']),q=[];   // un figlio morto è rappresentato dai suoi figli (artt. 467–468)
+  if(st.length){
+    const tf=con?(st.length===1?1/3:1/2):(st.length===1?1/2:2/3),qc=con?(st.length===1?1/3:1/4):0;
+    if(con)q.push([con,qc]);for(const s of st)for(const f of s)q.push([f,tf/st.length/s.length]);
   }else if(con){q.push([con,.5]);for(const x of gen)q.push([x,.25/gen.length])}
   else for(const x of gen)q.push([x,1/3/gen.length]);
   return q;
@@ -44,7 +44,7 @@ function quoteSuccessione(X){
 }
 function testoLegittima(){
   const L=legittima();if(!L.length)return 'Non hai eredi che la legge tuteli: puoi lasciare tutto a chi vuoi.';
-  const ruoli=[...new Set(L.map(([p])=>p.ruolo))],nome={Coniuge:gp(L.find(x=>x[0].ruolo==='Coniuge')?.[0]||{sesso:'M'},'al marito','alla moglie'),Figlio:'ai figli',Madre:'ai genitori',Padre:'ai genitori'};
+  const ruoli=[...new Set(L.map(([p])=>p.ruolo))],nome={Coniuge:gp(L.find(x=>x[0].ruolo==='Coniuge')?.[0]||{sesso:'M'},'al marito','alla moglie'),Figlio:'ai figli',Nipote:'ai nipoti, che prendono il posto di un figlio morto',Madre:'ai genitori',Padre:'ai genitori'};
   const lista=[...new Set(ruoli.map(r=>nome[r]))],tot=Math.round(L.reduce((s,x)=>s+x[1],0)*100);
   return `La legge riserva il ${tot}% dell'eredità ${lista.join(' e ')} (la «legittima»): nessun testamento può toglierlo. Il resto, il ${100-tot}%, è la quota disponibile e la lasci a chi vuoi.`;
 }

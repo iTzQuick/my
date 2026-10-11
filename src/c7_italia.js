@@ -389,10 +389,20 @@ function assegnoFigli(){
 /* Successione legittima (codice civile, artt. 565–586), senza testamento: coniuge (o unito civilmente) e un figlio metà a testa;
    coniuge e più figli: un terzo al coniuge e il resto ai figli; solo il coniuge: due terzi a lui e un terzo ai genitori o ai fratelli;
    né coniuge né figli: genitori e fratelli. Chi convive senza essere sposato non eredita. */
+/* Rappresentazione (artt. 467–468): un figlio morto prima di te è rappresentato dai suoi figli, i tuoi nipoti, che si dividono la sua quota.
+   Ogni «stirpe» è l'elenco di chi eredita al posto di un figlio: lui, se è vivo, altrimenti i suoi figli vivi (nessuno: la stirpe non c'è). */
+function stirpiFigli(X){
+  X=X||S;const out=[];
+  for(const f of X.relazioni.filter(p=>p.ruolo==='Figlio')){
+    if(f.vivo)out.push([f]);
+    else{const n=X.relazioni.filter(p=>p.vivo&&p.ruolo==='Nipote'&&p.gen===f.id);if(n.length)out.push(n)}
+  }
+  return out;
+}
 function quoteLegge(X){
   X=X||S;const v=R=>X.relazioni.filter(p=>p.vivo&&R.includes(p.ruolo));
-  const con=v(['Coniuge'])[0],figli=v(['Figlio']),gen=v(['Madre','Padre']),fr=v(['Fratello']),q=[];
-  if(figli.length){const qc=con?(figli.length===1?1/2:1/3):0;if(con)q.push([con,qc]);for(const f of figli)q.push([f,(1-qc)/figli.length])}
+  const con=v(['Coniuge'])[0],st=stirpiFigli(X),gen=v(['Madre','Padre']),fr=v(['Fratello']),q=[];
+  if(st.length){const qc=con?(st.length===1?1/2:1/3):0;if(con)q.push([con,qc]);for(const s of st)for(const f of s)q.push([f,(1-qc)/st.length/s.length])}
   else if(con){const a=gen.length?gen:fr;q.push([con,a.length?2/3:1]);for(const x of a)q.push([x,1/3/a.length])}
   else if(gen.length&&fr.length){for(const x of gen)q.push([x,.5/gen.length]);for(const x of fr)q.push([x,.5/fr.length])}
   else{const a=gen.length?gen:fr;for(const x of a)q.push([x,1/a.length])}
