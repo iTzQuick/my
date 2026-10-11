@@ -5,6 +5,7 @@ window.AP={
  pref(){
   const F=S.fatti;
   if(F.apNozze===undefined)F.apNozze=chance(.6+pz('A')*.15);
+  if(F.apMestiere===undefined)F.apMestiere=chance(.2);   // circa una vita su cinque preferisce un mestiere da mettersi in proprio (PIVA_LIV): serve a far provare a fuzz e invarianti anche car_proprio con la partita IVA
   if(F.apFigli===undefined)F.apFigli=pesata([[0,22],[1,30],[2,38],[3,10]]);
   return F;
  },
@@ -22,6 +23,8 @@ window.AP={
    const lav=L.find(b=>/lavoro/i.test(b.textContent));if(lav&&chance(.7)){lav.click();return true}
   }
   const F=this.pref();
+  // mettersi in proprio (car_proprio): ogni tanto, circa 1 volta su 3, sceglie la partita IVA nel proprio mestiere, così fuzz e invarianti provano anche quel percorso
+  if(tit==='In proprio?'){const b=L.find(x=>/nel tuo mestiere/.test(x.textContent));if(b&&chance(1/3)){b.click();return true}}
   // a chi sei attratt*: secondo l'orientamento (S.orient), non a caso
   const bU=L.find(x=>x.textContent.startsWith('Uomini')),bD=L.find(x=>x.textContent.startsWith('Donne'));
   if(bU&&bD){const o=S.orient||'etero';const t=o==='bi'?L.find(x=>x.textContent.startsWith('Entrambi')):((o==='omo')===(S.sesso==='M')?bU:bD);(t||bD).click();return true}
@@ -58,12 +61,14 @@ window.AP={
   const piccoli=vivi(['Figlio']).some(f=>f.eta<6&&!f.conEx)&&convivente();
   if(e>=18&&!S.lavoro&&!iscritto()&&!S.pensione&&e<64&&chance((.25+pz('C')*.1)*(F.apAttivo?1:.04)*(piccoli?.35:1))){
     const L=LAVORI.filter(j=>!requisitiJob(j).length&&!fatto('job_'+j.id)&&!j.nascosto);
-    if(L.length){const sc=j=>stipLiv(j,0)*(.6+matchLavoro(j.id)/250)*(j.pt?.45:1)*(.8+Math.random()*.8);const b=L.sort((a,b)=>sc(b)-sc(a))[0];candidati(b.id);return}
+    if(L.length){const sc=j=>stipLiv(j,0)*(.6+matchLavoro(j.id)/250)*(j.pt?.45:1)*(.8+Math.random()*.8)*(F.apMestiere&&PIVA_LIV[j.id]!==undefined?4:1);const b=L.sort((a,b)=>sc(b)-sc(a))[0];candidati(b.id);return}
   }
   if(e>=21&&S.lavoro&&JOB[S.lavoro.id].pt&&!iscritto()&&chance(.08)){
     const L=LAVORI.filter(j=>!j.pt&&!requisitiJob(j).length&&!fatto('job_'+j.id)&&!j.nascosto);
     if(L.length){candidati(pick(L).id);return}
   }
+  // chi ha scelto un mestiere da mettersi in proprio (F.apMestiere): quando può e ha i soldi, ci pensa davvero (apre car_proprio, dove scegli() prende la partita IVA 1 volta su 3)
+  if(F.apMestiere&&proprioPossibile()&&opzioniProprio().some(o=>o.k==='piva')&&S.soldi+tfrNetto()>=P(COSTO_PIVA)+P(3000)&&chance(.06)){coda.push({e:EV.car_proprio,d:{x:{}}});next();return}
   // uscire di casa: in Italia in media a 30 anni
   if(S.casa.tipo==='genitori'&&e>=23&&S.lavoro&&!JOB[S.lavoro.id].pt&&S.soldi>P(6000)&&chance(e<28?.004:e<32?.012:.03)){cercaAffitto();return}
   if(e>=20&&e<50&&single()&&chance(.03+S.pers.E/3000)){cercaAmore();return}

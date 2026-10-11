@@ -300,7 +300,7 @@ Con `python tools/sim.py 120` (pilota automatico, ottobre 2026) i valori attuali
 - carattere dai 18 anni a fine vita (media): C **+13**, A **+13**, N **−7** (cala soprattutto tra 20 e 40 anni), O ed E **−3/−4**; ~19 «svolte» da adulto per vita. `sim.py` stampa queste righe: se un tratto deriva di +20 o più, qualcosa si accumula senza rientrare.
 - `realismo.py 600`: figli per donna ~1,1, matrimoni finiti ~39%, primo matrimonio ~35–37 anni, con i genitori a 30 anni ~40%, occupati 20–64 anni ~76%, NEET ~18%, pensione a ~67 anni.
 
-Se una modifica sposta molto questi numeri, è probabile un errore. Il pilota automatico (`tools/autopilota.js`) dal 2026 ha preferenze decise una volta per vita (`S.fatti.apNozze`, `apFigli`, `apAttivo`), cura sempre i tumori, a volte lascia la scuola e sceglie a chi è attratto secondo `S.orient`; resta più «facile» della vita vera sul lavoro (troppi occupati) e trova sempre un partner (93% in coppia a 35 anni).
+Se una modifica sposta molto questi numeri, è probabile un errore. Il pilota automatico (`tools/autopilota.js`) dal 2026 ha preferenze decise una volta per vita (`S.fatti.apNozze`, `apFigli`, `apAttivo`, `apMestiere`), cura sempre i tumori, a volte lascia la scuola e sceglie a chi è attratto secondo `S.orient`; resta più «facile» della vita vera sul lavoro (troppi occupati) e trova sempre un partner (93% in coppia a 35 anni). Circa una vita su cinque (`apMestiere`) preferisce un mestiere da mettersi in proprio (`PIVA_LIV`) e, quando può, apre da sé `car_proprio`, dove `scegli()` prende la partita IVA 1 volta su 3: così fuzz e invarianti provano anche quel percorso (circa l'8% delle vite).
 
 ---
 
