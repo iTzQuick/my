@@ -163,13 +163,15 @@ ev({id:'capo_progetto',link:1,k:'Lavoro',t:'Un progetto importante',x:'Il capo t
 
 function emergenti(){
   if(S.carcere>0||S.eta<6)return;
+  vecchiaiaMese();
   const B=S.bis,F=S.fatti;
   F.stressAlto=B.stress>=82?(F.stressAlto||0)+1:0;
   F.soloN=B.soc<25&&S.eta>=13?(F.soloN||0)+1:0;
   F.rossoN=S.soldi<0&&(F.ultimoMese||0)<0&&S.eta>=18?(F.rossoN||0)+1:0;
   if(coda.length)return;
+  if(S.eta>=55&&vecchiaiaEventi())return;
   if(F.stressAlto>=3&&(S.lavoro||iscritto())&&S.t-(F.burnT||-99)>=18){F.burnT=S.t;coda.push({e:EV.burnout,d:{}});return}
-  if(F.soloN>=4&&S.t-(F.soloT||-99)>=12){F.soloT=S.t;coda.push({e:EV.solitudine,d:{}});return}
+  if(F.soloN>=4&&S.t-(F.soloT||-99)>=(S.eta>=65?Math.min(48,12*(1+(F.soloV||0))):12)){F.soloT=S.t;if(S.eta>=65)F.soloV=(F.soloV||0)+1;coda.push({e:EV[eventoSolitudine()],d:{}});return}   // dopo i 65 anni: un evento diverso a ogni giro e intervalli sempre più lunghi (1, 2, 3, 4 anni)
   if(F.rossoN>=3&&S.t-(F.rossoT||-99)>=Math.min(48,12*(1+(F.rossoV||0)))){F.rossoT=S.t;F.rossoV=(F.rossoV||0)+1;coda.push({e:EV.conto_rosso,d:{}});return}   // la seconda volta dopo 2 anni, poi 3, poi 4: nel frattempo resta la riga nel bilancio
   if(S.eta>=30&&B.forma<30&&chance(.02)&&S.t-(F.medT||-99)>=24){F.medT=S.t;coda.push({e:EV.medico_forma,d:{}});return}
   if(S.anno>=1985&&S.eta>=9&&S.eta<17&&rOre('schermi')>=14&&iscritto()&&S.scuola.voto<48&&genitoriVivi()&&S.casa.tipo==='genitori'&&chance(.15)&&S.t-(F.consT||-99)>=12){F.consT=S.t;coda.push({e:EV.console,d:{}});return}

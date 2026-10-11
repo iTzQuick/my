@@ -17,7 +17,7 @@ JS_BASE = r'''async ()=>{
  const nuova=(eta,anno)=>{
    nuovaVita({sesso:'M',nome:'Prova',cognome:'Test',citta:'Roma',prov:'RM'});
    S.eta=eta;S.anno=anno||2026;S.annoNascita=S.anno-eta;S.t=eta*12+6;S.mese=(S.meseNascita+6)%12;S.scuola.stato='finita';S.casa={tipo:'affitto',n:'Monolocale',costo:P(6000)};S.soldi=P(40000);
-   S.relazioni=[];coda.length=0;S.futuri.length=0;
+   S.relazioni=[];S.gruppi=[];S.legami=[];coda.length=0;S.futuri.length=0;
  };
  const pers=(ruolo,eta,sesso,rapp)=>nuovaPersona(ruolo,sesso||'F',eta,null,{rapporto:rapp||70});
  const apri=(id,d)=>{coda.push({e:EV[id],d:d||{}});next();return [...document.querySelectorAll('#shA button:not([disabled])')]};
@@ -134,6 +134,45 @@ JS_BASE = r'''async ()=>{
  // un figlio senza coppia non ha nipoti; con coppia, nel tempo, sì
  nuova(60);fi=pers('Figlio',30,'F',80);fi.coppia='sposato';fi.pId=undefined;let ha=0;for(let i=0;i<3000&&!ha;i++){S.t++;vitaNpc(fi);if(S.relazioni.some(p=>p.ruolo==='Nipote'))ha=1}
  if(!ha)ko.push('un figlio sposato non ha mai nipoti in 250 anni');
+ // 7) circolo, volontariato, solitudine
+ const prova=(id,setup,d)=>{let n=1;for(let k=0;k<n;k++){setup();const bs=apri(id,d?JSON.parse(JSON.stringify(d)):{});n=bs.length;if(!n){ko.push(id+': nessuna scelta');return}if(bs[k])bs[k].click();chiudi();coda.length=0}};
+ const conCirc=()=>{nuova(70);iscriviCircolo(CIRCOLI[0])};
+ const conVol=()=>{nuova(70);iniziaVol(VOL[0])};
+ for(const c of CIRCOLI){nuova(70);iscriviCircolo(c);const soci=sociCircolo();if(!S.circolo||!circoloAttivo()||soci.length<3||soci.length>4)ko.push('iscrizione '+c.id+': '+soci.length+' soci');
+   if(soci.some(p=>p.ruolo!=='Conoscente'||p.eta<62))ko.push('soci del circolo '+c.id);if((S.routine.amici||0)<3)ko.push('il circolo toglie ore agli amici: '+S.routine.amici)}
+ prova('circ_iscrizione',()=>nuova(70));
+ nuova(70);let bi=apri('circ_iscrizione');if(bi.length<5)ko.push('circ_iscrizione: '+bi.length+' scelte');chiudi();
+ nuova(1960+70-70,1962);let bu=apri('circ_iscrizione');if(bu.some(b=>/università/.test(b.textContent)))ko.push('università della terza età prima del 1975');chiudi();
+ prova('circ_torneo',conCirc);prova('circ_presidente',conCirc);prova('circ_sedia',conCirc,{x:{nome:'Gino'}});prova('circ_chiude',conCirc);
+ conCirc();S.circolo.chiude=1;apri('circ_chiude');chiudi();
+ // i soci diventano amici, il circolo non sbiadisce, chi muore apre «un posto libero» (al massimo ogni 18 mesi)
+ conCirc();const soci0=sociCircolo().map(p=>p.id);for(let i=0;i<60;i++){vecchiaiaMese()}
+ if(!sociCircolo().some(p=>p.ruolo==='Amico'))ko.push('nessun socio è diventato amico in 5 anni');
+ conCirc();S.futuri.length=0;coda.length=0;let sc=sociCircolo();mortePersona(sc[0]);if(!coda.some(x=>x.e===EV.circ_sedia))ko.push('morte di un socio: circ_sedia');
+ coda.length=0;mortePersona(sc[1]);if(coda.some(x=>x.e===EV.circ_sedia))ko.push('due «posti liberi» di fila');
+ conCirc();for(const p of sociCircolo())p.vivo=false;S.circolo.dal=S.t-48;let ch=0;for(let i=0;i<300;i++){coda.length=0;S.circolo.chiude=0;vecchiaiaEventi();if(coda.some(x=>x.e===EV.circ_chiude)){ch=1;break}}if(!ch)ko.push('circolo senza soci: non chiude mai');
+ // volontariato
+ prova('vol_inizio',()=>{nuova(70);S.karma=60});
+ nuova(70);const haAuto0=volPossibili().some(v=>v.id==='trasporto');if(haAuto0&&!haAuto())ko.push('trasporto senza auto');
+ conVol();if(!volAttivo()||S.routine.volont<1)ko.push('iniziaVol: ore '+S.routine.volont);
+ prova('vol_storia',conVol);prova('vol_stanco',conVol);prova('vol_targa',conVol);prova('vol_giovane',conVol);
+ // solitudine
+ const sola=()=>{nuova(70);S.bis.soc=10;pers('Figlio',40,'M',70);for(let i=0;i<3;i++){const a=pers('Amico',70,'M');a.vivo=false}};
+ prova('sol_silenzio',sola);prova('sol_agenda',sola);prova('sol_animale',()=>{sola();S.animali=[]});
+ prova('sol_anniversario',sola,{x:{nome:'Anna',anni:2}});
+ sola();if(!/sol_agenda/.test(JSON.stringify(Array.from({length:80},()=>eventoSolitudine()))))ko.push('sol_agenda non compare con 3 amici morti');
+ nuova(40);if(eventoSolitudine()!=='solitudine')ko.push('sotto i 65 anni resta l\'evento di prima');
+ // a cadenza: la solitudine non si ripete più di 10 volte
+ nuova(65);S.fatti.desEta=99;S.fatti.testEta=99;let ns=0;
+ for(let i=0;i<12*35;i++){S.t++;S.eta=65+Math.floor(i/12);S.bis.soc=10;S.fatti.soloN=9;S.fatti.stressAlto=0;coda.length=0;emergenti();if(coda.some(x=>['sol_silenzio','sol_agenda','sol_animale','solitudine'].includes(x.e.id)))ns++}
+ if(ns>10)ko.push('solitudine: '+ns+' volte in 35 anni (massimo 10)');if(ns<4)ko.push('solitudine: solo '+ns+' volte in 35 anni');
+ // vedovo: anniversario nel mese giusto, al massimo 6
+ nuova(70);const vv=pers('Coniuge',70,'F');mortePersona(vv);vv.mortoT=S.t;let an=0;for(let i=0;i<12*10;i++){S.t++;coda.length=0;if(vecchiaiaEventi()&&coda.some(x=>x.e===EV.sol_anniversario))an++}
+ if(an!==6)ko.push('sol_anniversario '+an+' volte invece di 6');
+ // proposte annuali: circolo e volontariato a chi è libero tra 60 e 80 anni
+ let c1=0,v1=0;for(let i=0;i<400;i++){nuova(66);S.lavoro=null;S.pensione=1000;S.karma=60;S.bis.soc=30;vecchiaiaAnno2();if(coda.some(x=>x.e===EV.circ_iscrizione))c1++;if(coda.some(x=>x.e===EV.vol_inizio))v1++}
+ if(c1<30||v1<10)ko.push('proposte annuali: circolo '+c1+'/400, volontariato '+v1+'/400');
+ nuova(50);S.lavoro=null;vecchiaiaAnno2();if(coda.length)ko.push('circolo a 50 anni');
  return {errs,ko};
 }'''
 JS_VITE = r'''(N)=>{
@@ -149,7 +188,7 @@ JS_VITE = r'''(N)=>{
      if(S.testamento)test=1;if(S.fatti.desiderio)des=S.fatti.desiderio.fatto?'fatto':'no';
      if(S.eta>=70){const q=quoteSuccessione();if(q.length&&Math.abs(q.reduce((s,y)=>s+y[1],0)-1)>1e-6)ko.push('quote non sommano a 1: '+q.reduce((s,y)=>s+y[1],0))}
      if(typeof INV!=='undefined'){const i=INV.controlla();if(i.length)ko.push(i.slice(0,2).map(z=>z.join(': ')).join(' | '))}}
-   const nips=S.relazioni.filter(p=>p.ruolo==='Nipote');ris.push({eta:S.eta,test,des,rif:S.fatti.desiderioRif?1:0,nip:nips.length,pas:nips.reduce((a,p)=>a+Object.keys(p.nv||{}).length,0),stile:S.fatti.nonnoStile||''});
+   const nips=S.relazioni.filter(p=>p.ruolo==='Nipote');ris.push({eta:S.eta,test,des,rif:S.fatti.desiderioRif?1:0,nip:nips.length,pas:nips.reduce((a,p)=>a+Object.keys(p.nv||{}).length,0),stile:S.fatti.nonnoStile||'',circ:S.circolo?1:0,circAnni:S.circolo?Math.round((S.t-S.circolo.dal)/12):0,vol:S.volont?1:0,volMesi:S.fatti.volMesi||0,sol:S.fatti.soloV||0});
   }catch(e){errs.push(e.message+' | '+(e.stack||'').split('\n').slice(0,3).join(' / '))}
  }
  return {errs,ko:[...new Set(ko)].slice(0,6),ris};
@@ -172,6 +211,9 @@ if V:
 if V:
     cn = [x for x in V if x['nip']]
     print(f"nipoti: {len(cn)} vite su {len(V)} hanno nipoti (in media {sum(x['nip'] for x in cn)/max(1,len(cn)):.1f}), passi vissuti per vita con nipoti {sum(x['pas'] for x in cn)/max(1,len(cn)):.1f}; stile: " + ', '.join(f"{k} {sum(1 for x in cn if x['stile']==k)}" for k in ('presente','richiesta','distante')))
+if V:
+    ol = [x for x in V if x['eta'] >= 75]
+    print(f"oltre i 75 anni ({len(ol)} vite): circolo {100*sum(x['circ'] for x in ol)/max(1,len(ol)):.0f}% · volontariato {100*sum(x['vol'] for x in ol)/max(1,len(ol)):.0f}% · solitudine ripetuta (media {sum(x['sol'] for x in ol)/max(1,len(ol)):.1f}, massimo {max([x['sol'] for x in ol] or [0])})")
 print('violazioni nelle vite:', v['ko'] or 'nessuna ✓')
 print('errori JS:', (r['errs'] + pe + v['errs']) or 'nessuno')
 sys.exit(1 if r['ko'] or v['ko'] or r['errs'] or pe or v['errs'] else 0)

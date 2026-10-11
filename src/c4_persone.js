@@ -129,7 +129,7 @@ function meseNpc(){
     else if(['Zio','Cugino','Suocero','Cognato'].includes(p.ruolo))relD(p,-(non>=6?.5:non>=3?.2:0));
     else if(['Madre','Padre','Fratello','Nonno','Patrigno'].includes(p.ruolo))relD(p,-(non>=3?.6:0));
     else if(p.ruolo==='Figlio'&&p.eta>=18)relD(p,-(non>=4?.5:0));
-    else if(p.ruolo==='Conoscente'&&!lavInCorso(p))relD(p,-1.5);   // i colleghi di adesso li vedi ogni giorno
+    else if(p.ruolo==='Conoscente'&&!lavInCorso(p)&&!circInCorso(p))relD(p,-1.5);   // i colleghi di adesso li vedi ogni giorno
     // un rapporto perfetto si consuma un po' anche frequentandosi: al 100% si resta solo con cura costante
     if(p.rapporto>=95&&S.eta>=14&&!['Partner','Coniuge'].includes(p.ruolo))relD(p,-.35);
     if(['Partner','Coniuge'].includes(p.ruolo))mesePartner(p);
@@ -145,7 +145,7 @@ function meseNpc(){
   for(const p of S.relazioni){
     if(!p.vivo)continue;
     if(p.ruolo==='Amico'&&p.rapporto<8&&!p.cella){p.rimuovi=true;log(`Tu e ${p.nome} vi siete persi di vista.`,'h')}
-    if(p.ruolo==='Conoscente'&&p.rapporto<5&&!lavInCorso(p))p.rimuovi=true;
+    if(p.ruolo==='Conoscente'&&p.rapporto<5&&!lavInCorso(p)&&!circInCorso(p))p.rimuovi=true;
   }
   const ex=S.relazioni.filter(p=>p.ruolo==='Ex');
   if(ex.length>4)ex.slice(0,ex.length-4).forEach(p=>p.rimuovi=true);

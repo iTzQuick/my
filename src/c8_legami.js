@@ -8,8 +8,8 @@
    - CONTESTO delle persone (lutto, lavoro nuovo, neonato, separazione…) per conversazioni che c'entrano. */
 
 /* ---------- Gruppi ---------- */
-const GRUPPO_N={asilo:'I bambini dell\'asilo',elementari:'La classe delle elementari',medie:'La classe delle medie',universita:'Gli amici dell\'università',festa:'La compagnia del sabato sera',volont:'I volontari',online:'Il gruppo online',cane:'Il parco dei cani',parco:'Il parco giochi',viaggio:'Gli amici delle vacanze',carcere:'Il carcere',treno:'Il treno del mattino',orto:'Gli orti comunali'};
-const TIPI_INC=['scuola','parco','lavoro','tramite','vicino','treno','cane','genitori','corso','festa','volont','online','quartiere','viaggio','orto','carcere'];
+const GRUPPO_N={asilo:'I bambini dell\'asilo',elementari:'La classe delle elementari',medie:'La classe delle medie',universita:'Gli amici dell\'università',festa:'La compagnia del sabato sera',volont:'I volontari',online:'Il gruppo online',cane:'Il parco dei cani',parco:'Il parco giochi',viaggio:'Gli amici delle vacanze',carcere:'Il carcere',treno:'Il treno del mattino',orto:'Gli orti comunali',circolo:'Il circolo'};
+const TIPI_INC=['scuola','parco','lavoro','tramite','vicino','treno','cane','genitori','corso','festa','volont','online','quartiere','viaggio','orto','carcere','circolo'];
 function scuolaGruppo(){const s=S.scuola.stato;return s==='asilo'?'asilo':s==='elementari'?'elementari':s==='medie'?'medie':['superiori','serale'].includes(s)?'superiori':['universita','magistrale','dottorato','master','its','spec'].includes(s)?'universita':null}
 const figlioScuola=()=>vivi(['Figlio']).filter(f=>f.eta>=3&&f.eta<=13&&!f.fuori&&!f.conEx).sort((a,b)=>a.eta-b.eta)[0];
 function contestoAttuale(){if(S.carcere>0)return 'carcere';const sg=scuolaGruppo();if(sg&&iscritto())return sg;if(S.lavoro&&!JOB[S.lavoro.id].pt)return 'lavoro';if(S.eta<6)return 'parco';return 'quartiere'}
@@ -48,6 +48,8 @@ function gruppoAttivo(G){
   if(tipo==='genitori'){const f=persona(+a);return !!f&&f.vivo&&f.eta<=13}
   if(tipo==='quartiere'||tipo==='vicino')return S.citta===a;
   if(tipo==='carcere')return S.carcere>0;
+  if(tipo==='circolo')return circoloAttivo();
+  if(tipo==='volont')return rOre('volont')>0;
   if(tipo==='corso')return a==='palestra'?rOre('sport')>=2:S.hobby===a&&rOre('hobby')>0;
   return true;
 }

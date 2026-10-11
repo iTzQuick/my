@@ -435,7 +435,7 @@ function compleanno(){
   if(S.eta>=30&&S.eta%10===0)auguriDalPassato();
   if(S.eta>=18&&S.eta<=60&&!S.aspir&&S.carcere===0)coda.push({e:EV.aspirazioni,d:{}});
   else if(S.aspir&&S.eta>=25&&S.eta<=75&&S.carcere===0&&coda.length<2&&S.eta-(S.fatti.aspEta||18)>=(aspAttive().length?9:4)&&aspLiberi().length&&chance(.5)){const da=S.fatti.aspEta||18;S.fatti.aspEta=S.eta;coda.push({e:EV.asp_ripensa,d:{da}})}
-  controllaNaja();vecchiaiaAnno();
+  controllaNaja();vecchiaiaAnno();vecchiaiaAnno2();
 }
 function tappe(){
   const e=S.eta;
@@ -462,6 +462,7 @@ function mortePersona(p){
   if(S.legami&&vicino(p)){const m=ricordoDi(p,1,10);if(m&&chance(.6)){log(`${p.nome} non aveva mai dimenticato una cosa di ${quanto(m)}: ${m.s.charAt(0).toLowerCase()+m.s.slice(1)}. Lo raccontava a tutti.`,'h');ritorno(p,m,'addio')}}
   if(lutto>=14&&S.legami)bisognoAiuto('lutto',p);
   if((p.ruolo==='Madre'||p.ruolo==='Padre')&&!genitoriVivi())ereditaGenitori();
+  if(S.circolo&&circInCorso(p))circoloLutto(p);
   if(S.testamento&&S.eta>=60&&(S.testamento.dest||[]).some(x=>x.pid===p.id))futuro(.4,'testamento_rivedi',{x:{nome:p.nome}});
   if(p.ruolo==='Nonno'&&chance(.4)){const q={umile:500,media:3000,agiata:15000}[S.classe]*r(1,4);soldi(q);log(`${cap(tuoR(p))} ti lascia ${eur(q)} in eredità.`,'g')}
   if(p.ruolo==='Coniuge'){log(`Rimani vedov${g('o','a')}.`,'b');avviaReversibilita(p)}

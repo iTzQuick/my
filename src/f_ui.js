@@ -516,6 +516,7 @@ function renderMorte(V){
    ${kv('Patrimonio',eur(patrimonio()))}
    ${patrimonio()>0?kv('Eredità',esc(testoSuccessione())):''}
    ${testoDesiderio()?kv('Ultimo desiderio',esc(testoDesiderio())):''}
+   ${S.circolo?kv('Circolo',esc(S.circolo.nome)+(S.circolo.pres===2?' (presidente)':'')):''}${S.volont?kv('Volontariato',esc(S.volont.nome)):''}
    ${kv('Coniuge',con?esc(con.nome):'—')}
    ${kv('Figli',figli.length)}${nip?kv('Nipoti',nip):''}
    ${kv('Fedina penale',S.fedina.length?'Sporca':'Pulita')}

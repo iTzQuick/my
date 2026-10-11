@@ -78,3 +78,62 @@ ev({id:'nip_nozze',min:55,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=26&&p.et
 
 ev({id:'nip_pronipote',min:62,max:100,w:3,rip:1,chi:['Nipote'],pc:p=>p.eta>=27&&p.eta<=42&&!nv(p,'pron')&&p.rapporto>=35,t:'Diventi {nonno}, di nuovo',x:d=>{nvSet(d.p,'pron');return '{P} ti chiama con una voce strana: «Devo dirti una cosa». Ti siedi. Hai capito prima ancora che finisca la frase.'},c:[
   {l:'Piangi, e non te ne vergogni',fx:d=>{S.fatti.pronipoti=(S.fatti.pronipoti||0)+1;relD(d.p,8);ricorda(d.p,'Hai pianto di gioia quando ti ha detto del bambino',3);if(S.fatti.pronipoti===1)momento('nipote',{tit:'Un pronipote',sub:g('Diventi bisnonno','Diventi bisnonna'),pids:[d.p.id]})},e:{f:12},r:'Un pronipote. Un\'altra generazione che non conoscevi, e che porta un pezzo di te.'}]});
+
+/* ---------- Il circolo (blocco 3) ---------- */
+ev({id:'circ_iscrizione',link:1,t:'Il circolo',x:'In quartiere c\'è un posto dove la gente si ritrova ogni pomeriggio. Ci passi davanti da anni, e ogni volta ti dici che prima o poi entri.',c:()=>[
+  ...circoliPossibili().map(c=>({l:c.n,sub:c.d,_incl:0,fx:()=>iscriviCircolo(c)})),
+  {l:'Non fa per te',_incl:0,pers:{E:-1},fx:()=>{S.fatti.circRif=(S.fatti.circRif||0)+1;S.fatti.circT=S.t},r:'Un giorno, forse. Intanto tiri dritto.'}]});
+ev({id:'circ_torneo',link:1,t:'Il torneo',cond:()=>circoloAttivo(),x:()=>{const t=CIRCOLI.find(c=>c.id===S.circolo.tipo).torneo;return `Al circolo c'è ${t[0]}. In palio: ${t[1]}, e soprattutto la gloria di un anno intero.`},c:[
+  {l:'Giochi per vincere',p:.35,si:{e:{f:7},fx:()=>{sociCircolo().forEach(p=>relD(p,2))},r:'Vinci. Per una settimana nessuno al circolo ti parla d\'altro, e tu non fai niente perché smettano.'},no:{e:{f:1},fx:()=>{sociCircolo().forEach(p=>relD(p,1))},r:'Perdi in finale contro uno che bara con eleganza. Lo dici a tutti, senza prove.'}},
+  {l:'Giochi per stare insieme',e:{f:4},fx:()=>{sociCircolo().forEach(p=>relD(p,4))},pers:{A:1},r:'Non importa chi vince: a fine serata brindate tutti alla coppa, che è di nessuno.'},
+  {l:'Fai l\'arbitro',e:{f:3},fx:()=>{sociCircolo().forEach(p=>relD(p,2))},pers:{C:2},r:'Fischi un fallo che non c\'era. Il torneo si salva, la tua reputazione un po\' meno.'}]});
+ev({id:'circ_presidente',link:1,t:'Il presidente',cond:()=>circoloAttivo(),x:'Il presidente storico del circolo si ritira. Tutti guardano te: «Chi meglio di te?»',c:[
+  {l:'Accetti',sub:'Più responsabilità, più stress, più gente',fx:()=>{S.circolo.pres=2;S.karma=clamp(S.karma+3);S.bis.stress=clamp(S.bis.stress+6);sociCircolo().forEach(p=>relD(p,3))},e:{f:6},pers:{C:3,E:1},r:'Il primo giorno ti consegnano le chiavi e un quaderno di conti che nessuno capisce. Sei il presidente.'},
+  {l:'Fai solo il cassiere',fx:()=>{sociCircolo().forEach(p=>relD(p,2))},e:{f:3},pers:{C:2},r:'Sai contare, sai dire di no: la combinazione perfetta.'},
+  {l:'Rifiuti',fx:()=>{sociCircolo().forEach(p=>relD(p,-2))},pers:{E:-1},r:'Preferisci giocare e basta. Gli altri capiscono, più o meno.'}]});
+ev({id:'circ_sedia',link:1,t:'Un posto libero',cond:()=>circoloAttivo(),x:d=>`${d.x.nome} non verrà più al circolo. Il suo posto, al tavolo, resta libero per un po'. Nessuno ci si siede.`,c:[
+  {l:'Vai al funerale',fx:()=>{sociCircolo().forEach(p=>relD(p,4));pesa(2,1)},e:{f:-2},pers:{A:1},r:'Ci sono tutti, nel cappotto buono. Sembrate una squadra a cui hanno tolto un giocatore.'},
+  {l:'Metti il suo nome sulla coppa',fx:()=>{S.karma=clamp(S.karma+1);sociCircolo().forEach(p=>relD(p,3))},e:{f:2},r:'Una targhetta nuova, accanto alle altre. Il prossimo torneo si gioca anche per lui.'},
+  {l:'Non ce la fai a venire',e:{f:-3},fx:()=>pesa(2,1),r:'Resti a casa. Quando torni al circolo, quella sedia è ancora lì.'}]});
+ev({id:'circ_chiude',link:1,t:'Il circolo chiude',cond:()=>circoloAttivo(),x:'I soci sono sempre meno, l\'affitto sempre di più. Il presidente appende il cartello alla porta.',c:[
+  {l:'Provi a tenerlo aperto con una colletta',sub:()=>eur(P(300)),costo:()=>P(300),p:.4,si:{fx:()=>{for(let i=0;i<2;i++)nuovaPersona('Conoscente',pick(['M','F']),r(60,78),null,{rapporto:r(28,45),dove:'circolo'});S.circolo.chiude=0;S.circolo.dal=S.t},e:{f:7},pers:{C:2},r:'Funziona: arrivano due soci nuovi, e un nipote che sistema il sito. Il circolo resta aperto.'},no:{fx:()=>{S.circolo.attivo=false},e:{f:-3},r:'Non basta. Si chiude con una cena, tutti insieme, nel locale vuoto.'}},
+  {l:'Cerchi un altro circolo',_incl:0,fx:()=>{S.circolo.attivo=false;S.fatti.circT=S.t-60;coda.push({e:EV.circ_iscrizione,d:{}})},r:'Ti guardi intorno. Un altro posto, un\'altra gente.'},
+  {l:'Accetti la fine',fx:()=>{S.circolo.attivo=false},e:{f:-4},pers:{N:1},r:'È la fine di un\'epoca. Ti tieni, almeno, i numeri di telefono.'}]});
+
+/* ---------- Il volontariato (blocco 3) ---------- */
+ev({id:'vol_inizio',link:1,t:'Una mano agli altri',x:'Hai tempo, e ne hai di più da quando il lavoro non scandisce più le tue giornate. In parrocchia, in comune, in bacheca: gli annunci chiedono volontari.',c:()=>[
+  ...volPossibili().map(v=>({l:v.n,sub:v.d,_incl:0,fx:()=>iniziaVol(v)})),
+  {l:'Non adesso',_incl:0,fx:()=>{S.fatti.volT=S.t},r:'Ci pensi. Intanto sfogli un altro annuncio.'}]});
+ev({id:'vol_storia',link:1,t:'Un incontro',cond:()=>volAttivo(),x:()=>{const v=VOL.find(x=>x.id===S.volont.tipo);return v.storie[(S.volont.storie||0)%v.storie.length]},c:[
+  {l:'Ti fermi un\'ora in più',fx:()=>{S.volont.storie=(S.volont.storie||0)+1;S.karma=clamp(S.karma+2);S.bis.energia=clamp(S.bis.energia-4)},e:{f:6},pers:{A:2},r:'Torni a casa tardi e stanco. Per cena non mangi quasi niente, ma dormi come un ghiro.'},
+  {l:'Fai il tuo turno, e basta',fx:()=>{S.volont.storie=(S.volont.storie||0)+1;S.karma=clamp(S.karma+1)},e:{f:3},r:'Hai fatto la tua parte. Domani c\'è un altro turno.'},
+  {l:'Chiedi aiuto a chi sa come fare',fx:()=>{S.volont.storie=(S.volont.storie||0)+1;S.karma=clamp(S.karma+1)},e:{f:4},pers:{C:1},r:'Chiami la responsabile. Fa una telefonata, e una cosa che sembrava senza uscita ce l\'ha.'}]});
+ev({id:'vol_stanco',link:1,t:'Il turno pesa',cond:()=>volAttivo(),x:'I turni si sono fatti più lunghi, o sei tu che sei più lento. Alla fine ti tremano le mani. Nessuno dice niente, ma qualcuno guarda.',c:[
+  {l:'Riduci i turni',fx:()=>{S.routine.volont=Math.max(1,(S.routine.volont||0)-1)},e:{f:2},pers:{C:1},r:'Un turno in meno a settimana. La responsabile ti ringrazia di averlo detto.'},
+  {l:'Continui così',fx:()=>{S.salute=clamp(S.salute-2);S.karma=clamp(S.karma+1)},e:{f:3},pers:{C:-1},r:'Non ti fermi, anche se dovresti. Qualcuno ti toglie il secchio di mano senza che tu lo chieda.'},
+  {l:'Smetti, con onore',fx:()=>{S.volont.attivo=false;S.routine.volont=0},e:{f:-2},r:'Ti salutano con una torta e un biglietto firmato da tutti. Ti manca già.'}]});
+ev({id:'vol_targa',link:1,t:'Una targa',x:'L\'associazione ti consegna una targa per gli anni di servizio. Sul retro c\'è il tuo nome. Sbagliato: manca una lettera.',c:[
+  {l:'La appendi in corridoio',e:{f:6},fx:()=>{S.karma=clamp(S.karma+2)},r:'Ogni mattina la guardi, e ogni mattina sorridi della lettera mancante.'},
+  {l:'La regali a un nuovo volontario',e:{f:5},fx:()=>{S.karma=clamp(S.karma+3)},pers:{A:2},r:'«Serve più a te.» Lo guarda come se gli avessi dato le chiavi di casa.'},
+  {l:'Dici che non serviva',e:{f:2},pers:{E:-1},r:'Preferivi non fare cerimonie. Te la mettono comunque nella borsa.'}]});
+ev({id:'vol_giovane',link:1,t:'Un nuovo volontario',cond:()=>volAttivo(),x:'Dalla settimana scorsa c\'è un ragazzo nuovo. Fa tutto di fretta e sbaglia tutto con entusiasmo.',c:[
+  {l:'Gli insegni come si fa',fx:()=>{const p=nuovaPersona('Conoscente',pick(['M','F']),r(18,26),null,{rapporto:r(55,72),dove:'volont'});ricorda(p,'Ti ha insegnato come si fa, con pazienza',3)},e:{f:6},pers:{A:2,O:1},r:'Dopo un mese lavora quasi meglio di te. Te lo dice, e ti fa piacere.'},
+  {l:'Lo lasci imparare da solo',fx:()=>{nuovaPersona('Conoscente',pick(['M','F']),r(18,26),null,{rapporto:r(35,50),dove:'volont'})},e:{f:2},r:'Sbaglia, si arrangia, impara. È un modo anche quello.'}]});
+
+/* ---------- La solitudine dopo i 65 anni (blocco 3) ---------- */
+ev({id:'sol_silenzio',link:1,t:'Il telefono',x:'Oggi il telefono non ha squillato. Nemmeno ieri, a pensarci. La casa ha un rumore di frigorifero che non avevi mai sentito.',c:[
+  {l:'Chiami tu',cond:()=>vivi(['Figlio','Nipote','Fratello','Amico']).length>0,fx:()=>{const p=vivi(['Figlio','Nipote','Fratello','Amico']).sort((a,b)=>b.rapporto-a.rapporto)[0];relD(p,8);p.ultimo=S.t;S.bis.soc=clamp(S.bis.soc+15);return [`Chiami ${p.nome}. Parlate quaranta minuti di niente. Quando riattacchi, la casa è meno grande.`,'g']}},
+  {l:'Vai al circolo',cond:()=>!circoloAttivo(),_incl:0,fx:()=>{coda.push({e:EV.circ_iscrizione,d:{}})},r:'Ti metti la giacca.'},
+  {l:'Fai qualcosa per gli altri',cond:()=>!S.volont||!S.volont.attivo,_incl:0,fx:()=>{coda.push({e:EV.vol_inizio,d:{}})},r:'Se nessuno ha bisogno di te qui, qualcuno ne avrà altrove.'},
+  {l:'Tieni accesa la radio',fx:()=>{segnaVita('solitudine');mod('felicita',-4)},pers:{N:1},r:'Una voce in casa, anche se non parla con te. Per stasera basta.'}]});
+ev({id:'sol_agenda',link:1,t:'L\'agenda dei numeri',x:()=>`Apri la vecchia agenda dei numeri di telefono. ${amiciMorti()} nomi sono ormai cancellati con una riga. Altri non rispondono più, o risponde un figlio che dice «mio padre non c'è più».`,c:[
+  {l:'Chiami quelli che restano',fx:()=>{S.fatti.solAgenda=1;vivi(['Amico','Fratello','Cugino']).sort((a,b)=>b.rapporto-a.rapporto).slice(0,3).forEach(p=>{relD(p,6);p.ultimo=S.t});S.bis.soc=clamp(S.bis.soc+12)},e:{f:4},pers:{A:1},r:'Telefoni ai tre che rispondono ancora. Scherzate sull\'età e sulle gambe, e vi promettete un pranzo.'},
+  {l:'Non la riapri più',fx:()=>{S.fatti.solAgenda=1;pesa(2,1)},e:{f:-3},pers:{N:1},r:'La rimetti nel cassetto. Lì stanno meglio, dici. Non è vero.'},
+  {l:'Ne scrivi una nuova',fx:()=>{S.fatti.solAgenda=1},e:{f:3},pers:{O:1},r:'Sulla prima pagina, i nipoti. Poi gli amici del circolo. Un\'agenda nuova è un modo di dire che non è finita.'}]});
+ev({id:'sol_animale',link:1,t:'Un coinquilino',cond:()=>!S.animali.length,x:'Una vicina ha una cucciolata di gatti da regalare. Ti guarda come se la risposta fosse già sì.',c:[
+  {l:'Ne prendi uno',fx:()=>{S.fatti.solAnimale=1;return adotta(ANIMALI.find(a=>a.t==='Gatto'))},pers:{A:1}},
+  {l:'No, grazie',fx:()=>{S.fatti.solAnimale=1},r:'Gli animali hanno bisogno di cure: te lo ricordi, e sai che non è una scusa.'}]});
+ev({id:'sol_anniversario',link:1,t:'Una data',x:d=>`Sono passati ${d.x.anni} ${d.x.anni===1?'anno':'anni'} da quando non c'è più ${d.x.nome}. Oggi la casa è piena della sua assenza.`,c:[
+  {l:'Vai al cimitero',fx:()=>{pesa(2,1)},e:{f:-1},pers:{N:1},r:'Un fiore, una mano sulla pietra. Resti più del solito, poi torni a piedi.'},
+  {l:'Chiami i figli, state insieme',cond:()=>vivi(['Figlio']).length>0,fx:()=>{vivi(['Figlio']).forEach(p=>relD(p,6));S.bis.soc=clamp(S.bis.soc+10)},e:{f:3},pers:{A:2},r:'Una messa, poi un pranzo. Raccontate tutti, a turno, qualcosa che non sapevate.'},
+  {l:'Resti a casa con le sue foto',fx:()=>{pesa(3,2)},e:{f:-3},pers:{N:2},r:'Le guardi tutte, due volte. Alla fine non sai se ti ha fatto bene.'}]});

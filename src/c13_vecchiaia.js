@@ -143,3 +143,80 @@ function annoNipote(p){
 }
 const stileNonno=()=>S.fatti.nonnoStile||'richiesta';
 const genitoreDi=p=>p&&p.gen!==undefined?persona(p.gen):null;
+
+/* ---------- Circolo, volontariato, solitudine (blocco 3) ---------- */
+/* S.circolo = {tipo, nome, dal, attivo, lutti, pres?, torneoT?, sediaT?}: un posto dove ci si ritrova (gruppo «circolo»: i soci sono Conoscente
+   che, frequentandolo, diventano Amico). S.volont = {tipo, nome, dal, attivo, storie}: le ore sono quelle della routine «volont».
+   Gli eventi `circ_`, `vol_`, `sol_` sono in d18_vecchiaia.js; ognuno ha un tetto di ripetizioni per vita. */
+const CIRCOLI=[
+  {id:'bocciofila',n:'La bocciofila',d:'Bocce, un bicchiere e discussioni sulle distanze',torneo:['il torneo di bocce','una coppa']},
+  {id:'anziani',n:'Il circolo degli anziani',d:'Carte, tombola e il liscio del sabato',torneo:['il torneo di briscola','una coppa']},
+  {id:'unitre',n:'L\'università della terza età',d:'Lezioni, gite e gente curiosa',dal:1975,torneo:['la gara di quiz di fine anno','un diploma di carta']},
+  {id:'parrocchia',n:'Il gruppo della parrocchia',d:'Il caffè dopo la messa, la tombolata, le gite',torneo:['la tombolata di beneficenza','un salame']}];
+const circoliPossibili=()=>CIRCOLI.filter(c=>!c.dal||S.anno>=c.dal);
+const circoloAttivo=()=>!!(S.circolo&&S.circolo.attivo);
+const sociCircolo=()=>{const G=(S.gruppi||[]).find(g=>g.k==='circolo');return G?membriVivi(G):[]};
+const circInCorso=p=>circoloAttivo()&&(S.gruppi||[]).some(g=>g.k==='circolo'&&g.m.includes(p.id));
+function iscriviCircolo(c){
+  S.circolo={tipo:c.id,nome:c.n,dal:S.t,attivo:true,lutti:0};
+  for(let i=0;i<r(3,4);i++)nuovaPersona('Conoscente',pick(['M','F']),r(62,84),null,{rapporto:r(28,48),dove:'circolo'});
+  aggiungiOre('amici',3);S.bis.soc=clamp(S.bis.soc+10);mod('felicita',5);
+  return [`Entri. ${c.n} ha i suoi riti e i suoi tavoli, e dopo mezz'ora qualcuno ti ha già detto dove NON sederti. Conosci gente che ti rivedrà, e te lo fa capire.`,'g'];
+}
+function circoloLutto(p){
+  const C=S.circolo;C.lutti=(C.lutti||0)+1;
+  if(S.t-(C.sediaT||-99)>=18){C.sediaT=S.t;coda.push({e:EV.circ_sedia,d:{x:{nome:p.nome}}})}
+}
+const VOL=[
+  {id:'mensa',n:'La mensa della Caritas',d:'Servire il pranzo a chi non ha dove andare',storie:['Un uomo viene alla mensa da tre giorni senza dire una parola. Oggi, mentre prende il piatto, dice solo «grazie».','Una signora elegante si siede sempre nello stesso posto. Non ha casa, ma si mette il rossetto prima di ogni pasto.']},
+  {id:'ospedale',n:'Volontario in ospedale',d:'Un po\' di compagnia in corsia',storie:['Una signora del reparto non riceve visite. Ti chiede se puoi fermarti a leggerle il giornale.','Un ragazzo ricoverato da un mese ti insegna a giocare a carte. Ti batte, e se ne vanta con gli infermieri.']},
+  {id:'scuola',n:'Davanti alla scuola',d:'Aiutare i bambini ad attraversare la strada',storie:['Un bambino aspetta ogni giorno che arrivino a prenderlo, ultimo, sempre. Oggi i suoi non arrivano.','I bambini ti hanno dato un soprannome. Lo scopri da un disegno appeso al cancello, e ti commuovi.']},
+  {id:'trasporto',n:'Accompagnare gli anziani soli',d:'In macchina dal dottore o a fare la spesa',cond:()=>haAuto(),storie:['La signora che accompagni dal dottore ti ha preparato una torta. Non accetta un no.','Il signore dell\'ultimo piano non vuole scendere per la visita: ha paura dell\'ascensore. Lo convinci con la scala.']},
+  {id:'biblioteca',n:'Leggere ai bambini',d:'Un pomeriggio a settimana in biblioteca',storie:['Una bambina ti chiede di rileggere la stessa storia per la quinta volta. Poi ti corregge se salti una riga.','Un bimbo non parla mai. Oggi, a metà favola, ti chiede com\'è andata a finire.']}];
+const volPossibili=()=>VOL.filter(v=>!v.cond||v.cond());
+const volAttivo=()=>!!(S.volont&&S.volont.attivo&&rOre('volont')>0);
+function iniziaVol(v){
+  S.volont={tipo:v.id,nome:v.n,dal:S.t,attivo:true,storie:0};
+  aggiungiOre('volont',3);S.karma=clamp(S.karma+3);mod('felicita',4);
+  for(let i=0;i<2;i++)nuovaPersona('Conoscente',pick(['M','F']),r(30,72),null,{rapporto:r(25,45),dove:'volont'});
+  return [`Cominci. ${v.n}: il primo turno ti sembra lunghissimo, il secondo breve. Torni a casa stanc${g('o','a')}, ed è una stanchezza che ti piace.`,'g'];
+}
+/* solitudine dopo i 65 anni: un evento diverso a ogni giro (le scelte già fatte non si riproporrebbero), con intervalli sempre più lunghi */
+const amiciMorti=()=>S.relazioni.filter(p=>!p.vivo&&['Amico','Coniuge','Fratello','Cugino','Partner'].includes(p.ruolo)).length;
+function eventoSolitudine(){
+  if(S.eta<65)return 'solitudine';
+  const F=S.fatti,L=['sol_silenzio'];
+  if(amiciMorti()>=3&&!F.solAgenda)L.push('sol_agenda');
+  if(!S.animali.length&&!F.solAnimale&&S.salute>=35)L.push('sol_animale');
+  return pick(L);
+}
+/* ogni mese: i soci del circolo si frequentano; sono anche loro anziani, quindi vanno e vengono */
+function vecchiaiaMese(){
+  if(!circoloAttivo())return;
+  for(const p of sociCircolo()){relD(p,.8);if(p.ruolo==='Conoscente'&&p.rapporto>=62){p.ruolo='Amico';log(`${p.nome}, del circolo, ormai è ${gp(p,'un amico','un\'amica')}.`,'g')}}
+}
+/* eventi dallo stato; ritorna true se ne ha aperto uno */
+function vecchiaiaEventi(){
+  const F=S.fatti,C=S.circolo,V=S.volont;
+  if(S.eta>=55){const v=vedovo();if(v&&v.mortoT!==undefined){const m=S.t-v.mortoT;if(m>0&&m%12===0&&m<=72){coda.push({e:EV.sol_anniversario,d:{x:{nome:v.nome,anni:m/12}}});return true}}}
+  if(circoloAttivo()){
+    const soci=sociCircolo().length;
+    if(S.t-(C.torneoT||C.dal)>=30&&soci>=2&&chance(.015)){C.torneoT=S.t;coda.push({e:EV.circ_torneo,d:{}});return true}
+    if(!C.pres&&S.t-C.dal>=48&&soci>=2&&chance(.008)){C.pres=1;coda.push({e:EV.circ_presidente,d:{}});return true}
+    if(!C.chiude&&S.t-C.dal>=36&&soci<=1&&chance(.1)){C.chiude=1;coda.push({e:EV.circ_chiude,d:{}});return true}
+  }
+  if(volAttivo()){
+    if(S.t-(V.storiaT||V.dal)>=30&&chance(.012)){V.storiaT=S.t;coda.push({e:EV.vol_storia,d:{}});return true}
+    if((S.salute<50||S.eta>=82)&&!V.stancoT&&S.t-V.dal>=24&&chance(.02)){V.stancoT=S.t;coda.push({e:EV.vol_stanco,d:{}});return true}
+    if(!F.volTarga&&(F.volMesi||0)>=60&&chance(.02)){F.volTarga=1;coda.push({e:EV.vol_targa,d:{}});return true}
+    if(!F.volGiovane&&S.t-V.dal>=18&&chance(.01)){F.volGiovane=1;coda.push({e:EV.vol_giovane,d:{}});return true}
+  }
+  return false;
+}
+/* all'anno: il circolo e il volontariato si propongono a chi è in pensione, vedovo o ha poca gente intorno */
+function vecchiaiaAnno2(){
+  if(S.carcere>0||S.eta<60||S.eta>80)return;const F=S.fatti;
+  const libero=!S.lavoro||S.pensione>0;
+  if(!circoloAttivo()&&libero&&S.t-(F.circT===undefined?-999:F.circT)>=60&&chance(vedovo()||S.bis.soc<55?.15:.07)&&!coda.some(q=>q.e===EV.circ_iscrizione)){F.circT=S.t;coda.push({e:EV.circ_iscrizione,d:{}})}
+  if(!S.volont?.attivo&&libero&&S.karma>=40&&S.t-(F.volT===undefined?-999:F.volT)>=72&&chance(.06+.12*Math.max(0,pz('A')))&&!coda.some(q=>q.e===EV.vol_inizio)){F.volT=S.t;coda.push({e:EV.vol_inizio,d:{}})}
+}
