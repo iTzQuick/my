@@ -93,6 +93,9 @@ JS_BASE = r'''async ()=>{
  for(const [id,x] of [['prg_imprevisto',{q:col8.id,m:'guida',s:1,k:'cliente'}],['prg_imprevisto',{q:col8.id,m:'solo',s:0,k:'malattia'}],['prg_consegna',{q:col8.id,m:'insieme',s:1}],['prg_riorg2',{a:1,m:1}],['prg_riorg3',{a:1,m:1}],['prg_riorg3',{a:0,m:0}]]){
    for(let i=0;i<3;i++){const bs=apri(id,{p:capo8,x:{...x},_fut:1});if(!bs.length){ko.push(id+' senza lavoro: nessuna scelta');break}if(bs[i%bs.length])bs[i%bs.length].click();chiudi()}
  }
+ // 9) in produzione il passo da futuro() porta _ric: se non hai più il lavoro, next() lo salta e non apre niente
+ nuova(35,'imp');completaSquadra(true);const capo9=squadra().capo;S.lavoro=null;
+ for(const id of ['prg_imprevisto','prg_consegna','prg_riorg2','prg_riorg3'])if((apri(id,{p:capo9,x:{q:capo9.id,m:'insieme',s:1,k:'cliente',a:1},_fut:1,_ric:1}),!document.querySelector('#scrim').hidden)){ko.push(id+': con _ric e senza lavoro il foglio si apre lo stesso');chiudi()}
  return {errs,ko};
 }'''
 JS_VITE = r'''(N)=>{

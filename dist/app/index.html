@@ -1374,7 +1374,7 @@ function mese(silenzioso){
   const due=S.futuri.filter(f=>f.t<=S.t);S.futuri=S.futuri.filter(f=>f.t>S.t);
   for(const f of due){
     const e=EV[f.id];if(!e)continue;
-    const d={x:f.x,_fut:1};
+    const d={x:f.x,_fut:1,_ric:1};   // _ric: next() ricontrolla la cond quando il foglio si apre (se nel frattempo un altro evento della coda ha cambiato la situazione)
     if(f.pid){d.p=S.relazioni.find(p=>p.id===f.pid);if(!d.p||!d.p.vivo)continue}
     if(e.cond&&!e.cond(d))continue;
     if(e.auto){const res=conCausa(T(e.t,d),()=>scegli(e.auto,d));if(res&&res[0])log(res[0],res[1])}
@@ -8679,7 +8679,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='38801d88';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='48ef4ca0';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 
@@ -9108,7 +9108,8 @@ function next(){
   if(coda.length&&S&&S.vivo){
     const q=coda.shift(),e=q.e,d=q.d||{};
     if(d.p&&!d.p.vivo)return next();
-    if(e.cond&&!d._fut&&e.id!=='processo'&&!e.cond(d))return next();
+    // _fut senza _ric = evento aperto a mano dai test (ignora la cond); _ric = passo di catena arrivato da futuro(): la cond è già passata alla scadenza, si ricontrolla qui
+    if(e.cond&&(!d._fut||d._ric)&&e.id!=='processo'&&!e.cond(d))return next();
     const scelte=typeof e.c==='function'?e.c(d):(e.c||[]);
     if(!e.link&&(fuoriEpoca(T(e.t,d))||fuoriEpoca(T(e.x,d))))return next();   // un evento casuale fuori epoca si salta
     showSheet({k:`${dataStr()} · ${S.eta} ${S.eta===1?'anno':'anni'}`+(e.k?' · '+T(e.k,d):''),t:T(e.t,d),p:T(e.x,d),scelte,d});

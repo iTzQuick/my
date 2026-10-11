@@ -59,7 +59,8 @@ function next(){
   if(coda.length&&S&&S.vivo){
     const q=coda.shift(),e=q.e,d=q.d||{};
     if(d.p&&!d.p.vivo)return next();
-    if(e.cond&&!d._fut&&e.id!=='processo'&&!e.cond(d))return next();
+    // _fut senza _ric = evento aperto a mano dai test (ignora la cond); _ric = passo di catena arrivato da futuro(): la cond è già passata alla scadenza, si ricontrolla qui
+    if(e.cond&&(!d._fut||d._ric)&&e.id!=='processo'&&!e.cond(d))return next();
     const scelte=typeof e.c==='function'?e.c(d):(e.c||[]);
     if(!e.link&&(fuoriEpoca(T(e.t,d))||fuoriEpoca(T(e.x,d))))return next();   // un evento casuale fuori epoca si salta
     showSheet({k:`${dataStr()} · ${S.eta} ${S.eta===1?'anno':'anni'}`+(e.k?' · '+T(e.k,d):''),t:T(e.t,d),p:T(e.x,d),scelte,d});

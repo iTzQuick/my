@@ -392,7 +392,7 @@ function mese(silenzioso){
   const due=S.futuri.filter(f=>f.t<=S.t);S.futuri=S.futuri.filter(f=>f.t>S.t);
   for(const f of due){
     const e=EV[f.id];if(!e)continue;
-    const d={x:f.x,_fut:1};
+    const d={x:f.x,_fut:1,_ric:1};   // _ric: next() ricontrolla la cond quando il foglio si apre (se nel frattempo un altro evento della coda ha cambiato la situazione)
     if(f.pid){d.p=S.relazioni.find(p=>p.id===f.pid);if(!d.p||!d.p.vivo)continue}
     if(e.cond&&!e.cond(d))continue;
     if(e.auto){const res=conCausa(T(e.t,d),()=>scegli(e.auto,d));if(res&&res[0])log(res[0],res[1])}
