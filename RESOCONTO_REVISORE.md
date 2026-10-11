@@ -2,7 +2,7 @@
 
 Questo file serve a una nuova sessione di Claude che deve aiutare Davide **come revisore e consigliere**, non come sviluppatore. Leggi prima `CLAUDE.md` e `ROADMAP.md`: qui c'è solo quello che non sta lì.
 
-Aggiornato all'11 ottobre 2026, ultimo commit su `main`: `d1eedcc` (rappresentazione dei figli premorti).
+Aggiornato all'11 ottobre 2026, ultimo commit su `main`: `9cd42a7` (nonni con la storia dell'epoca).
 
 ---
 
@@ -35,7 +35,7 @@ Lingua: **italiano**. Tono diretto e conciso. Davide legge spesso dal telefono, 
   - **Mezzadria**: niente nuovi contratti dal 1964, abolita del tutto nel 1982.
 - **Esclusioni che diventano disparità**: voleva escludere il part-time dai colleghi, il che li avrebbe tolti soprattutto alle donne.
 - **Tappe o soglie che non coincidono con il codice esistente**: per esempio un'aspirazione la cui ultima tappa andava oltre `ok()`, o «continenti» che il gioco non conta.
-- **Piani troppo grandi**: proponi sempre di dividere (5.3 è diventata 5.3a, b e c; la 5.2 quattro blocchi).
+- **Piani troppo grandi**: proponi sempre di dividere (5.3 è diventata 5.3a, b e c; la 5.2 cinque blocchi).
 - **Indebolire un controllo per farlo passare**: quando un invariante «viene tollerato», controlla che resti un controllo vero (per esempio la tolleranza di un mese sui colleghi orfani era giusta).
 - **Leggi italiane**: verifica le quote. La legittima in `c13_vecchiaia.js` è corretta: ⅓+⅓, ¼+½, ½ o ⅔ ai figli, ½ al coniuge con ¼ ai genitori, ⅓ ai soli genitori. La rappresentazione dei figli premorti (artt. 467–468) è stata aggiunta in `d1eedcc`.
 
@@ -55,31 +55,14 @@ Lingua: **italiano**. Tono diretto e conciso. Davide legge spesso dal telefono, 
     - circolo, volontariato e solitudine: `e5cb470`;
     - viaggi da anziano: `b03f99a`;
     - rappresentazione dei figli premorti: `d1eedcc`.
+    - nonni con la storia dell'epoca (`c14_nonni.js`: una storia per nonno secondo anno di nascita e regione del lato, `test_nonni.py`): `9cd42a7`. **La 5.2 è completa**; resta fuori solo la non autosufficienza (4.5).
 - **Correzioni lungo la strada**:
   - editor «Famiglia» con età dei fratelli valide: `0d55d55`;
   - coppie tra minorenni al massimo a 2 anni di distanza: `f149584`;
   - `next()` che ricontrolla i passi delle catene (`_ric`): `ca9d03f`;
   - Ex non più «lontani» nella stessa città: `5be142f`.
 
-## 5. In corso adesso
-
-**Nonni con la storia dell'epoca**: Sonnet ha il piano approvato con queste modifiche.
-- Una storia per nonno, scelta secondo il suo anno di nascita e la regione, in un file nuovo `c14_nonni.js` con la tabella `STORIE_NONNI`. Si raccontano in `nonno_storie` e `ado_nonno_storia` e compaiono al funerale.
-- Storie con date vere:
-  - Prima guerra (nati prima del 1900) e Seconda guerra (1915–1927);
-  - America (inizio Novecento);
-  - Belgio 1946–56 con Marcinelle (nati circa 1910–1935, riusa `META_EMI`);
-  - Germania e Svizzera 1955–70, dal Sud al Nord negli anni '50–'60;
-  - mezzadria;
-  - la fabbrica del boom e la bottega.
-- **Più due storie per i nonni giovani**, chiesti da te:
-  - nati circa 1945–1960: il Sessantotto, l'autunno caldo del 1969, la fabbrica e il sindacato; per regione il Friuli 1976 e l'Irpinia 1980;
-  - nati circa 1960–1980: il lavoro negli anni '80, il mutuo con tassi alti, i Mondiali 1982, l'euro.
-- **Regione per lato** (materno e paterno), assegnata «pigra»: per chi nasce al Nord circa 1 lato su 4 viene dal Sud, se i nonni sono nati tra il 1920 e il 1945.
-
-Quando arriva il resoconto, verifica il commit, le date e l'assenza di anacronismi (`italia_vera.py`).
-
-## 6. Cosa resta (in ordine consigliato)
+## 5. Cosa resta (in ordine consigliato)
 
 1. **5.4 Eredità tra generazioni**: giocare come figlio con la casa, i debiti, i rancori e le collezioni dei genitori. «Continua come…» esiste già e usa `quoteSuccessione`.
 2. **A fine Fase 5**: `realismo.py 400` (non è stato lanciato sulla 5.2) e `simula.py 600` per aggiornare le statistiche dell'Atlante (sono ancora quelle vecchie).
@@ -87,7 +70,7 @@ Quando arriva il resoconto, verifica il commit, le date e l'assenza di anacronis
 4. **Fase 6** (interfaccia), **0.5** (età delle azioni, da fare con Davide davanti al gioco).
 5. Idee aperte: i gemelli come scelta nell'editor di creazione; l'oltreoceano (Argentina, USA, Australia) per l'emigrazione; il pilota automatico accetta troppo (circolo e volontariato oltre il 50% degli over 75 nelle simulazioni, 23% delle vite che cambiano settore). Va reso più «umano».
 
-## 7. Modello di risposta che funziona
+## 6. Modello di risposta che funziona
 
 Quando Davide incolla un piano di Sonnet:
 
