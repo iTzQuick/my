@@ -1,6 +1,6 @@
 /* Service worker di «my»: il gioco funziona anche offline e si aggiorna da solo.
    VERSIONE viene sostituita da build.py a ogni build: cambia il file → il telefono scarica la nuova versione. */
-const VERSIONE='9a79e7adac';
+const VERSIONE='40b6d61719';
 const CACHE='my-'+VERSIONE, FONT='my-font';
 const GUSCIO=['./','index.html','manifest.webmanifest','apple-touch-icon.png','icona-192.png','icona-512.png','icona-maskable-512.png'];
 

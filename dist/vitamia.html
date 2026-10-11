@@ -8385,7 +8385,9 @@ function trasferisciti(){
 function dopoTrasloco(da){
   marcaEmigrazione(da);
   for(const p of S.relazioni){
-    if(!p.vivo||['Nemico','Conoscente','Ex'].includes(p.ruolo)||convive(p))continue;
+    if(!p.vivo||convive(p))continue;
+    /* Nemici, conoscenti ed ex non cambiano rapporto né diario, ma non restano «lontani» nella tua stessa città */
+    if(['Nemico','Conoscente','Ex'].includes(p.ruolo)){if(p.lontano&&p.dove===S.citta){p.lontano=false;p.dove=null}continue}
     if(p.lontano&&p.dove===S.citta){p.lontano=false;p.dove=null;p.rapporto=clamp(p.rapporto+5);log(`Ora tu e ${p.nome} vivete nella stessa città.`,'g')}
     else if(!p.lontano&&da&&da!==S.citta){p.lontano=true;p.dove=da}
   }
@@ -8671,7 +8673,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='48ef4ca0';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='d7edc154';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 

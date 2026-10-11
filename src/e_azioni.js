@@ -413,7 +413,9 @@ function trasferisciti(){
 function dopoTrasloco(da){
   marcaEmigrazione(da);
   for(const p of S.relazioni){
-    if(!p.vivo||['Nemico','Conoscente','Ex'].includes(p.ruolo)||convive(p))continue;
+    if(!p.vivo||convive(p))continue;
+    /* Nemici, conoscenti ed ex non cambiano rapporto né diario, ma non restano «lontani» nella tua stessa città */
+    if(['Nemico','Conoscente','Ex'].includes(p.ruolo)){if(p.lontano&&p.dove===S.citta){p.lontano=false;p.dove=null}continue}
     if(p.lontano&&p.dove===S.citta){p.lontano=false;p.dove=null;p.rapporto=clamp(p.rapporto+5);log(`Ora tu e ${p.nome} vivete nella stessa città.`,'g')}
     else if(!p.lontano&&da&&da!==S.citta){p.lontano=true;p.dove=da}
   }
