@@ -32,7 +32,8 @@ const CITTA=[
   {n:'Verona',mq:2600},{n:'Catania',mq:1500},{n:'Cagliari',mq:2600},{n:'Trieste',mq:2200},{n:'Perugia',mq:1600},
   {n:'Lecce',mq:1700},{n:'Padova',mq:2500},{n:'Brescia',mq:2300},{n:'Pescara',mq:2000},{n:'Trento',mq:3300}
 ];
-const CITTA_ESTERE=[{n:'Londra',mq:9500},{n:'Berlino',mq:5000},{n:'Barcellona',mq:4400},{n:'Parigi',mq:10000},{n:'Amsterdam',mq:7000}];
+const CITTA_ESTERE=[{n:'Londra',mq:9500},{n:'Berlino',mq:5000},{n:'Barcellona',mq:4400},{n:'Parigi',mq:10000},{n:'Amsterdam',mq:7000},
+  {n:'Charleroi',mq:1800},{n:'Colonia',mq:4800},{n:'Zurigo',mq:12500},{n:'Bruxelles',mq:4500},{n:'Dublino',mq:6200}];   // prezzi al m² del 2026, indicativi; da che anno si può andarci: META_EMI (c12_estero.js)
 
 const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
 const TRATTI=[['Generoso','Generosa'],['Geloso','Gelosa'],['Divertente','Divertente'],['Ambizioso','Ambiziosa'],['Pigro','Pigra'],['Premuroso','Premurosa'],['Lunatico','Lunatica'],['Testardo','Testarda'],['Timido','Timida'],['Avventuroso','Avventurosa'],['Leale','Leale'],['Egoista','Egoista']];

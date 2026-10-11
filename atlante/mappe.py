@@ -268,3 +268,12 @@ COND.update({
 })
 PC.update({"p=>p.rapporto>=62&&(p.sesso!==S.sesso||unioneCivilePossibile())":"il rapporto è almeno 62 e, se è dello stesso sesso, c'è già l'unione civile (da giugno 2016)"})
 PC.update({"p=>etaCompatibile(p)":"ha un'età compatibile con la tua (da minorenni al massimo 2 anni di differenza)"})
+# ottobre 2026: emigrare (Fase 5.3c)
+COND.update({"()=>S.eta>=16&&S.eta<=62&&!S.pensione&&S.carcere===0&&!S.fatti.estero&&!S.azienda&&metaDisponibili().length>0":"Hai tra 16 e 62 anni, non sei in pensione né in carcere, non vivi già all'estero, non hai un'attività in proprio e c'è almeno un paese in cui, in questo anno, si può andare a lavorare",
+"()=>!!S.fatti.estero&&S.fatti.estero.n===S.citta":"Vivi all'estero nella città in cui sei emigrato",
+"()=>S.soldi>=costoEstero(m)":"Hai i soldi per il viaggio e il primo mese",
+"()=>casa.length>0&&S.soldi>=P(1200)":"Hai qualcuno a casa a cui mandare i soldi e almeno 1.200 euro",
+"()=>E.stag&&figli.length>0":"Sei stagionale e hai figli minorenni rimasti a casa",
+"()=>E.stag&&fam.length>0&&S.soldi>=P(2500)":"Con il permesso da stagionale hai ancora la famiglia a casa e 2.500 euro",
+"()=>E.stag&&fam.length===0":"Sei stagionale e non hai famiglia al seguito",
+"()=>!E.stag":"Non sei stagionale"})

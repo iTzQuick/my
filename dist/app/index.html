@@ -508,7 +508,8 @@ const CITTA=[
   {n:'Verona',mq:2600},{n:'Catania',mq:1500},{n:'Cagliari',mq:2600},{n:'Trieste',mq:2200},{n:'Perugia',mq:1600},
   {n:'Lecce',mq:1700},{n:'Padova',mq:2500},{n:'Brescia',mq:2300},{n:'Pescara',mq:2000},{n:'Trento',mq:3300}
 ];
-const CITTA_ESTERE=[{n:'Londra',mq:9500},{n:'Berlino',mq:5000},{n:'Barcellona',mq:4400},{n:'Parigi',mq:10000},{n:'Amsterdam',mq:7000}];
+const CITTA_ESTERE=[{n:'Londra',mq:9500},{n:'Berlino',mq:5000},{n:'Barcellona',mq:4400},{n:'Parigi',mq:10000},{n:'Amsterdam',mq:7000},
+  {n:'Charleroi',mq:1800},{n:'Colonia',mq:4800},{n:'Zurigo',mq:12500},{n:'Bruxelles',mq:4500},{n:'Dublino',mq:6200}];   // prezzi al m² del 2026, indicativi; da che anno si può andarci: META_EMI (c12_estero.js)
 
 const MESI=['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
 const TRATTI=[['Generoso','Generosa'],['Geloso','Gelosa'],['Divertente','Divertente'],['Ambizioso','Ambiziosa'],['Pigro','Pigra'],['Premuroso','Premurosa'],['Lunatico','Lunatica'],['Testardo','Testarda'],['Timido','Timida'],['Avventuroso','Avventurosa'],['Leale','Leale'],['Egoista','Egoista']];
@@ -807,7 +808,7 @@ function luogo(){return cittaInfo(S.citta,S.prov)}
 function nomeLuogo(n,s){const est=CITTA_ESTERE.find(c=>c.n===n);if(est)return n;return s?`${n} (${s})`:n}
 function cercaLuoghi(q,esteri){
   q=q.trim().toLowerCase();const out=[];
-  if(esteri)for(const c of CITTA_ESTERE)if(!q||c.n.toLowerCase().includes(q))out.push({n:c.n,s:null,estero:true,p:1e6});
+  if(esteri)for(const m of metaDisponibili())if(!q||m.n.toLowerCase().includes(q))out.push({n:m.n,s:null,estero:true,p:1e6});
   if(!q){CITTA.forEach(c=>{const x=trovaComune(c.n);if(x)out.push(x)});return out}
   const L=comuni();const pre=[],mid=[];
   for(const c of L){const nl=c.n.toLowerCase();if(nl.startsWith(q))pre.push(c);else if(nl.includes(q))mid.push(c)}
@@ -1362,7 +1363,7 @@ function mese(silenzioso){
   if(S.carcere===0)meseScuola();
   calendario();
   storiaMese();
-  meseLavoro();meseSquadra();
+  meseLavoro();meseSquadra();meseEstero();
   meseItalia();
   normalizzaRoutine();
   meseRoutine();
@@ -2521,7 +2522,7 @@ function meseSalute(){
   const pA=(.012+Math.max(0,e-30)*.0006+(S.dip.fumo?.01:0)+(S.dip.alcol?.01:0)+(S.salute<40?.03:0)+(B.stress>75?.01:0))/12;
   if(e>=3&&chance(pA*inv)){ammala(pick(MALATTIE[2]),2);mod('salute',-6)}
   // croniche: crescono con l'età (la pressione alta riguarda oltre metà degli anziani)
-  const cron=[['Ipertensione',e<40?.002:e<55?.012:e<70?.025:.03],['Diabete di tipo 2',(e<40?.0005:e<60?.004:e<75?.008:.01)*(B.forma<35?1.6:1)],['Artrosi',e<50?0:.012],['Asma',.0008],['Emicrania cronica',e>=15&&e<=50?(S.sesso==='F'?.004:.0015):0],['BPCO',S.dip.fumo&&e>=45?.006:0]];
+  const cron=[['Ipertensione',e<40?.002:e<55?.012:e<70?.025:.03],['Diabete di tipo 2',(e<40?.0005:e<60?.004:e<75?.008:.01)*(B.forma<35?1.6:1)],['Artrosi',e<50?0:.012],['Asma',.0008],['Emicrania cronica',e>=15&&e<=50?(S.sesso==='F'?.004:.0015):0],['BPCO',(S.dip.fumo&&e>=45?.006:0)+((S.fatti.minieraMesi||0)>=12&&e>=40?.005:0)]];
   for(const [n,p] of cron)if(p&&e>=3&&!haMal(n)&&chance(p/12)){ammala(n,3);mod('salute',-4)}
   // cuore: più facile con pressione alta, diabete e fumo
   if(e>=55&&!haMal('Insufficienza cardiaca')&&chance((.0015+(haMal('Ipertensione')?.002:0)+(haMal('Diabete di tipo 2')?.002:0)+(S.dip.fumo?.002:0))/12)){ammala('Insufficienza cardiaca',4);mod('salute',-10)}
@@ -2548,8 +2549,8 @@ function causaMorte(){
   const v=pesata(voci);
   if(v!=='base')return v.tum||TUMORE[v.n]?causaTumore(v.n):(CAUSE[v.n]||'per una grave malattia');
   const e=S.eta,manuale=S.lavoro&&MANUALI.includes(S.lavoro.id);
-  const L=e<30?[['in un incidente stradale',40],['in un incidente in montagna',8],['in un incidente in mare',6],['per un malore improvviso',20],['in un incidente sul lavoro',manuale?10:0]]
-    :e<60?[['per un infarto',30],['per un ictus',15],['per un malore improvviso',15],['in un incidente stradale',12],['in un incidente sul lavoro',manuale?6:0],['per una polmonite',4]]
+  const L=e<30?[['in un incidente stradale',40],['in un incidente in montagna',8],['in un incidente in mare',6],['per un malore improvviso',20],['in un incidente sul lavoro',manuale?(S.lavoro.miniera?20:10):0]]
+    :e<60?[['per un infarto',30],['per un ictus',15],['per un malore improvviso',15],['in un incidente stradale',12],['in un incidente sul lavoro',manuale?(S.lavoro.miniera?12:6):0],['per una polmonite',4]]
     :e<80?[['per un infarto',25],['per un ictus',22],['per una polmonite',7],['per un\'insufficienza respiratoria',S.dip.fumo?9:4],['per un malore improvviso',3],['per le conseguenze di una caduta',3],['per un\'infezione',8],['per un\'insufficienza renale',7],['per una malattia del fegato',4],['serenamente, nel sonno',4]]
     :[['per un infarto',18],['per un ictus',18],['per una polmonite',10],['per un\'insufficienza respiratoria',4],['per le conseguenze di una caduta',7],['per un\'infezione',10],['per un\'insufficienza renale',8],['serenamente, nel sonno',10],['per un malore improvviso',2]];
   return pesata(L);
@@ -3264,6 +3265,7 @@ const STORIA=[
   {a:1951,m:10,t:'Il Po rompe gli argini: il Polesine finisce sott\'acqua.',ev:'alluvione',dove:inReg0('Veneto')},
   {a:1954,m:0,t:'Nasce la televisione italiana: la RAI trasmette il primo programma. Chi ha un televisore invita i vicini.'},
   {a:1956,m:0,t:'Olimpiadi invernali a Cortina d\'Ampezzo.'},
+  {a:1956,m:7,t:'Marcinelle, in Belgio: un incendio nella miniera del Bois du Cazier uccide 262 minatori, 136 italiani. L\'Italia sospende le partenze per le miniere belghe.',ev:'car_marcinelle',dove:()=>!!S.lavoro&&!!S.lavoro.miniera&&S.citta==='Charleroi'},
   {a:1957,m:1,t:'Arriva Carosello: dopo la pubblicità, tutti i bambini a letto.'},
   {a:1957,m:6,t:'Esce la Fiat Nuova 500: l\'automobile diventa per tutti.'},
   {a:1960,m:7,t:'Olimpiadi di Roma: Abebe Bikila vince la maratona a piedi nudi sull\'Appia Antica.'},
@@ -3568,24 +3570,26 @@ const alSud=z=>z==='Sud'||z==='Isole';
    I concorsi pubblici e le cariche elettive hanno contratti nazionali: uguali ovunque. */
 const ZONA_STIP={'Nord-ovest':1.06,'Nord-est':1.03,Centro:1,Sud:.92,Isole:.91};
 const CONTR_NAZ=['ins','maes','ric','inf','med','post'];   // scuola, sanità pubblica, Poste: contratti nazionali anche senza concorso nel gioco
-function fattoreZona(j){return j&&(j.conc||j.elez||CONTR_NAZ.includes(j.id))?1:(ZONA_STIP[zonaMia()]||1)}
+function fattoreZona(j){return j&&(j.conc||j.elez||CONTR_NAZ.includes(j.id))?1:(zonaMia()==='Estero'?fattoreEsteroOra():(ZONA_STIP[zonaMia()]||1))}
 /* Occupazione (ISTAT 2023, 20–64 anni: Nord ~76%, Centro ~72%, Mezzogiorno ~52%): quota di chi lavora tra le persone
    del gioco, rischio di perdere il lavoro, facilità di trovarlo, stabilizzazione dei contratti a termine */
 const OCC_ZONA={'Nord-ovest':{occ:.86,perdi:.85,trova:1.15,stab:1.1},'Nord-est':{occ:.88,perdi:.8,trova:1.2,stab:1.15},Centro:{occ:.82,perdi:1,trova:1,stab:1},
-  Sud:{occ:.62,perdi:1.4,trova:.55,stab:.75},Isole:{occ:.6,perdi:1.5,trova:.5,stab:.7}};
+  Sud:{occ:.62,perdi:1.4,trova:.55,stab:.75},Isole:{occ:.6,perdi:1.5,trova:.5,stab:.7},Estero:{occ:.85,perdi:.9,trova:1.1,stab:1}};
 const occZona=()=>OCC_ZONA[zonaMia()]||OCC_ZONA.Centro;
 /* costo della vita (spesa e bollette): al Sud i prezzi sono più bassi di circa il 10% (ISTAT, parità di potere d'acquisto regionali) */
 const COSTO_ZONA={'Nord-ovest':1.05,'Nord-est':1.04,Centro:1,Sud:.9,Isole:.91};
-const costoZona=()=>COSTO_ZONA[zonaMia()]||1;
-/* chi lascia il Sud per il Centro-Nord o l'estero tra i 18 e i 45 anni è emigrato; se torna giù, è tornato (da dopoTrasloco) */
+const costoZona=()=>{const z=zonaMia();if(z==='Estero'){const m=metaDi(S.citta);return m?m.v:1}return COSTO_ZONA[z]||1};
+/* chi lascia il Sud per il Centro-Nord, o chiunque lasci l'Italia, tra i 18 e i 45 anni è emigrato (zo = la zona da cui è partito:
+   i salvataggi vecchi non ce l'hanno e sono tutti del Sud); se torna nella zona di partenza, è tornato (da dopoTrasloco) */
+const emigratoTornato=(em,z)=>alSud(em.zo||'Sud')?alSud(z):z===em.zo;
 function marcaEmigrazione(da){
   if(!S||!da)return;const c0=cittaInfo(da),z1=zonaMia();
-  if(!S.fatti.emigrato&&alSud(c0.zona)&&!alSud(z1)&&S.eta>=18&&S.eta<=45)S.fatti.emigrato={t:S.t,da,prov:c0.s||null};
-  else if(S.fatti.emigrato&&!S.fatti.ritornato&&alSud(z1))S.fatti.ritornato=S.t;
+  if(!S.fatti.emigrato&&((alSud(c0.zona)&&!alSud(z1))||(z1==='Estero'&&c0.zona!=='Estero'))&&S.eta>=18&&S.eta<=45)S.fatti.emigrato={t:S.t,da,prov:c0.s||null,zo:c0.zona};
+  else if(S.fatti.emigrato&&!S.fatti.ritornato&&emigratoTornato(S.fatti.emigrato,z1))S.fatti.ritornato=S.t;
 }
 /* dopo almeno 5 anni lontano, la domanda: tornare giù? (e di nuovo, una volta, da pensionato) */
 function controllaRitorno(){
-  const em=S.fatti.emigrato;if(!em||S.fatti.ritornato||S.carcere>0||alSud(zonaMia()))return;
+  const em=S.fatti.emigrato;if(!em||S.fatti.ritornato||S.carcere>0||emigratoTornato(em,zonaMia()))return;
   const prima=!S.fatti.ritornoChiesto&&S.t-em.t>=60,pens=S.fatti.ritornoChiesto===1&&S.pensione&&!S.fatti.ritornoPens;
   if((prima||pens)&&chance(1/36)){if(pens)S.fatti.ritornoPens=1;S.fatti.ritornoChiesto=1;coda.push({e:EV.ita_ritorno,d:{}})}
 }
@@ -4017,7 +4021,7 @@ const EPOCA=[
   [/intelligenza artificiale/i,2023],
   [/\b(lockdown|didattica a distanza|green pass|smart working)\b/i,2020],
   [/\b(tik ?tok|reddito di cittadinanza|monopattin[oi] elettric[oi]|pcto)\b/i,2018],
-  [/\b(unione civile|unioni civili|spid|stories)\b/i,2016],
+  [/\b(unione civile|unioni civili|spid|stories|brexit)\b/i,2016],
   [/\b(naspi|rider|influencer|podcast|netflix|airbnb|bitcoin|criptovalut\w*|smartwatch|scooter elettric\w*)\b/i,2015],
   [/\b(spotify|selfie|emoji|instagram|tablet|startup|drone|droni)\b/i,2012],
   [/\b(whatsapp|smartphone|app|videochiamat\w*|streaming|youtuber|meme|hashtag|follower|like|wireless|e-book|vocale|vocali)\b/i,2010],
@@ -4330,6 +4334,174 @@ function passaAltraAzienda(p){
     relD(p,10);ricorda(p,'Avete cambiato azienda insieme',3);
   }
   return [`Date le dimissioni lo stesso giorno. Nella nuova azienda sei ${L.nome.toLowerCase()} con una RAL di ${eur(L.stip)}, +10%${p?`, e c'è anche ${p.nome}`:''}.`,'g'];
+}
+
+/* ================= EMIGRARE (ROADMAP Fase 5.3c) =================
+   Le mete all'estero hanno un'epoca (da quando ci si può andare, e come). Gli eventi car_estero… sono in d17_estero.js.
+   Storia vera:
+   - Belgio, miniere di carbone: accordo «uomini contro carbone» del 23 giugno 1946; dopo Marcinelle (8 agosto 1956) l'Italia
+     sospende le partenze: niente miniere dopo il 1956. Il Belgio resta meta normale solo dal 1968 (Bruxelles, libera circolazione).
+   - Germania: accordo di reclutamento del 20 dicembre 1955 (i «Gastarbeiter»); dal 1968 gli italiani, cittadini CEE, circolano liberi.
+   - Svizzera: permesso da STAGIONALE (9 mesi, niente famiglia) fino al 2001; dal 2002 gli accordi bilaterali. Con il permesso B,
+     dopo tre anni, si può chiamare la famiglia.
+   - Regno Unito: permesso di lavoro prima del 1973 (qui 1 su 2); libera circolazione solo 1973–2020; dal 2021 visto (diploma o
+     laurea, lingua almeno 40 e un'offerta di lavoro). Irlanda dal 1973.
+   - Libera circolazione dei lavoratori CEE: regolamento 1612/68, in vigore dall'autunno 1968 (dal 1961 solo in modo graduale):
+     Parigi, Amsterdam, Bruxelles e Berlino (Ovest) dal 1968; Barcellona dal 1986 (la Spagna entra nella CEE; libera circolazione piena 1992).
+   Semplificazioni: i contributi esteri valgono come quelli italiani (totalizzazione) e netto() resta quello italiano; all'estero si
+   ha sempre un contratto a tempo indeterminato; niente oltreoceano; Minatore non esiste, in Belgio si fa l'«operaio» (ope); lo
+   stagionale svizzero è una meccanica leggera (stipendio ×0,75, alloggio dell'azienda, famiglia a casa). */
+const META_EMI=[
+  {id:'charleroi',n:'Charleroi',paese:'Belgio',da:1946,a:1956,mina:1,etaMin:16,lingua:0,f:1.15,v:.95,costo:700,w:3,
+    nota:'In Belgio cercano uomini per le miniere di carbone: l\'accordo con l\'Italia prevede carbone in cambio di braccia.'},
+  {id:'colonia',n:'Colonia',paese:'Germania',da:1955,lingua:a=>a<1990?0:15,f:a=>a<1980?1.35:1.2,v:1.05,costo:900,w:3,op:a=>a<=1973,
+    nota:'In Germania le fabbriche hanno fame di operai: ci sono i contratti di reclutamento, i treni dalla stazione di Verona e le baracche.'},
+  {id:'zurigo',n:'Zurigo',paese:'Svizzera',da:1948,lingua:a=>a<2002?0:15,f:1.7,v:1.55,costo:1000,w:3,op:a=>a<2002,stag:a=>a<2002,
+    nota:'In Svizzera si guadagna quasi il doppio. Fino al 2001 gli italiani arrivano con il permesso da stagionale: nove mesi l\'anno, e la famiglia non può venire.'},
+  {id:'bruxelles',n:'Bruxelles',paese:'Belgio',da:1968,lingua:15,f:1.2,v:1.1,costo:1200,w:2,
+    nota:'Bruxelles è la capitale delle istituzioni europee, e per i cittadini della CEE la strada è libera.'},
+  {id:'parigi',n:'Parigi',paese:'Francia',da:1968,lingua:15,f:1.15,v:1.2,costo:1400,w:2,
+    nota:'Parigi: stipendi più alti, affitti da svenarsi e un francese da imparare.'},
+  {id:'amsterdam',n:'Amsterdam',paese:'Paesi Bassi',da:1968,lingua:10,f:1.2,v:1.15,costo:1300,w:2,
+    nota:'Ad Amsterdam tutti parlano inglese e le biciclette sono più delle persone.'},
+  {id:'berlino',n:'Berlino',paese:'Germania',da:1968,lingua:15,f:1.1,v:1,costo:1100,w:2,
+    nota:'Berlino: affitti ancora ragionevoli, una scena che non dorme mai e il tedesco da imparare.'},
+  {id:'londra',n:'Londra',paese:'Regno Unito',da:1950,lingua:a=>a>=2021?40:(a<1973?30:20),f:1.25,v:1.25,costo:1500,w:3,perm:a=>a<1973?.5:1,visto:2021,
+    nota:'Londra: la città dove arrivano tutti, con stipendi alti e affitti ancora più alti.'},
+  {id:'dublino',n:'Dublino',paese:'Irlanda',da:1973,lingua:20,f:1.2,v:1.2,costo:1300,w:2,
+    nota:'Dublino: le sedi europee delle aziende tecnologiche, la pioggia, i pub.'},
+  {id:'barcellona',n:'Barcellona',paese:'Spagna',da:1986,lingua:10,f:.9,v:.95,costo:1000,w:2,
+    nota:'Barcellona: il mare, la vita di notte e stipendi un po\' più bassi dei nostri.'}
+];
+const perAnno=(x,a)=>typeof x==='function'?x(a):x;
+const metaDi=n=>META_EMI.find(m=>m.n===n);
+const metaDisponibili=anno=>{anno=anno||S.anno;return META_EMI.filter(m=>anno>=m.da&&anno<=(m.a||9999))};
+const linguaMeta=m=>perAnno(m.lingua,S.anno);
+const stagMeta=m=>!!perAnno(m.stag,S.anno);
+/* cosa manca per partire (vuoto = si può) */
+function requisitiMeta(m){
+  const o=[],L=linguaMeta(m);
+  if(S.eta<(m.etaMin||18))o.push(`${m.etaMin||18} anni`);
+  if(S.abil.lingue<L)o.push(`lingue almeno ${L}`);
+  if(m.visto&&S.anno>=m.visto&&S.istr.liv<2)o.push('un diploma o una laurea');
+  return o;
+}
+const metaPossibili=()=>metaDisponibili().filter(m=>requisitiMeta(m).length===0);
+const esportabile=j=>!!j&&!j.conc&&!j.elez&&!j.pt&&!j.nascosto&&!SPORTIVI.includes(j.id)&&!CONTR_NAZ.includes(j.id)&&!SENZA_SQUADRA.includes(j.id)&&lavoroInEpoca(j);
+/* il lavoro che aspetta all'estero: operaio dove si reclutano braccia, altrimenti lo stesso mestiere, altrimenti uno accessibile */
+function lavoroEstero(m){
+  if(m.mina)return {j:JOB.ope,liv:0,mina:1};
+  if(perAnno(m.op,S.anno))return {j:JOB.ope,liv:0};
+  const L=S.lavoro;
+  if(L&&esportabile(JOB[L.id]))return {j:JOB[L.id],liv:L.liv,trasf:1};
+  const c=[].concat(...'RIASEC'.split('').map(lavoriSettore)).filter(esportabile);
+  if(!c.length)return {j:JOB.ope,liv:0};
+  return {j:pick(c.map(j=>[j,matchLavoro(j.id)+r(-10,10)]).sort((x,y)=>y[1]-x[1]).slice(0,4))[0],liv:0};
+}
+function offertaMeta(m){const l=lavoroEstero(m);return {m:m.id,j:l.j.id,liv:l.liv,trasf:l.trasf?1:0,mina:l.mina?1:0}}
+/* fino a 3 proposte tra le mete possibili adesso, pesate */
+function offerteEstero(max){
+  const pool=metaPossibili(),o=[];
+  while(pool.length&&o.length<(max||3)){const m=pesata(pool.map(x=>[x,perAnno(x.w,S.anno)||2]));pool.splice(pool.indexOf(m),1);o.push(offertaMeta(m))}
+  return o;
+}
+const feMeta=m=>perAnno(m.f,S.anno)*(stagMeta(m)?.75:1);
+const stipEstero=o=>{const m=META_EMI.find(x=>x.id===o.m);return Math.round(stipLiv(JOB[o.j],o.liv)*feMeta(m)*fattoreGenere())};
+/* lo stipendio all'estero: fattoreZona() lo chiama quando zonaMia() è «Estero» */
+function fattoreEsteroOra(){
+  const m=metaDi(S.citta);if(!m)return 1;
+  const E=S.fatti.estero;
+  return perAnno(m.f,S.anno)*(E&&E.stag?.75:1);
+}
+const costoEstero=m=>P(m.costo);
+const alloggioAzienda=()=>({tipo:'affitto',n:'Alloggio dell\'azienda',costo:Math.round(P(2400)/100)*100});
+
+/* ---------- Partire ---------- */
+/* chi vive con te e non può venire (stagionale): partner e figli minorenni restano «a casa», cioè lontani */
+function lasciaFamiglia(da,fam){
+  for(const p of S.relazioni){
+    if(!p.vivo)continue;
+    if(['Partner','Coniuge'].includes(p.ruolo)&&p.conv){p.conv=false;p.lontano=true;p.dove=da;fam.push(p.id)}
+    else if(p.ruolo==='Figlio'&&p.eta<18&&!p.fuori&&!p.conEx){p.conEx=true;p.lontano=true;p.dove=da;fam.push(p.id)}
+  }
+}
+/* la famiglia ti raggiunge (permesso B) oppure torni tu da loro */
+function ricongiungi(ids){
+  const E=S.fatti.estero;let n=0;
+  for(const id of (ids||(E&&E.fam)||[])){
+    const p=persona(id);if(!p||!p.vivo)continue;
+    p.lontano=false;p.dove=null;n++;relD(p,8);
+    if(['Partner','Coniuge'].includes(p.ruolo))p.conv=true;
+    else if(p.eta>=18)p.fuori=true;
+    p.conEx=false;
+  }
+  if(E)E.fam=[];
+  return n;
+}
+function assumiEstero(o,m){
+  const j=JOB[o.j];
+  assumi(j);
+  const L=S.lavoro;
+  if(o.liv>0){L.liv=o.liv;L.nome=nomeJob(j,o.liv);L.stip=Math.round(stipLiv(j,o.liv)*(1+r(-3,6)/100)*fattoreGenere()*fattoreZona(j));S.ultimoLavoro=L.nome}
+  L.contratto={t:'ind'};L.estero=m.id;if(o.mina)L.miniera=1;
+  if(L.sq===null&&squadraPossibile(L)){L.sq=undefined;iniziaSquadra(false)}
+  return L;
+}
+/* o: l'offerta; x: i dati dell'evento (x.off = c'è un'offerta di lavoro vera, x.v = visto già garantito) */
+function avviaEstero(o,x){
+  const m=META_EMI.find(k=>k.id===o.m),a=S.anno,costo=costoEstero(m);
+  if(S.soldi<costo)return [`Ti servono ${eur(costo)} tra viaggio e primo mese: per ora non ci sei.`,'x'];
+  const perm=perAnno(m.perm,a);
+  if(perm!==undefined&&perm<1&&!chance(perm)){soldi(-P(80));mod('felicita',-3);return ['Il permesso di lavoro non arriva. Hai speso in carte e raccomandate, e resti dove sei.','b']}
+  if(m.visto&&a>=m.visto&&!(x&&x.off)&&!chance(.55)){mod('felicita',-2);return ['Senza un\'offerta di lavoro che ti sponsorizzi, il visto non viene concesso.','b']}
+  const da=S.citta,prov=S.prov,stag=stagMeta(m),fam=[];
+  soldi(-costo);
+  vaiA(m.n,null);
+  if(stag)lasciaFamiglia(da,fam);
+  S.fatti.estero={id:m.id,n:m.n,t:S.t,da,prov,stag:stag?1:0,fam,mina:o.mina?1:0};   // prima dell'assunzione: lo stipendio dello stagionale ne dipende
+  const L=assumiEstero(o,m);
+  if(stag||o.mina)S.casa=alloggioAzienda();
+  S.fatti.vissutoEstero=(S.fatti.vissutoEstero||0)+1;
+  mod('felicita',-2);
+  futuro(.5,'car_estero2',{x:{}});
+  futuro(3,'car_estero3',{x:{}});
+  const lavoro=`${L.nome.toLowerCase()}, con una RAL di ${eur(L.stip)}`;
+  let t=`Parti per ${m.n}. Ti aspetta un posto da ${lavoro}.`;
+  if(stag)t+=` Hai il permesso da stagionale: ${fam.length?'la famiglia resta a casa, e chiamarla non si può':'niente famiglia al seguito, e non si può chiamarla'}. L'azienda ti dà un letto in una baracca.`;
+  else if(o.mina)t+=' Dormirai in una baracca vicino al pozzo.';
+  return [t,'g'];
+}
+/* tornare in Italia (o altrove): la famiglia si riunisce, il periodo estero si chiude */
+function tornatoDaEstero(){
+  const E=S.fatti.estero;if(!E)return;
+  const n=ricongiungi();
+  S.fatti.esteroMesi=(S.fatti.esteroMesi||0)+(S.t-E.t);
+  S.fatti.esteroStorico={id:E.id,n:E.n,t:E.t,a:S.t};
+  delete S.fatti.estero;
+  if(n)log('La tua famiglia vi riunisce di nuovo: ricominciate insieme.','g');
+}
+
+/* ---------- Ogni mese ---------- */
+function meseEstero(){
+  const E=S.fatti.estero;
+  if(!E){
+    /* un'offerta da fuori: più spesso a chi è senza lavoro e a chi vive al Sud, meno a chi ha figli piccoli o una famiglia in casa */
+    if(!S.azienda&&S.eta>=20&&S.eta<=45&&!S.pensione&&S.carcere===0&&!coda.length&&S.scuola.stato==='finita'
+      &&S.t-(S.fatti.esteroOffT===undefined?-999:S.fatti.esteroOffT)>=60){
+      const p=(S.lavoro?.0012:.004)*(alSud(zonaMia())?2:1)*(minoriConTe()?.5:1)*(convivente()?.6:1);
+      if(chance(p)&&metaPossibili().length){S.fatti.esteroOffT=S.t;coda.push({e:EV.car_estero,d:{x:{off:1}}})}
+    }
+    return;
+  }
+  if(S.citta!==E.n){tornatoDaEstero();return}
+  if(S.abil.lingue<75&&chance(.12))S.abil.lingue=clamp(S.abil.lingue+1);
+  if(E.stag&&E.fam&&E.fam.length&&chance(.35)){mod('felicita',-1);S.bis.stress=clamp(S.bis.stress+1)}
+  const L=S.lavoro;
+  if(L&&L.miniera){
+    S.fatti.minieraMesi=(S.fatti.minieraMesi||0)+1;
+    if(chance(.25))mod('salute',-1);                                             // −3 punti l'anno, senza una malattia nuova
+    if(chance(.004)){mod('salute',-r(8,22));pesa(8,4);log('Un cedimento in galleria: ti portano fuori ferito.','b')}
+  }
 }
 
 /* ================= EVENTI =================
@@ -5155,7 +5327,7 @@ ev({id:'sassi',min:16,max:70,once:1,cond:inProv('MT'),t:'Hollywood tra i Sassi',
 ev({id:'emigrazione',min:19,max:35,cond:()=>inZona('Sud','Isole')()&&!S.lavoro&&S.carcere===0&&S.scuola.stato==='finita',t:'La valigia',x:'Tanti amici sono partiti per lavorare al Nord o all\'estero. Parti anche tu?',c:[
   {l:'Parto per Milano',fx:()=>{const t=vaiA('Milano','MI');mod('felicita',-3);return [t[0]+' Ti mancherà casa.','']}},
   {l:'Parto per Torino',fx:()=>{const t=vaiA('Torino','TO');mod('felicita',-3);return [t[0]+' Ti mancherà casa.','']}},
-  {l:'Vado all\'estero, a Londra',cond:()=>S.abil.lingue>=30,fx:()=>{const t=vaiA('Londra',null);mod('felicita',-4);return [t[0],'']}},
+  {l:'Vado all\'estero',sub:'Dove cercano gente adesso',cond:()=>metaPossibili().length>0&&!S.fatti.estero,fx:()=>{coda.unshift({e:EV.car_estero,d:{x:{off:1}}});return null}},
   {l:'Resto qui',e:{f:2},r:'Questa terra merita qualcuno che resti.'}]});
 ev({id:'processione',min:16,max:75,cond:inReg('Campania','Puglia','Calabria','Sicilia','Basilicata','Sardegna'),t:'La processione',x:'Ti chiedono di portare la statua del santo patrono durante la processione.',c:[
   {l:'Accetta l\'onore',e:{s:-2,k:4,f:5},r:'Ore sotto il peso della statua, tra fuochi d\'artificio e banda.'},
@@ -7747,8 +7919,8 @@ ev({id:'ita_cig',link:1,k:'Lavoro',cond:()=>!!S.lavoro,t:'Cassa integrazione',x:
   {l:'Accetti l\'incentivo e te ne vai',cond:()=>S.anno!==2020&&!!S.lavoro,sub:()=>S.lavoro?`${eur(Math.round(ralEff(S.lavoro)/13*6))} di buonuscita`:'',pers:{O:1,N:-1},fx:()=>{if(!S.lavoro)return;const x=Math.round(ralEff(S.lavoro)/13*6);soldi(x);licenzia('Firmi la risoluzione con l\'incentivo e lasci l\'azienda.');return ['Sei mesi di stipendio come incentivo, la liquidazione e l\'indennità di disoccupazione. Ora tocca cercare altro.','']}}]});
 
 /* ---------- Tornare giù: dopo anni al Centro-Nord o all'estero (S.fatti.emigrato) ---------- */
-ev({id:'ita_ritorno',link:1,k:'Casa',cond:()=>!!S.fatti.emigrato&&!S.fatti.ritornato,t:'Tornare giù',x:()=>{const em=S.fatti.emigrato,n=Math.max(1,Math.round((S.t-em.t)/12)),m=vivi(['Madre'])[0];
-    return `Sono passati ${n} anni da quando sei partit${g('o','a')} da ${em.da}. ${m?'Tua madre, al telefono, te lo chiede ogni volta: «E quando torni?»':'Ogni estate, quando scendi, ti chiedi se non sia il momento di tornare per sempre.'}${S.pensione?' Ora che sei in pensione, niente ti tiene più qui.':''}`},c:[
+ev({id:'ita_ritorno',link:1,k:'Casa',cond:()=>!!S.fatti.emigrato&&!S.fatti.ritornato,t:'Tornare a casa',x:()=>{const em=S.fatti.emigrato,n=Math.max(1,Math.round((S.t-em.t)/12)),m=vivi(['Madre'])[0];
+    return `Sono passati ${n} anni da quando sei partit${g('o','a')} da ${em.da}. ${m?'Tua madre, al telefono, te lo chiede ogni volta: «E quando torni?»':'Ogni estate, quando torni, ti chiedi se non sia il momento di tornare per sempre.'}${S.pensione?' Ora che sei in pensione, niente ti tiene più qui.':''}`},c:[
   {l:'Torni a casa, per sempre',sub:()=>S.lavoro?'Lasci il lavoro':'',pers:{A:1,O:-1},fx:()=>{const em=S.fatti.emigrato;S.fatti.ritornato=S.t;vaiA(em.da,em.prov);mod('felicita',6);return [`Torni a ${em.da}. I parenti, il dialetto, i pranzi della domenica: sembra che tu non sia mai partit${g('o','a')}. Quasi.`,'g']}},
   {l:'Torni e lavori da remoto',cond:()=>S.anno>=2020&&!!S.lavoro&&REMOTO.includes(S.lavoro.id),sub:'Stesso lavoro, stesso stipendio',pers:{O:1},fx:()=>{const em=S.fatti.emigrato,L=S.lavoro;S.lavoro=null;vaiA(em.da,em.prov);S.lavoro=L;S.fatti.ritornato=S.t;mod('felicita',8);return [`Porti il computer giù a ${em.da}: lo stesso lavoro, lo stipendio di prima e il pranzo con la famiglia la domenica.`,'g']}},
   {l:'Resti: ormai la tua vita è qui',pers:{O:1,A:-1},fx:()=>{mod('felicita',-1);return ['Giù ci torni per le feste. Casa, ormai, è dove sei.','']}},
@@ -7977,6 +8149,87 @@ COL_EV.push(
   {id:'car_proprio',w:12,rip:8,ok:()=>proprioPossibile()&&S.soldi+tfrNetto()>=Math.min(...opzioniProprio().map(costoProprio))+P(3000)&&S.eta>=26,d:()=>({x:{}})},
   {id:'car_collega_via',w:2,rip:8,ok:sq=>!sportSq()&&S.eta>=25&&S.eta<=55&&(S.lavoro.anni||0)>=2&&!isPiva(S.lavoro)&&sq.colleghi.some(p=>p.rapporto>=55&&p.eta>=24&&p.eta<=58),
     d:sq=>({p:pick(sq.colleghi.filter(p=>p.rapporto>=55&&p.eta>=24&&p.eta<=58))})});
+
+/* ================= EMIGRARE (ROADMAP Fase 5.3c) =================
+   car_estero (partire?) → car_estero2 (i primi mesi) → car_estero3 (tre anni dopo: stabilirsi, il permesso B e la famiglia, tornare).
+   car_marcinelle (8 agosto 1956, solo per chi lavora in miniera a Charleroi). Le funzioni e le mete per epoca sono in c12_estero.js. */
+
+/* le proposte si calcolano una volta e restano in d.x.o (x.meta = una meta scelta dal giocatore, x.off = c'è un'offerta di lavoro vera) */
+function offerteDi(d){
+  d.x=d.x||{};
+  if(!d.x.o){const m=d.x.meta?META_EMI.find(k=>k.id===d.x.meta):null;d.x.o=m?[offertaMeta(m)]:offerteEstero()}
+  return d.x.o;
+}
+ev({id:'car_estero',link:1,k:'Emigrare',t:'Partire?',cond:()=>S.eta>=16&&S.eta<=62&&!S.pensione&&S.carcere===0&&!S.fatti.estero&&!S.azienda&&metaDisponibili().length>0,
+  x:d=>{
+    const o=offerteDi(d),m=d.x.meta?META_EMI.find(k=>k.id===d.x.meta):null;
+    if(m){const ric=requisitiMeta(m);
+      return `${m.nota} ${ric.length?`Per ora ti manca: ${ric.join(', ')}.`:'Partire vuol dire rifarsi una vita da zero: una casa, un lavoro, degli amici.'}${m.visto&&S.anno>=m.visto?' Dal 2021, dopo la Brexit, per lavorare nel Regno Unito serve un visto, e di solito un datore di lavoro che ti sponsorizzi.':''}`}
+    return S.anno<1985?'Dalle lettere di chi è già partito, e dai racconti al bar, sai che all\'estero cercano gente che abbia voglia di lavorare. Pagano meglio, e il posto c\'è.'
+      :'Un conoscente partito qualche anno fa ti scrive: dove lavora cercano gente, e pagano meglio che qui. Ti basterebbe fare la valigia.';
+  },
+  c:d=>{
+    const o=offerteDi(d),out=[];
+    for(const f of o){
+      const m=META_EMI.find(k=>k.id===f.m),j=JOB[f.j],ric=requisitiMeta(m);
+      if(ric.length){out.push({l:`${m.n}: non ancora`,sub:`Ti manca: ${ric.join(', ')}`,_incl:0,fx:()=>[`Per ${m.n} ti manca ancora: ${ric.join(', ')}.`,'']});continue}
+      out.push({l:`${m.n} (${m.paese}): ${nomeJob(j,f.liv).toLowerCase()}`,
+        sub:()=>`${eur(stipEstero(f))} RAL · ${eur(costoEstero(m))} per partire${stagMeta(m)?' · permesso da stagionale: la famiglia resta a casa':''}`,
+        cond:()=>S.soldi>=costoEstero(m),pers:{O:3,E:1},fx:d=>avviaEstero(f,d.x)});
+    }
+    return out.concat([{l:'Resti dove sei',_incl:0,pers:{C:2},r:'Le valigie restano nell\'armadio. Forse un\'altra volta.'}]);
+  }});
+
+ev({id:'car_estero2',link:1,k:'Emigrare',t:'I primi mesi',cond:()=>!!S.fatti.estero&&S.fatti.estero.n===S.citta,
+  x:d=>{const E=S.fatti.estero,L=S.lavoro;
+    if(L&&L.miniera)return `Sei mesi nel pozzo: la sveglia prima dell'alba, il buio, la polvere nera nei capelli anche la domenica. Dei compagni non capisci metà delle parole, ma sulla paga non ci sono equivoci.`;
+    const fam=(E.fam||[]).map(persona).filter(p=>p&&p.vivo);
+    if(E.stag)return `Sei mesi a ${E.n}, con il permesso da stagionale. Il lavoro è duro e la baracca è fredda${fam.length?`; a casa ${fam.length>1?'ti aspettano':'ti aspetta'} ${fam.map(p=>p.nome).join(' e ')}, e le lettere ci mettono una settimana`:''}.`;
+    return `Sei mesi a ${E.n}. La lingua la capisci a metà, il caffè non sa di niente e la sera, tornando a casa, ti manca il tuo paese.`},
+  c:d=>{const E=S.fatti.estero,fam=(E.fam||[]).map(persona).filter(p=>p&&p.vivo),figli=fam.filter(p=>p.ruolo==='Figlio'&&p.eta<18),
+      casa=vivi(['Madre','Padre','Partner','Coniuge']).filter(p=>!convive(p)||p.lontano);
+    return [
+    {l:'Studi la lingua la sera',pers:{C:2},fx:()=>{S.abil.lingue=clamp(S.abil.lingue+5);S.bis.energia=clamp(S.bis.energia-6);return ['Un libro di grammatica e un dizionario consumato. Dopo qualche settimana capisci anche quello che dicono al bar.','g']}},
+    {l:'Cerchi gli altri italiani',pers:{E:2,A:1},fx:()=>{S.bis.soc=clamp(S.bis.soc+12);mod('felicita',3);S.abil.lingue=clamp(S.abil.lingue+1);
+      const p=chance(.7)?nuovoAmico(true):null;
+      return [p?`Il circolo degli italiani, la domenica: una partita a carte, un piatto di pasta. Conosci ${p.nome}.`:'Il circolo degli italiani, la domenica: una partita a carte, un piatto di pasta e, per qualche ora, sembra di essere a casa.','g']}},
+    {l:'Ti butti tra la gente del posto',pers:{O:3,E:1},fx:()=>{S.abil.lingue=clamp(S.abil.lingue+4);mod('felicita',-1);S.bis.soc=clamp(S.bis.soc+6);
+      const p=chance(.4)?nuovoAmico(true):null;
+      return [p?`All'inizio è un esame continuo, poi arrivano le battute. Conosci ${p.nome}, che ti corregge ogni volta che sbagli.`:'All\'inizio è un esame continuo, poi arrivano le battute e i primi inviti a cena.','g']}},
+    {l:'Mandi metà dello stipendio a casa',cond:()=>casa.length>0&&S.soldi>=P(1200),pers:{A:2},fx:()=>{const p=pick(casa);soldi(-P(1200));relD(p,8);ricorda(p,'Ti ha mandato i soldi da lontano',3);mod('felicita',2);S.karma=clamp(S.karma+1);return [`Il vaglia parte ogni mese: ${p.nome} lo aspetta più della tua lettera.`,'g']}},
+    {l:'Fai venire di nascosto un figlio',sub:'Il permesso non lo prevede',cond:()=>E.stag&&figli.length>0,pers:{E:2,C:-2},fx:()=>{
+      const f=figli[0];
+      if(chance(.25)){vaiA(E.da,E.prov);mod('felicita',-6);return [`Un vicino ti denuncia. Ti danno ventiquattr'ore per lasciare il paese, e perdi il posto.`,'b']}
+      f.conEx=false;f.lontano=false;f.dove=null;E.fam=(E.fam||[]).filter(id=>id!==f.id);mod('felicita',5);pesa(6,3);
+      return [`${f.nome} vive nascost${gp(f,'o','a')} in baracca: non può uscire, non può andare a scuola, non può parlare ad alta voce. Ma è con te. Succedeva a tanti: li chiamarono i «bambini proibiti».`,'g']}}];}});
+
+ev({id:'car_estero3',link:1,k:'Emigrare',t:'Tre anni dopo',cond:()=>!!S.fatti.estero&&S.fatti.estero.n===S.citta,
+  x:d=>{const E=S.fatti.estero,L=S.lavoro,fam=(E.fam||[]).map(persona).filter(p=>p&&p.vivo);
+    if(E.stag)return `Dopo tre anni di stagioni consecutive l'ufficio degli stranieri ti propone il permesso B: annuale, rinnovabile, e soprattutto con il diritto di chiamare la famiglia.${fam.length?` ${fam.map(p=>p.nome).join(' e ')} ${fam.length>1?'aspettano':'aspetta'} solo questo.`:''}`;
+    return `Sono passati tre anni da quando sei partit${g('o','a')}. A ${E.n} hai una casa, un lavoro${L?` da ${L.nome.toLowerCase()}`:''} e ormai ti capiscono quando parli. Ma casa, quella vera, dov'è?`},
+  c:d=>{const E=S.fatti.estero,fam=(E.fam||[]).map(persona).filter(p=>p&&p.vivo),L=S.lavoro;
+    const fuoriStag=()=>{if(E.stag){E.stag=0;if(L)L.stip=Math.round(L.stip/.75)}};
+    return [
+    {l:'Chiami la famiglia',sub:()=>`${eur(P(2500))} per la casa e il trasloco`,cond:()=>E.stag&&fam.length>0&&S.soldi>=P(2500),pers:{A:2},fx:()=>{soldi(-P(2500));fuoriStag();ricongiungi();S.casa=affittoBase('Bilocale');mod('felicita',12);S.bis.soc=clamp(S.bis.soc+10);
+      return [`Per la prima volta in tre anni vi ritrovate tutti insieme. La casa è piccola, ma ha una porta sola, e a chiuderla siete voi.`,'g']}},
+    {l:'Prendi il permesso B',sub:'Più stipendio, una casa vera',cond:()=>E.stag&&fam.length===0,pers:{C:1},fx:()=>{fuoriStag();S.casa=affittoBase('Monolocale');mod('felicita',4);return ['Il permesso B cambia tutto: un contratto vero, una stanza tutta per te, la possibilità di restare.','g']}},
+    {l:'Ti stabilisci qui',cond:()=>!E.stag,pers:{O:2,C:1},fx:()=>{E.fermo=1;S.abil.lingue=clamp(S.abil.lingue+3);mod('felicita',4);return [`Rinnovi il contratto di affitto e cambi la residenza. ${E.n} non è casa, ma comincia a somigliarle.`,'g']}},
+    {l:'Torni in Italia',sub:()=>`Torni a ${E.da}`,pers:{A:1,O:-1},fx:()=>{const da=E.da,prov=E.prov;vaiA(da,prov);mod('felicita',4);return [`Torni a ${da}. Dopo tre anni la lingua, i sapori e i volti ti sembrano più piccoli e più cari.`,'g']}}];}});
+
+/* ---------- Marcinelle: 8 agosto 1956 (in STORIA per tutti; l'evento solo per chi lavora in miniera a Charleroi) ---------- */
+ev({id:'car_marcinelle',link:1,k:'Storia',t:'Marcinelle',cond:()=>true,
+  x:d=>{const c=squadra().colleghi;d.x=d.x||{};if(d.x.p===undefined)d.x.p=c.length?pick(c).id:0;const p=d.x.p?persona(d.x.p):null;
+    return `L'8 agosto 1956, nel pozzo del Bois du Cazier a Marcinelle, un incendio a più di mille metri sotto terra intrappola i minatori. I morti saranno 262, e 136 sono italiani. Tu non eri in quel turno.${p?` ${p.nome}, con cui lavoravi, sì.`:''}`},
+  c:d=>[
+    {l:'Aspetti con gli altri al cancello',_incl:0,pers:{A:2},fx:d=>{const p=d.x.p?persona(d.x.p):null;
+      if(p&&p.vivo){mortePersona(p);ricorda(p,'È morto a Marcinelle',-3)}
+      pesa(14,6);mod('felicita',-10);segnaVita('lutto');
+      return ['Per giorni nessuno parla. Il cancello, le donne, le liste dei nomi. Dopo, niente è più come prima.','b']}},
+    {l:'Torni in Italia',_incl:0,pers:{N:2},fx:d=>{const p=d.x.p?persona(d.x.p):null;if(p&&p.vivo)mortePersona(p);const E=S.fatti.estero,da=E?E.da:S.citta,pr=E?E.prov:S.prov;
+      if(E)vaiA(da,pr);pesa(14,6);mod('felicita',-8);return ['Fai la valigia in una notte. In Italia dirai a tutti che in fondo a quel pozzo non ci scendi più.','b']}}]});
+
+COL_EV.push(
+  {id:'car_estero',w:2,rip:8,ok:()=>S.eta>=20&&S.eta<=45&&!S.fatti.estero&&!S.azienda&&!sportSq()&&metaPossibili().length>0&&(S.fatti.cercaAltro!==undefined||soddLavoro()<62),d:()=>({x:{off:1}})});
 
 /* ================= AZIONI ================= */
 function fatto(k){return !!S.azioni[k]}
@@ -8385,9 +8638,9 @@ function apriVeicolo(id){
     ...(c.valore>0?[{l:'Vendi',sub:`Incassi circa ${eur(vend)}`,fx:()=>{soldi(vend);S.veicoli=S.veicoli.filter(x=>x!==c);return [`Vendi ${c.n.toLowerCase()} e incassi ${eur(vend)}.`,vend>=0?'':'b']}}]:[{l:'Restituisci',fx:()=>{S.veicoli=S.veicoli.filter(x=>x!==c);return ['Restituisci il veicolo.','']}}])]});
 }
 function trasferisciti(){
-  const ext=S.abil.lingue>=40||S.istr.cert.includes('Inglese B2');
-  showSheet({k:'Trasloco',t:'Dove vuoi vivere?',p:`Cerca tra tutti i comuni italiani. Se hai un lavoro dipendente lo perdi e le amicizie si allentano.${ext?' Puoi anche andare all\'estero.':' Per l\'estero ti servono le lingue (abilità 40 o inglese B2).'}`,chiudi:true,
-    cerca:{ph:'Cerca un comune: Lecce, Bra, Cefalù…',trova:q=>cercaLuoghi(q,ext).filter(c=>!(c.n===S.citta&&c.s===S.prov)).slice(0,30).map(c=>{const inf=cittaInfo(c.n,c.s);return {l:nomeLuogo(c.n,c.s),sub:`${inf.estero?'Estero':inf.reg}${c.p&&!inf.estero?` · ${nf(c.p)} abitanti`:''} · case ${eur(inf.mq*S.mondo.mattone)} al m²`,fx:()=>vaiA(c.n,c.s)}})}});
+  const ext=!S.fatti.estero&&S.eta<=62&&metaDisponibili().length>0;   // per l'estero ogni meta ha le sue regole (c12_estero.js)
+  showSheet({k:'Trasloco',t:'Dove vuoi vivere?',p:`Cerca tra tutti i comuni italiani. Se hai un lavoro dipendente lo perdi e le amicizie si allentano.${ext?' Puoi anche cercare lavoro all\'estero: ogni paese ha le sue regole.':''}`,chiudi:true,
+    cerca:{ph:'Cerca un comune: Lecce, Bra, Cefalù…',trova:q=>cercaLuoghi(q,ext).filter(c=>!(c.n===S.citta&&c.s===S.prov)).slice(0,30).map(c=>{const inf=cittaInfo(c.n,c.s);return {l:nomeLuogo(c.n,c.s),sub:`${inf.estero?'Estero':inf.reg}${c.p&&!inf.estero?` · ${nf(c.p)} abitanti`:''} · case ${eur(inf.mq*S.mondo.mattone)} al m²`,fx:()=>{if(inf.estero){coda.unshift({e:EV.car_estero,d:{x:{meta:metaDi(c.n).id}}});return null}return vaiA(c.n,c.s)}}})}});
 }
 /* Dopo un trasloco: chi vive già nella nuova città non è più «lontano»; chi resta nella vecchia lo diventa */
 function dopoTrasloco(da){
@@ -8399,6 +8652,7 @@ function dopoTrasloco(da){
     if(p.lontano&&p.dove===S.citta){p.lontano=false;p.dove=null;p.rapporto=clamp(p.rapporto+5);log(`Ora tu e ${p.nome} vivete nella stessa città.`,'g')}
     else if(!p.lontano&&da&&da!==S.citta){p.lontano=true;p.dove=da}
   }
+  if(S.fatti.estero&&!luogoC().estero)tornatoDaEstero();   // tornato dall'estero: la famiglia rimasta a casa si riunisce
 }
 function vaiA(n,s){
   const da=S.citta;
@@ -8681,7 +8935,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='d7edc154';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='87ec004e';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 

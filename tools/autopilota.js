@@ -25,6 +25,8 @@ window.AP={
   const F=this.pref();
   // mettersi in proprio (car_proprio): ogni tanto, circa 1 volta su 3, sceglie la partita IVA nel proprio mestiere, così fuzz e invarianti provano anche quel percorso
   if(tit==='In proprio?'){const b=L.find(x=>/nel tuo mestiere/.test(x.textContent));if(b&&chance(1/3)){b.click();return true}}
+  // emigrare (car_estero): accetta circa 1 proposta su 3, altrimenti resta
+  if(tit==='Partire?'){const b=L.filter(x=>/\(.+\): /.test(x.textContent)&&!/non ancora/.test(x.textContent));if(b.length&&chance(.35)){pick(b).click();return true}const n=L.find(x=>/^Resti/.test(x.textContent));if(n){n.click();return true}}
   // a chi sei attratt*: secondo l'orientamento (S.orient), non a caso
   const bU=L.find(x=>x.textContent.startsWith('Uomini')),bD=L.find(x=>x.textContent.startsWith('Donne'));
   if(bU&&bD){const o=S.orient||'etero';const t=o==='bi'?L.find(x=>x.textContent.startsWith('Entrambi')):((o==='omo')===(S.sesso==='M')?bU:bD);(t||bD).click();return true}

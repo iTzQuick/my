@@ -407,7 +407,7 @@ function meseSalute(){
   const pA=(.012+Math.max(0,e-30)*.0006+(S.dip.fumo?.01:0)+(S.dip.alcol?.01:0)+(S.salute<40?.03:0)+(B.stress>75?.01:0))/12;
   if(e>=3&&chance(pA*inv)){ammala(pick(MALATTIE[2]),2);mod('salute',-6)}
   // croniche: crescono con l'età (la pressione alta riguarda oltre metà degli anziani)
-  const cron=[['Ipertensione',e<40?.002:e<55?.012:e<70?.025:.03],['Diabete di tipo 2',(e<40?.0005:e<60?.004:e<75?.008:.01)*(B.forma<35?1.6:1)],['Artrosi',e<50?0:.012],['Asma',.0008],['Emicrania cronica',e>=15&&e<=50?(S.sesso==='F'?.004:.0015):0],['BPCO',S.dip.fumo&&e>=45?.006:0]];
+  const cron=[['Ipertensione',e<40?.002:e<55?.012:e<70?.025:.03],['Diabete di tipo 2',(e<40?.0005:e<60?.004:e<75?.008:.01)*(B.forma<35?1.6:1)],['Artrosi',e<50?0:.012],['Asma',.0008],['Emicrania cronica',e>=15&&e<=50?(S.sesso==='F'?.004:.0015):0],['BPCO',(S.dip.fumo&&e>=45?.006:0)+((S.fatti.minieraMesi||0)>=12&&e>=40?.005:0)]];
   for(const [n,p] of cron)if(p&&e>=3&&!haMal(n)&&chance(p/12)){ammala(n,3);mod('salute',-4)}
   // cuore: più facile con pressione alta, diabete e fumo
   if(e>=55&&!haMal('Insufficienza cardiaca')&&chance((.0015+(haMal('Ipertensione')?.002:0)+(haMal('Diabete di tipo 2')?.002:0)+(S.dip.fumo?.002:0))/12)){ammala('Insufficienza cardiaca',4);mod('salute',-10)}
@@ -434,8 +434,8 @@ function causaMorte(){
   const v=pesata(voci);
   if(v!=='base')return v.tum||TUMORE[v.n]?causaTumore(v.n):(CAUSE[v.n]||'per una grave malattia');
   const e=S.eta,manuale=S.lavoro&&MANUALI.includes(S.lavoro.id);
-  const L=e<30?[['in un incidente stradale',40],['in un incidente in montagna',8],['in un incidente in mare',6],['per un malore improvviso',20],['in un incidente sul lavoro',manuale?10:0]]
-    :e<60?[['per un infarto',30],['per un ictus',15],['per un malore improvviso',15],['in un incidente stradale',12],['in un incidente sul lavoro',manuale?6:0],['per una polmonite',4]]
+  const L=e<30?[['in un incidente stradale',40],['in un incidente in montagna',8],['in un incidente in mare',6],['per un malore improvviso',20],['in un incidente sul lavoro',manuale?(S.lavoro.miniera?20:10):0]]
+    :e<60?[['per un infarto',30],['per un ictus',15],['per un malore improvviso',15],['in un incidente stradale',12],['in un incidente sul lavoro',manuale?(S.lavoro.miniera?12:6):0],['per una polmonite',4]]
     :e<80?[['per un infarto',25],['per un ictus',22],['per una polmonite',7],['per un\'insufficienza respiratoria',S.dip.fumo?9:4],['per un malore improvviso',3],['per le conseguenze di una caduta',3],['per un\'infezione',8],['per un\'insufficienza renale',7],['per una malattia del fegato',4],['serenamente, nel sonno',4]]
     :[['per un infarto',18],['per un ictus',18],['per una polmonite',10],['per un\'insufficienza respiratoria',4],['per le conseguenze di una caduta',7],['per un\'infezione',10],['per un\'insufficienza renale',8],['serenamente, nel sonno',10],['per un malore improvviso',2]];
   return pesata(L);

@@ -31,12 +31,13 @@ JS = r'''
    const V={anno,sesso:x,zona:luogo().zona,lire:null,euro:null,pens:null,naja:null,campioni:[]};
    let k=0;
    while(S.vivo&&k<1500){k++;AP.mese();risolvi();mese();risolvi();
+     if(S.fatti.estero&&!V.est)V.est={n:S.fatti.estero.n,anno:S.anno,stag:S.fatti.estero.stag,ok:metaDisponibili(S.anno).some(m=>m.n===S.fatti.estero.n)};
      if(S.anno===1990&&S.mese===0&&V.lire===null)V.lire=eur(1000);
      if(S.anno===2010&&S.mese===0&&V.euro===null)V.euro=eur(1000);
      if(S.pensione&&V.pens===null)V.pens={anno:S.anno,eta:S.eta,contr:Math.round(S.contributi||0),tipo:S.fatti.pensioneTipo,retr:Math.round(S.anniRetr||0)};
      if(S.mese===S.meseNascita&&[30,40,50].includes(S.eta))V.campioni.push({eta:S.eta,zona:luogo().zona,lav:!!S.lavoro,ral:S.lavoro?Math.round(ralEff(S.lavoro)/S.mondo.ip):0});
    }
-   V.naja=S.fatti.naja||null;V.screen=S.fatti.screening||0;V.cig=S.fatti.cigN||0;V.emig=S.fatti.emigrato||0;V.eta=S.eta;
+   V.naja=S.fatti.naja||null;V.screen=S.fatti.screening||0;V.cig=S.fatti.cigN||0;V.emig=S.fatti.emigrato||0;V.eta=S.eta;if(!V.est&&S.fatti.vissutoEstero)V.est={n:'?',anno:0,ok:true};
    vite.push(V);
   }catch(e){errs.push(anno+': '+e.message+' | '+(e.stack||'').split('\n').slice(0,2).join(' / '))}
  }
@@ -73,5 +74,9 @@ if C:
         L = [c for c in C if c['zona'] == z]
         if L: print(f"  {z:10} occupati {sum(c['lav'] for c in L)/len(L):.0%} · stipendio mediano {st.median([c['ral'] for c in L if c['lav']] or [0]):.0f} € di oggi ({len(L)} campioni)")
 print('Screening fatti per vita:', round(st.mean(v['screen'] for v in V), 1), '· mesi di cassa integrazione:', round(st.mean(v['cig'] for v in V), 1), '· emigrati dal Sud:', sum(1 for v in V if v['emig']))
-ok = len(A) == 0
+EST = [v['est'] for v in V if v.get('est')]
+fuori = [e for e in EST if not e['ok']]
+print(f"Emigrati all'estero: {len(EST)} su {len(V)}" + (' · mete: ' + ', '.join(f"{n} {c}" for n, c in Counter(e['n'] for e in EST).most_common()) if EST else ''))
+print('Mete fuori epoca:', 'nessuna ✓' if not fuori else fuori[:5])
+ok = len(A) == 0 and not fuori
 print('\nANACRONISMI:', 'nessuno ✓' if ok else 'da sistemare')

@@ -85,6 +85,8 @@ JS = r'''
    // Fase 5.3a: capo e colleghi veri (anche una squadra sportiva, a turno) e i dati che gli eventi si aspettano
    if(/^car_/.test(id)){   // Fase 5.3b: scelte di carriera
      if(/^car_(proprio|collega_via)/.test(id)){S.lavoro=null;assumi(JOB.cuoco);S.lavoro.liv=1;S.lavoro.anni=3;S.lavoro.tfr=P(6000);S.soldi=P(100000)}
+     if(/^car_estero/.test(id)){S.abil.lingue=60;S.soldi=P(60000);S.anno=i%2?1985:2015;S.lavoro=null;assumi(JOB.imp);if(id!=='car_estero')avviaEstero(offertaMeta(metaDi(i%2?'Zurigo':'Parigi')),{off:1})}
+     if(id==='car_marcinelle'){S.anno=1955;S.eta=25;S.abil.lingue=60;S.soldi=P(60000);S.lavoro=null;avviaEstero(offertaMeta(metaDi('Charleroi')),{off:1});S.anno=1956}
      if(id==='car_proprio2'&&i%2){S.lavoro=null;assumi(JOB.idra);S.lavoro.liv=1;S.lavoro.contratto={t:'piva',da:S.t};S.lavoro.proprioT=S.t-24}
      if(id==='car_proprio2'&&!(i%2)){S.lavoro=null;nuovaAzienda(AZIENDE[5])}
    }
@@ -101,6 +103,7 @@ JS = r'''
      if(id==='car_proprio')d.x=i%2?{q:sq.colleghi[0].id}:{};
      if(id==='car_proprio2')d.x={k:i%2?'piva':'az'};
      if(id==='car_collega_via'){sq.colleghi[0].rapporto=70}
+     if(id==='car_estero')d.x=i%2?{off:1}:{meta:'parigi'};
      if(id==='prg_imprevisto'||id==='prg_consegna')d.x={q:sq.colleghi[0].id,m:'insieme',s:1,k:['cliente','malattia','budget'][i%3]};
      if(/^prg_riorg[23]$/.test(id))d.x={a:1,m:1};
      if(id==='prg_riorg3'){S.mondo.crisi=i%2===0;S.lavoro.perf=i<4?20:80}

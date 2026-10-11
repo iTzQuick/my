@@ -380,7 +380,7 @@ function mese(silenzioso){
   if(S.carcere===0)meseScuola();
   calendario();
   storiaMese();
-  meseLavoro();meseSquadra();
+  meseLavoro();meseSquadra();meseEstero();
   meseItalia();
   normalizzaRoutine();
   meseRoutine();

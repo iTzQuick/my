@@ -10,7 +10,7 @@ const EPOCA=[
   [/intelligenza artificiale/i,2023],
   [/\b(lockdown|didattica a distanza|green pass|smart working)\b/i,2020],
   [/\b(tik ?tok|reddito di cittadinanza|monopattin[oi] elettric[oi]|pcto)\b/i,2018],
-  [/\b(unione civile|unioni civili|spid|stories)\b/i,2016],
+  [/\b(unione civile|unioni civili|spid|stories|brexit)\b/i,2016],
   [/\b(naspi|rider|influencer|podcast|netflix|airbnb|bitcoin|criptovalut\w*|smartwatch|scooter elettric\w*)\b/i,2015],
   [/\b(spotify|selfie|emoji|instagram|tablet|startup|drone|droni)\b/i,2012],
   [/\b(whatsapp|smartphone|app|videochiamat\w*|streaming|youtuber|meme|hashtag|follower|like|wireless|e-book|vocale|vocali)\b/i,2010],

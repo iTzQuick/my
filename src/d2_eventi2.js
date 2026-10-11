@@ -225,7 +225,7 @@ ev({id:'sassi',min:16,max:70,once:1,cond:inProv('MT'),t:'Hollywood tra i Sassi',
 ev({id:'emigrazione',min:19,max:35,cond:()=>inZona('Sud','Isole')()&&!S.lavoro&&S.carcere===0&&S.scuola.stato==='finita',t:'La valigia',x:'Tanti amici sono partiti per lavorare al Nord o all\'estero. Parti anche tu?',c:[
   {l:'Parto per Milano',fx:()=>{const t=vaiA('Milano','MI');mod('felicita',-3);return [t[0]+' Ti mancherà casa.','']}},
   {l:'Parto per Torino',fx:()=>{const t=vaiA('Torino','TO');mod('felicita',-3);return [t[0]+' Ti mancherà casa.','']}},
-  {l:'Vado all\'estero, a Londra',cond:()=>S.abil.lingue>=30,fx:()=>{const t=vaiA('Londra',null);mod('felicita',-4);return [t[0],'']}},
+  {l:'Vado all\'estero',sub:'Dove cercano gente adesso',cond:()=>metaPossibili().length>0&&!S.fatti.estero,fx:()=>{coda.unshift({e:EV.car_estero,d:{x:{off:1}}});return null}},
   {l:'Resto qui',e:{f:2},r:'Questa terra merita qualcuno che resti.'}]});
 ev({id:'processione',min:16,max:75,cond:inReg('Campania','Puglia','Calabria','Sicilia','Basilicata','Sardegna'),t:'La processione',x:'Ti chiedono di portare la statua del santo patrono durante la processione.',c:[
   {l:'Accetta l\'onore',e:{s:-2,k:4,f:5},r:'Ore sotto il peso della statua, tra fuochi d\'artificio e banda.'},

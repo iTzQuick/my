@@ -16,6 +16,7 @@ const STORIA=[
   {a:1951,m:10,t:'Il Po rompe gli argini: il Polesine finisce sott\'acqua.',ev:'alluvione',dove:inReg0('Veneto')},
   {a:1954,m:0,t:'Nasce la televisione italiana: la RAI trasmette il primo programma. Chi ha un televisore invita i vicini.'},
   {a:1956,m:0,t:'Olimpiadi invernali a Cortina d\'Ampezzo.'},
+  {a:1956,m:7,t:'Marcinelle, in Belgio: un incendio nella miniera del Bois du Cazier uccide 262 minatori, 136 italiani. L\'Italia sospende le partenze per le miniere belghe.',ev:'car_marcinelle',dove:()=>!!S.lavoro&&!!S.lavoro.miniera&&S.citta==='Charleroi'},
   {a:1957,m:1,t:'Arriva Carosello: dopo la pubblicità, tutti i bambini a letto.'},
   {a:1957,m:6,t:'Esce la Fiat Nuova 500: l\'automobile diventa per tutti.'},
   {a:1960,m:7,t:'Olimpiadi di Roma: Abebe Bikila vince la maratona a piedi nudi sull\'Appia Antica.'},
@@ -320,24 +321,26 @@ const alSud=z=>z==='Sud'||z==='Isole';
    I concorsi pubblici e le cariche elettive hanno contratti nazionali: uguali ovunque. */
 const ZONA_STIP={'Nord-ovest':1.06,'Nord-est':1.03,Centro:1,Sud:.92,Isole:.91};
 const CONTR_NAZ=['ins','maes','ric','inf','med','post'];   // scuola, sanità pubblica, Poste: contratti nazionali anche senza concorso nel gioco
-function fattoreZona(j){return j&&(j.conc||j.elez||CONTR_NAZ.includes(j.id))?1:(ZONA_STIP[zonaMia()]||1)}
+function fattoreZona(j){return j&&(j.conc||j.elez||CONTR_NAZ.includes(j.id))?1:(zonaMia()==='Estero'?fattoreEsteroOra():(ZONA_STIP[zonaMia()]||1))}
 /* Occupazione (ISTAT 2023, 20–64 anni: Nord ~76%, Centro ~72%, Mezzogiorno ~52%): quota di chi lavora tra le persone
    del gioco, rischio di perdere il lavoro, facilità di trovarlo, stabilizzazione dei contratti a termine */
 const OCC_ZONA={'Nord-ovest':{occ:.86,perdi:.85,trova:1.15,stab:1.1},'Nord-est':{occ:.88,perdi:.8,trova:1.2,stab:1.15},Centro:{occ:.82,perdi:1,trova:1,stab:1},
-  Sud:{occ:.62,perdi:1.4,trova:.55,stab:.75},Isole:{occ:.6,perdi:1.5,trova:.5,stab:.7}};
+  Sud:{occ:.62,perdi:1.4,trova:.55,stab:.75},Isole:{occ:.6,perdi:1.5,trova:.5,stab:.7},Estero:{occ:.85,perdi:.9,trova:1.1,stab:1}};
 const occZona=()=>OCC_ZONA[zonaMia()]||OCC_ZONA.Centro;
 /* costo della vita (spesa e bollette): al Sud i prezzi sono più bassi di circa il 10% (ISTAT, parità di potere d'acquisto regionali) */
 const COSTO_ZONA={'Nord-ovest':1.05,'Nord-est':1.04,Centro:1,Sud:.9,Isole:.91};
-const costoZona=()=>COSTO_ZONA[zonaMia()]||1;
-/* chi lascia il Sud per il Centro-Nord o l'estero tra i 18 e i 45 anni è emigrato; se torna giù, è tornato (da dopoTrasloco) */
+const costoZona=()=>{const z=zonaMia();if(z==='Estero'){const m=metaDi(S.citta);return m?m.v:1}return COSTO_ZONA[z]||1};
+/* chi lascia il Sud per il Centro-Nord, o chiunque lasci l'Italia, tra i 18 e i 45 anni è emigrato (zo = la zona da cui è partito:
+   i salvataggi vecchi non ce l'hanno e sono tutti del Sud); se torna nella zona di partenza, è tornato (da dopoTrasloco) */
+const emigratoTornato=(em,z)=>alSud(em.zo||'Sud')?alSud(z):z===em.zo;
 function marcaEmigrazione(da){
   if(!S||!da)return;const c0=cittaInfo(da),z1=zonaMia();
-  if(!S.fatti.emigrato&&alSud(c0.zona)&&!alSud(z1)&&S.eta>=18&&S.eta<=45)S.fatti.emigrato={t:S.t,da,prov:c0.s||null};
-  else if(S.fatti.emigrato&&!S.fatti.ritornato&&alSud(z1))S.fatti.ritornato=S.t;
+  if(!S.fatti.emigrato&&((alSud(c0.zona)&&!alSud(z1))||(z1==='Estero'&&c0.zona!=='Estero'))&&S.eta>=18&&S.eta<=45)S.fatti.emigrato={t:S.t,da,prov:c0.s||null,zo:c0.zona};
+  else if(S.fatti.emigrato&&!S.fatti.ritornato&&emigratoTornato(S.fatti.emigrato,z1))S.fatti.ritornato=S.t;
 }
 /* dopo almeno 5 anni lontano, la domanda: tornare giù? (e di nuovo, una volta, da pensionato) */
 function controllaRitorno(){
-  const em=S.fatti.emigrato;if(!em||S.fatti.ritornato||S.carcere>0||alSud(zonaMia()))return;
+  const em=S.fatti.emigrato;if(!em||S.fatti.ritornato||S.carcere>0||emigratoTornato(em,zonaMia()))return;
   const prima=!S.fatti.ritornoChiesto&&S.t-em.t>=60,pens=S.fatti.ritornoChiesto===1&&S.pensione&&!S.fatti.ritornoPens;
   if((prima||pens)&&chance(1/36)){if(pens)S.fatti.ritornoPens=1;S.fatti.ritornoChiesto=1;coda.push({e:EV.ita_ritorno,d:{}})}
 }

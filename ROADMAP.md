@@ -106,7 +106,7 @@ Misura: `python tools/persone.py 60` → amici stretti legati ad altre persone d
 - 5.3 **Lavoro vissuto**: colleghi e capo come persone persistenti, progetti, scelte di carriera (cambiare settore, mettersi in proprio, emigrare).
   - 5.3a ✅ capo e 2–3 colleghi come persone (`p.lav`, gruppo `lavoro:<id>:<da>`), eventi `col_` e `prg_` (ottobre 2026: vedi CLAUDE.md «Lavoro vissuto»).
   - 5.3b ✅ scelte di carriera `car_`: cambiare settore (RIASEC, corso di riqualificazione, tre proposte) e mettersi in proprio (partita IVA nello stesso mestiere o un'attività), anche con un collega (ottobre 2026).
-  - 5.3c emigrare: mete e regole per epoca, ritorno con `ita_ritorno` esteso.
+  - 5.3c ✅ emigrare `car_estero`: mete e regole per epoca (libera circolazione CEE dal 1968), stagionale svizzero con la famiglia a casa e ricongiungimento col permesso B, Londra con permesso (prima del 1973) e visto (dal 2021), miniere del Belgio e Marcinelle, ritorno con `ita_ritorno` esteso (ottobre 2026).
 - 5.4 **Eredità tra generazioni**: giocare come figlio con la casa, i debiti, i rancori e le collezioni dei genitori.
 
 ---

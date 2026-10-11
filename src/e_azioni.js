@@ -405,9 +405,9 @@ function apriVeicolo(id){
     ...(c.valore>0?[{l:'Vendi',sub:`Incassi circa ${eur(vend)}`,fx:()=>{soldi(vend);S.veicoli=S.veicoli.filter(x=>x!==c);return [`Vendi ${c.n.toLowerCase()} e incassi ${eur(vend)}.`,vend>=0?'':'b']}}]:[{l:'Restituisci',fx:()=>{S.veicoli=S.veicoli.filter(x=>x!==c);return ['Restituisci il veicolo.','']}}])]});
 }
 function trasferisciti(){
-  const ext=S.abil.lingue>=40||S.istr.cert.includes('Inglese B2');
-  showSheet({k:'Trasloco',t:'Dove vuoi vivere?',p:`Cerca tra tutti i comuni italiani. Se hai un lavoro dipendente lo perdi e le amicizie si allentano.${ext?' Puoi anche andare all\'estero.':' Per l\'estero ti servono le lingue (abilità 40 o inglese B2).'}`,chiudi:true,
-    cerca:{ph:'Cerca un comune: Lecce, Bra, Cefalù…',trova:q=>cercaLuoghi(q,ext).filter(c=>!(c.n===S.citta&&c.s===S.prov)).slice(0,30).map(c=>{const inf=cittaInfo(c.n,c.s);return {l:nomeLuogo(c.n,c.s),sub:`${inf.estero?'Estero':inf.reg}${c.p&&!inf.estero?` · ${nf(c.p)} abitanti`:''} · case ${eur(inf.mq*S.mondo.mattone)} al m²`,fx:()=>vaiA(c.n,c.s)}})}});
+  const ext=!S.fatti.estero&&S.eta<=62&&metaDisponibili().length>0;   // per l'estero ogni meta ha le sue regole (c12_estero.js)
+  showSheet({k:'Trasloco',t:'Dove vuoi vivere?',p:`Cerca tra tutti i comuni italiani. Se hai un lavoro dipendente lo perdi e le amicizie si allentano.${ext?' Puoi anche cercare lavoro all\'estero: ogni paese ha le sue regole.':''}`,chiudi:true,
+    cerca:{ph:'Cerca un comune: Lecce, Bra, Cefalù…',trova:q=>cercaLuoghi(q,ext).filter(c=>!(c.n===S.citta&&c.s===S.prov)).slice(0,30).map(c=>{const inf=cittaInfo(c.n,c.s);return {l:nomeLuogo(c.n,c.s),sub:`${inf.estero?'Estero':inf.reg}${c.p&&!inf.estero?` · ${nf(c.p)} abitanti`:''} · case ${eur(inf.mq*S.mondo.mattone)} al m²`,fx:()=>{if(inf.estero){coda.unshift({e:EV.car_estero,d:{x:{meta:metaDi(c.n).id}}});return null}return vaiA(c.n,c.s)}}})}});
 }
 /* Dopo un trasloco: chi vive già nella nuova città non è più «lontano»; chi resta nella vecchia lo diventa */
 function dopoTrasloco(da){
@@ -419,6 +419,7 @@ function dopoTrasloco(da){
     if(p.lontano&&p.dove===S.citta){p.lontano=false;p.dove=null;p.rapporto=clamp(p.rapporto+5);log(`Ora tu e ${p.nome} vivete nella stessa città.`,'g')}
     else if(!p.lontano&&da&&da!==S.citta){p.lontano=true;p.dove=da}
   }
+  if(S.fatti.estero&&!luogoC().estero)tornatoDaEstero();   // tornato dall'estero: la famiglia rimasta a casa si riunisce
 }
 function vaiA(n,s){
   const da=S.citta;

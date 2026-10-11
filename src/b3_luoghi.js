@@ -22,7 +22,7 @@ function luogo(){return cittaInfo(S.citta,S.prov)}
 function nomeLuogo(n,s){const est=CITTA_ESTERE.find(c=>c.n===n);if(est)return n;return s?`${n} (${s})`:n}
 function cercaLuoghi(q,esteri){
   q=q.trim().toLowerCase();const out=[];
-  if(esteri)for(const c of CITTA_ESTERE)if(!q||c.n.toLowerCase().includes(q))out.push({n:c.n,s:null,estero:true,p:1e6});
+  if(esteri)for(const m of metaDisponibili())if(!q||m.n.toLowerCase().includes(q))out.push({n:m.n,s:null,estero:true,p:1e6});
   if(!q){CITTA.forEach(c=>{const x=trovaComune(c.n);if(x)out.push(x)});return out}
   const L=comuni();const pre=[],mid=[];
   for(const c of L){const nl=c.n.toLowerCase();if(nl.startsWith(q))pre.push(c);else if(nl.includes(q))mid.push(c)}
