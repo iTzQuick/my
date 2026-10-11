@@ -435,8 +435,9 @@ ev({id:'gen_separazione',min:6,max:17,once:1,chi:['Padre'],cond:()=>vivi(['Madre
 ev({id:'gen_consiglio',min:14,max:45,chi:['Madre','Padre'],t:'Un consiglio',x:'{Tuo} {P} ti dà un consiglio non richiesto sulla tua vita.',c:[
   {l:'Ascolta',e:{rel:5,i:1},r:'Dopotutto non aveva tutti i torti.'},
   {l:'Rispondi male',e:{rel:-8},r:'Porta sbattuta.'}]});
-ev({id:'nonno_storie',min:5,max:30,chi:['Nonno'],t:'I racconti',x:'{Tuo} {P} ti racconta di quando era giovane.',c:[
-  {l:'Ascolta con attenzione',e:{rel:10,i:1,f:2},r:d=>`Storie ${S.anno-d.p.eta<1940?'di guerra, di emigrazione':S.anno-d.p.eta<1960?'del dopoguerra, della prima televisione':'degli anni Settanta, delle radio libere'} e di balli in piazza.`},
+ev({id:'nonno_storie',min:5,max:30,chi:['Nonno'],t:'I racconti',x:d=>{const p=d.p,t=testoStoria(p,'x');if(!t)return '{Tuo} {P} ti racconta di quando era giovane.';if(!nv(p,'raccontata'))return t;return '{Tuo} {P} ti racconta ancora la sua storia'+(nv(p,'domande')?'. Questa volta la sai a memoria, e lo lasci arrivare fino alla fine.':', e stavolta aggiunge un particolare: '+testoStoria(p,'q').replace(/^[^«]*/,''))},c:[
+  {l:'Ascolta con attenzione',fx:d=>{eff({rel:10,i:1,f:2},d);const p=d.p,ric=testoStoria(p,'ric');nvSet(p,'raccontata',(nv(p,'raccontata')||0)+1);if(ric)ricorda(p,ric,3);return [ric?`Ascolti fino in fondo, senza interromperl${gp(p,'o','a')}. Da quel giorno, quando lo guardi, vedi anche gli anni che si porta dietro.`:'Ascolti fino in fondo: storie di quando il mondo era un altro.','g']}},
+  {l:'Fai domande',cond:()=>S.eta>=9,fx:d=>{eff({rel:12,i:1,f:3},d);const p=d.p,q=testoStoria(p,'q'),ric=testoStoria(p,'ric');nvSet(p,'raccontata',(nv(p,'raccontata')||0)+1);nvSet(p,'domande');if(ric)ricorda(p,ric,3);cambiaPers('O',1);return [q||`${p.nome} è felice che qualcuno voglia sapere.`,'g']}},
   {l:'Guardi il telefono',cond:()=>S.eta>=12,e:{rel:-6},r:'{P} se ne accorge e si interrompe.'},
   {l:'Ti distrai a giocare',cond:()=>S.eta<12,e:{rel:-3},r:'{P} sorride e ti lascia giocare.'}]});
 ev({id:'nonno_soldi',min:6,max:18,chi:['Nonno'],t:'Di nascosto',x:'{Tuo} {P} ti allunga 50 € di nascosto: «Non dirlo a nessuno».',c:[

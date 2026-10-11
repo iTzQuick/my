@@ -464,6 +464,7 @@ function mortePersona(p){
   if((p.ruolo==='Madre'||p.ruolo==='Padre')&&!genitoriVivi())ereditaGenitori();
   if(S.circolo&&circInCorso(p))circoloLutto(p);
   if(S.testamento&&S.eta>=60&&(S.testamento.dest||[]).some(x=>x.pid===p.id))futuro(.4,'testamento_rivedi',{x:{nome:p.nome}});
+  if(p.ruolo==='Nonno')funeraleNonno(p);
   if(p.ruolo==='Nonno'&&chance(.4)){const q={umile:500,media:3000,agiata:15000}[S.classe]*r(1,4);soldi(q);log(`${cap(tuoR(p))} ti lascia ${eur(q)} in eredità.`,'g')}
   if(p.ruolo==='Coniuge'){log(`Rimani vedov${g('o','a')}.`,'b');avviaReversibilita(p)}
   if(conv&&S.casa.tipo==='affitto')log('Ora devi pagare l\'affitto da sol'+g('o','a')+'.','h');
