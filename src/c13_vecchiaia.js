@@ -124,6 +124,7 @@ function vecchiaiaAnno(){
   if(F.testEta===undefined)F.testEta=r(66,72);
   if(!S.testamento&&!F.testamento&&S.eta>=F.testEta&&S.eta<=85&&(F.testProv||0)<2&&S.eta-(F.testUltima===undefined?-99:F.testUltima)>=5&&vivi(['Coniuge','Figlio','Nipote','Fratello','Amico']).length)
     {F.testProv=(F.testProv||0)+1;F.testUltima=S.eta;coda.push({e:EV.testamento,d:{}})}
+  if(S.eta>=70&&S.salute<40&&(F.viaggiAnz||0)>=1&&!F.viaggiFine&&!coda.some(q=>q.e===EV.vi_stop)){F.viaggiFine=1;coda.push({e:EV.vi_stop,d:{}})}
   if(F.desEta===undefined)F.desEta=r(75,80);
   if(!F.desiderio&&!F.desiderioRif&&S.eta>=F.desEta&&S.eta<=88&&desideriPossibili().length&&!coda.some(q=>q.e===EV.ult_desiderio))coda.push({e:EV.ult_desiderio,d:{}});
 }
@@ -220,3 +221,8 @@ function vecchiaiaAnno2(){
   if(!circoloAttivo()&&libero&&S.t-(F.circT===undefined?-999:F.circT)>=60&&chance(vedovo()||S.bis.soc<55?.15:.07)&&!coda.some(q=>q.e===EV.circ_iscrizione)){F.circT=S.t;coda.push({e:EV.circ_iscrizione,d:{}})}
   if(!S.volont?.attivo&&libero&&S.karma>=40&&S.t-(F.volT===undefined?-999:F.volT)>=72&&chance(.06+.12*Math.max(0,pz('A')))&&!coda.some(q=>q.e===EV.vol_inizio)){F.volT=S.t;coda.push({e:EV.vol_inizio,d:{}})}
 }
+
+/* ---------- Viaggi da anziano (blocco 4) ---------- */
+/* si viaggia finché la salute regge (≥ 40); S.fatti.viaggiAnz conta i viaggi dopo i 62 anni; S.fatti.viaggiFine = il medico dice basta (vi_stop) */
+const viaggiabile=()=>S.salute>=40&&S.eta>=62&&!S.fatti.viaggiFine;
+const contaViaggio=()=>{S.fatti.viaggiAnz=(S.fatti.viaggiAnz||0)+1};

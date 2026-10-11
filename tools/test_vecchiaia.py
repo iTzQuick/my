@@ -119,7 +119,7 @@ JS_BASE = r'''async ()=>{
    if(S.fatti.nonnoStile!==stile)ko.push('nonnoStile '+stile+' -> '+S.fatti.nonnoStile);if(!S.fatti.primoNipote)ko.push('momento primoNipote')}
  const EVN=[['nip_dai_nonni',6],['nip_comunione',9],['nip_tema',9],['nip_segreto',15],['nip_diciotto',18],['nip_soldi',22],['nip_laurea',24],['nip_nozze',30],['nip_pronipote',32]];
  for(const [id,eta] of EVN){
-   for(let i=0;i<3;i++){nuova(75);S.soldi=P(50000);fi=pers('Figlio',45,'F',80);const n=nuovaPersona('Nipote',i===1?'M':'F',eta,null,{rapporto:75,gen:fi.id});n.id=n.id;
+   for(let i=0;i<3;i++){nuova(75);S.soldi=P(50000);fi=pers('Figlio',45,'F',80);const n=nuovaPersona('Nipote',i===1?'M':'F',eta,null,{rapporto:75,gen:fi.id});if(n.id%3===0)n.id++;
      const e=EV[id];if(!e){ko.push(id+' manca');break}
      if(!e.link){if(!(e.pc?e.pc(n):true))ko.push(id+': pc falso a '+eta+' anni (rapporto '+n.rapporto+')');if(S.eta<e.min||S.eta>e.max)ko.push(id+': età '+S.eta+' fuori da min/max')}
      const bs=apri(id,{p:n});if(bs.length<1){ko.push(id+': senza scelte');continue}
@@ -173,6 +173,28 @@ JS_BASE = r'''async ()=>{
  let c1=0,v1=0;for(let i=0;i<400;i++){nuova(66);S.lavoro=null;S.pensione=1000;S.karma=60;S.bis.soc=30;vecchiaiaAnno2();if(coda.some(x=>x.e===EV.circ_iscrizione))c1++;if(coda.some(x=>x.e===EV.vol_inizio))v1++}
  if(c1<30||v1<10)ko.push('proposte annuali: circolo '+c1+'/400, volontariato '+v1+'/400');
  nuova(50);S.lavoro=null;vecchiaiaAnno2();if(coda.length)ko.push('circolo a 50 anni');
+ // 8) viaggi da anziano
+ const sano=()=>{nuova(70);S.salute=80;S.soldi=P(60000)};
+ nuova(70);S.salute=80;if(!viaggiabile())ko.push('viaggiabile a 70 anni e 80 di salute');S.salute=30;if(viaggiabile())ko.push('viaggiabile con salute 30');S.salute=80;S.fatti.viaggiFine=1;if(viaggiabile())ko.push('viaggiabile dopo viaggiFine');
+ nuova(55);S.salute=90;if(viaggiabile())ko.push('viaggiabile a 55 anni');
+ prova('vi_gruppo',()=>{sano();pers('Amico',70,'M',80)});prova('vi_gruppo',sano);
+ prova('vi_crociera',()=>{sano();pers('Partner',68,'F',80);S.relazioni[0].conv=true;S.relazioni[0].ruolo='Coniuge';pers('Nipote',12,'F',80)});
+ prova('vi_crociera',sano);
+ if(annoEvento(EV.vi_crociera)<1980)ko.push('crociera senza dal:1980');
+ prova('vi_radici',()=>{sano();S.fatti.cittaNascita='Bari';S.fatti.provNascita='BA';S.citta='Roma';pers('Figlio',45,'F')});
+ prova('vi_radici',()=>{sano();S.fatti.esteroStorico={id:'colonia',n:'Colonia',t:0,a:100};pers('Nipote',12,'F',80)});
+ sano();S.fatti.cittaNascita='Bari';S.citta='Roma';if(!EV.vi_radici.cond())ko.push('vi_radici dovrebbe essere possibile');
+ S.fatti.desiderio={id:'luogo',testo:'x',t:0};if(EV.vi_radici.cond())ko.push('vi_radici con il desiderio «luogo» già scelto');
+ sano();S.fatti.cittaNascita=S.citta;if(EV.vi_radici.cond())ko.push('vi_radici senza nessuna radice altrove');
+ {let k=0;for(let i=0;i<3;i++){sano();fi=pers('Figlio',45,'F',80);const n=nuovaPersona('Nipote','F',15,null,{rapporto:75,gen:fi.id});const bs=apri('vi_nipote',{p:n});if(bs.length!==3)ko.push('vi_nipote: '+bs.length+' scelte');if(bs[i])bs[i].click();chiudi();if(!nv(n,'viag'))ko.push('vi_nipote non segna p.nv');if(i<2&&!S.fatti.viaggiAnz)ko.push('vi_nipote non conta il viaggio')}
+  sano();S.fatti.nonnoStile='distante';fi=pers('Figlio',45,'F',80);const nd=nuovaPersona('Nipote','F',15,null,{rapporto:75,gen:fi.id});if(EV.vi_nipote.pc(nd)||(EV.vi_nipote.cond&&EV.vi_nipote.cond({})&&EV.vi_nipote.pc(nd)))ko.push('vi_nipote con un nonno distante')}
+ for(let i=0;i<3;i++){sano();const c=pers('Coniuge',72,'F',80);c.nozze=S.t-600;if(!EV.vi_nozze_oro.pc(c))ko.push('vi_nozze_oro pc');const bs=apri('vi_nozze_oro',{p:c});if(bs.length!==3)ko.push('vi_nozze_oro: '+bs.length);if(bs[i])bs[i].click();chiudi()}
+ sano();{const c=pers('Coniuge',72,'F',80);c.nozze=S.t-590;if(EV.vi_nozze_oro.pc(c))ko.push('nozze d\'oro a 49 anni e 10 mesi')}
+ prova('vi_stop',()=>{sano();S.fatti.viaggiAnz=3});
+ // l'ultimo viaggio: una volta, solo se hai viaggiato
+ nuova(72);S.salute=30;S.fatti.viaggiAnz=2;S.fatti.testEta=99;S.fatti.desEta=99;coda.length=0;vecchiaiaAnno();if(!coda.some(x=>x.e===EV.vi_stop))ko.push('vi_stop non compare');
+ coda.length=0;vecchiaiaAnno();if(coda.length)ko.push('vi_stop compare due volte');
+ nuova(72);S.salute=30;S.fatti.testEta=99;S.fatti.desEta=99;coda.length=0;vecchiaiaAnno();if(coda.some(x=>x.e===EV.vi_stop))ko.push('vi_stop senza viaggi');
  return {errs,ko};
 }'''
 JS_VITE = r'''(N)=>{
@@ -188,7 +210,7 @@ JS_VITE = r'''(N)=>{
      if(S.testamento)test=1;if(S.fatti.desiderio)des=S.fatti.desiderio.fatto?'fatto':'no';
      if(S.eta>=70){const q=quoteSuccessione();if(q.length&&Math.abs(q.reduce((s,y)=>s+y[1],0)-1)>1e-6)ko.push('quote non sommano a 1: '+q.reduce((s,y)=>s+y[1],0))}
      if(typeof INV!=='undefined'){const i=INV.controlla();if(i.length)ko.push(i.slice(0,2).map(z=>z.join(': ')).join(' | '))}}
-   const nips=S.relazioni.filter(p=>p.ruolo==='Nipote');ris.push({eta:S.eta,test,des,rif:S.fatti.desiderioRif?1:0,nip:nips.length,pas:nips.reduce((a,p)=>a+Object.keys(p.nv||{}).length,0),stile:S.fatti.nonnoStile||'',circ:S.circolo?1:0,circAnni:S.circolo?Math.round((S.t-S.circolo.dal)/12):0,vol:S.volont?1:0,volMesi:S.fatti.volMesi||0,sol:S.fatti.soloV||0});
+   const nips=S.relazioni.filter(p=>p.ruolo==='Nipote');ris.push({eta:S.eta,test,des,rif:S.fatti.desiderioRif?1:0,nip:nips.length,pas:nips.reduce((a,p)=>a+Object.keys(p.nv||{}).length,0),stile:S.fatti.nonnoStile||'',circ:S.circolo?1:0,circAnni:S.circolo?Math.round((S.t-S.circolo.dal)/12):0,vol:S.volont?1:0,volMesi:S.fatti.volMesi||0,sol:S.fatti.soloV||0,viag:S.fatti.viaggiAnz||0,stop:S.fatti.viaggiFine?1:0});
   }catch(e){errs.push(e.message+' | '+(e.stack||'').split('\n').slice(0,3).join(' / '))}
  }
  return {errs,ko:[...new Set(ko)].slice(0,6),ris};
@@ -214,6 +236,9 @@ if V:
 if V:
     ol = [x for x in V if x['eta'] >= 75]
     print(f"oltre i 75 anni ({len(ol)} vite): circolo {100*sum(x['circ'] for x in ol)/max(1,len(ol)):.0f}% · volontariato {100*sum(x['vol'] for x in ol)/max(1,len(ol)):.0f}% · solitudine ripetuta (media {sum(x['sol'] for x in ol)/max(1,len(ol)):.1f}, massimo {max([x['sol'] for x in ol] or [0])})")
+if V:
+    ol = [x for x in V if x['eta'] >= 75]
+    print(f"viaggi da anziano ({len(ol)} vite oltre i 75): almeno uno {100*sum(1 for x in ol if x['viag'])/max(1,len(ol)):.0f}% · in media {sum(x['viag'] for x in ol)/max(1,len(ol)):.1f} · massimo {max([x['viag'] for x in ol] or [0])} · «l'ultimo viaggio» {sum(x['stop'] for x in ol)}")
 print('violazioni nelle vite:', v['ko'] or 'nessuna ✓')
 print('errori JS:', (r['errs'] + pe + v['errs']) or 'nessuno')
 sys.exit(1 if r['ko'] or v['ko'] or r['errs'] or pe or v['errs'] else 0)

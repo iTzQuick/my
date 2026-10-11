@@ -122,7 +122,7 @@ ev({id:'ad_nonni_sitter',min:50,max:85,rip:8,chi:['Figlio'],pc:p=>vivi(['Nipote'
   {l:'Un pomeriggio sì, gli altri no',e:{rel:-2},pers:{C:2},r:'Metti dei paletti. {P} capisce, più o meno.'},
   {l:'No: hai già dato',e:{rel:-10},pers:{A:-3},r:'«Ho cresciuto te, adesso tocca a te.» Silenzio al telefono.'}]});
 ev({id:'ad_viaggio_tardi',min:65,max:85,once:1,cond:()=>S.soldi>=P(3500)&&S.salute>45,t:'Il viaggio rimandato',x:d=>{d.dove=d.dove||pick(['il Giappone','la Patagonia','l\'Islanda','New York','l\'India','il Canada']);return `Da cinquant'anni dici che un giorno vedrai ${d.dove}. Le gambe ancora reggono.`},c:[
-  {l:'Prenoti e parti',sub:()=>'Circa '+eur(P(3500)),fx:()=>{soldi(-P(3500));segnaVita('viaggio')},e:{f:12},pers:{O:4,E:1},r:'Un viaggio lungo e faticoso, e bellissimo. Torni con mille foto e una ginocchiera.'},
+  {l:'Prenoti e parti',sub:()=>'Circa '+eur(P(3500)),fx:()=>{soldi(-P(3500));segnaVita('viaggio');contaViaggio()},e:{f:12},pers:{O:4,E:1},r:'Un viaggio lungo e faticoso, e bellissimo. Torni con mille foto e una ginocchiera.'},
   {l:'Non è più cosa per te',e:{f:-2},pers:{O:-2},r:'Lo guardi in un documentario. È quasi la stessa cosa, ti dici.'}]});
 ev({id:'ad_apprendista',min:50,max:80,once:1,t:'L\'apprendista',x:'Un ragazzo del quartiere ti chiede di insegnargli quello che sai fare meglio.',c:[
   {l:'Gli dedichi un pomeriggio a settimana',e:{f:6,k:3},fx:()=>{if(vivi(['Amico']).length<12){const a=nuovaPersona('Amico','M',r(16,22),null,{rapporto:r(55,70)});ricorda(a,'Gli hai insegnato il mestiere')}},pers:{A:3,C:1,E:1},r:'All\'inizio è un disastro. Un anno dopo è più bravo di te, e te lo dice pure.'},

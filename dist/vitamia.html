@@ -4629,6 +4629,7 @@ function vecchiaiaAnno(){
   if(F.testEta===undefined)F.testEta=r(66,72);
   if(!S.testamento&&!F.testamento&&S.eta>=F.testEta&&S.eta<=85&&(F.testProv||0)<2&&S.eta-(F.testUltima===undefined?-99:F.testUltima)>=5&&vivi(['Coniuge','Figlio','Nipote','Fratello','Amico']).length)
     {F.testProv=(F.testProv||0)+1;F.testUltima=S.eta;coda.push({e:EV.testamento,d:{}})}
+  if(S.eta>=70&&S.salute<40&&(F.viaggiAnz||0)>=1&&!F.viaggiFine&&!coda.some(q=>q.e===EV.vi_stop)){F.viaggiFine=1;coda.push({e:EV.vi_stop,d:{}})}
   if(F.desEta===undefined)F.desEta=r(75,80);
   if(!F.desiderio&&!F.desiderioRif&&S.eta>=F.desEta&&S.eta<=88&&desideriPossibili().length&&!coda.some(q=>q.e===EV.ult_desiderio))coda.push({e:EV.ult_desiderio,d:{}});
 }
@@ -4725,6 +4726,11 @@ function vecchiaiaAnno2(){
   if(!circoloAttivo()&&libero&&S.t-(F.circT===undefined?-999:F.circT)>=60&&chance(vedovo()||S.bis.soc<55?.15:.07)&&!coda.some(q=>q.e===EV.circ_iscrizione)){F.circT=S.t;coda.push({e:EV.circ_iscrizione,d:{}})}
   if(!S.volont?.attivo&&libero&&S.karma>=40&&S.t-(F.volT===undefined?-999:F.volT)>=72&&chance(.06+.12*Math.max(0,pz('A')))&&!coda.some(q=>q.e===EV.vol_inizio)){F.volT=S.t;coda.push({e:EV.vol_inizio,d:{}})}
 }
+
+/* ---------- Viaggi da anziano (blocco 4) ---------- */
+/* si viaggia finché la salute regge (≥ 40); S.fatti.viaggiAnz conta i viaggi dopo i 62 anni; S.fatti.viaggiFine = il medico dice basta (vi_stop) */
+const viaggiabile=()=>S.salute>=40&&S.eta>=62&&!S.fatti.viaggiFine;
+const contaViaggio=()=>{S.fatti.viaggiAnz=(S.fatti.viaggiAnz||0)+1};
 
 /* ================= EVENTI =================
  Campi evento: id, min, max, w (peso), once, rip (anni prima di ripetersi), cond(d), chi (ruoli persona), pc(p), link (solo come conseguenza), prig (in carcere), auto (conseguenza silenziosa)
@@ -6540,7 +6546,7 @@ ev({id:'ad_nonni_sitter',min:50,max:85,rip:8,chi:['Figlio'],pc:p=>vivi(['Nipote'
   {l:'Un pomeriggio sì, gli altri no',e:{rel:-2},pers:{C:2},r:'Metti dei paletti. {P} capisce, più o meno.'},
   {l:'No: hai già dato',e:{rel:-10},pers:{A:-3},r:'«Ho cresciuto te, adesso tocca a te.» Silenzio al telefono.'}]});
 ev({id:'ad_viaggio_tardi',min:65,max:85,once:1,cond:()=>S.soldi>=P(3500)&&S.salute>45,t:'Il viaggio rimandato',x:d=>{d.dove=d.dove||pick(['il Giappone','la Patagonia','l\'Islanda','New York','l\'India','il Canada']);return `Da cinquant'anni dici che un giorno vedrai ${d.dove}. Le gambe ancora reggono.`},c:[
-  {l:'Prenoti e parti',sub:()=>'Circa '+eur(P(3500)),fx:()=>{soldi(-P(3500));segnaVita('viaggio')},e:{f:12},pers:{O:4,E:1},r:'Un viaggio lungo e faticoso, e bellissimo. Torni con mille foto e una ginocchiera.'},
+  {l:'Prenoti e parti',sub:()=>'Circa '+eur(P(3500)),fx:()=>{soldi(-P(3500));segnaVita('viaggio');contaViaggio()},e:{f:12},pers:{O:4,E:1},r:'Un viaggio lungo e faticoso, e bellissimo. Torni con mille foto e una ginocchiera.'},
   {l:'Non è più cosa per te',e:{f:-2},pers:{O:-2},r:'Lo guardi in un documentario. È quasi la stessa cosa, ti dici.'}]});
 ev({id:'ad_apprendista',min:50,max:80,once:1,t:'L\'apprendista',x:'Un ragazzo del quartiere ti chiede di insegnargli quello che sai fare meglio.',c:[
   {l:'Gli dedichi un pomeriggio a settimana',e:{f:6,k:3},fx:()=>{if(vivi(['Amico']).length<12){const a=nuovaPersona('Amico','M',r(16,22),null,{rapporto:r(55,70)});ricorda(a,'Gli hai insegnato il mestiere')}},pers:{A:3,C:1,E:1},r:'All\'inizio è un disastro. Un anno dopo è più bravo di te, e te lo dice pure.'},
@@ -8590,6 +8596,37 @@ ev({id:'sol_anniversario',link:1,t:'Una data',x:d=>`Sono passati ${d.x.anni} ${d
   {l:'Chiami i figli, state insieme',cond:()=>vivi(['Figlio']).length>0,fx:()=>{vivi(['Figlio']).forEach(p=>relD(p,6));S.bis.soc=clamp(S.bis.soc+10)},e:{f:3},pers:{A:2},r:'Una messa, poi un pranzo. Raccontate tutti, a turno, qualcosa che non sapevate.'},
   {l:'Resti a casa con le sue foto',fx:()=>{pesa(3,2)},e:{f:-3},pers:{N:2},r:'Le guardi tutte, due volte. Alla fine non sai se ti ha fatto bene.'}]});
 
+/* ---------- Viaggi da anziano (blocco 4): gite, crociere, le radici, un viaggio con il nipote, le nozze d'oro, l'ultimo viaggio ---------- */
+ev({id:'vi_gruppo',min:62,max:92,w:3,rip:3,cond:viaggiabile,t:'La gita',x:d=>{d.x=d.x||{dove:pick(['Assisi e Loreto','le Dolomiti','i laghi del Nord','la Costiera Amalfitana','Lourdes','Venezia e le isole','la Sicilia barocca'])};return `${circoloAttivo()?'Al circolo':'In parrocchia'} organizzano una gita in pullman di tre giorni: ${d.x.dove}. Si parte alle sei, ci si siede sempre negli stessi posti e si canta, prima o poi, qualcosa che non si ricorda per intero.`},c:[
+  {l:'Parti',sub:()=>eur(P(450)),costo:()=>P(450),fx:d=>{contaViaggio();S.bis.soc=clamp(S.bis.soc+15);if(chance(.5))nuovaPersona('Conoscente',pick(['M','F']),r(60,80),null,{rapporto:r(30,50),dove:'viaggio',lontano:true});return [`${d.x.dove}: ${pick(['le gambe non reggono come una volta, ma la compagnia sì','il pullman ha l\'aria condizionata al massimo e nessuno ha il coraggio di dirlo','l\'albergo ha il letto più duro della tua vita e la colazione più buona'])}. Torni con le foto e un paio di numeri di telefono nuovi.`,'g']},e:{f:8},pers:{E:1}},
+  {l:'Ci vai con un amico',cond:()=>vivi(['Amico']).length>0,sub:()=>eur(P(450)),costo:()=>P(450),fx:d=>{contaViaggio();const a=vivi(['Amico']).sort((x,y)=>y.rapporto-x.rapporto)[0];relD(a,10);ricorda(a,'Siete andati in gita insieme',2);S.bis.soc=clamp(S.bis.soc+12);return [`Con ${a.nome} ti diverti il doppio, e vi prendete in giro per tutto il viaggio. ${d.x.dove} passa in secondo piano.`,'g']},e:{f:9}},
+  {l:'Preferisci restare a casa',fx:()=>{S.fatti.viaggiRif=(S.fatti.viaggiRif||0)+1},e:{f:-1},pers:{O:-1},r:'Ti dici che le gite non ti piacciono più. In pullman ti piacevano, una volta.'}]});
+
+ev({id:'vi_crociera',min:62,max:90,w:2,rip:6,dal:1980,cond:()=>viaggiabile()&&S.soldi>=P(3000),t:'Una crociera',x:'L\'agenzia ti manda l\'opuscolo: sette notti nel Mediterraneo, tutto compreso, con il buffet che a un certo punto sembra una minaccia.',c:[
+  {l:'Ci vai con il tuo partner',cond:()=>!!partnerAttuale(),sub:()=>eur(P(3400)),costo:()=>P(3400),fx:()=>{contaViaggio();segnaVita('viaggio');const pa=partnerAttuale();pa.rapporto=clamp(pa.rapporto+10);ricorda(pa,'Una crociera insieme, a quest\'età',3);return [`Cabina con il balcone, tramonti in mezzo al mare e il ballo del sabato sera. ${pa.nome} ti dice che è la vacanza più bella da vent'anni.`,'g']},e:{f:12},pers:{O:1}},
+  {l:'Da sol{o}, in cabina singola',sub:()=>eur(P(2800)),costo:()=>P(2800),fx:()=>{contaViaggio();segnaVita('viaggio');S.bis.soc=clamp(S.bis.soc+14);return ['Al tavolo con altri tre, ognuno con la sua storia e la sua vedovanza. Alla fine ci scambiamo gli indirizzi, e ogni tanto una cartolina arriva davvero.','g']},e:{f:9},pers:{E:2}},
+  {l:'Con i nipoti',cond:()=>vivi(['Nipote']).some(n=>n.eta>=8&&n.eta<=22),sub:()=>eur(P(5200)),costo:()=>P(5200),fx:()=>{contaViaggio();const n=vivi(['Nipote']).filter(x=>x.eta>=8&&x.eta<=22);n.forEach(x=>{relD(x,10);ricorda(x,'Una crociera con il nonno',3)});return ['Passano tutto il tempo allo scivolo d\'acqua e a mangiare gelati. Quando tornano a casa raccontano che sei il più simpatico della nave.','g']},e:{f:11},pers:{A:2}},
+  {l:'Non fa per te',fx:()=>{S.fatti.viaggiRif=(S.fatti.viaggiRif||0)+1},r:'Una città galleggiante ti mette in agitazione. Strappi l\'opuscolo.'}]});
+
+ev({id:'vi_radici',min:62,max:90,w:3,once:1,cond:()=>viaggiabile()&&(!!S.fatti.esteroStorico||(!!S.fatti.cittaNascita&&S.fatti.cittaNascita!==S.citta))&&!(S.fatti.desiderio&&S.fatti.desiderio.id==='luogo'),t:'Le tue radici',x:()=>{const E=S.fatti.esteroStorico;return E?`Sono passati decenni da quando vivevi a ${E.n}. Ogni tanto ne parli ancora, e ogni volta ti accorgi che la città è nei tuoi racconti più grande di com'era.`:`Non rivedi ${luogoNascita()} da una vita. Ti sono rimasti i nomi delle strade e l'odore del forno, e ti chiedi quanto ne sia rimasto.`},c:[
+  {l:'Parti',sub:()=>eur(P(700)),costo:()=>P(700),fx:()=>{contaViaggio();const E=S.fatti.esteroStorico,luogo=E?E.n:luogoNascita();vivi(['Amico','Cugino','Fratello']).filter(p=>p.lontano).forEach(p=>relD(p,3));mod('felicita',12);return [`Torni a ${luogo}. ${pick(['La strada della tua infanzia è asfaltata e ha un\'altra gente','Il vecchio bar non c\'è più, ma qualcuno ricorda ancora il tuo nome','Una porta che conoscevi è rimasta uguale, e con quella dietro tutto il resto'])}. Resti tre giorni in più del previsto.`,'g']},pers:{O:2}},
+  {l:'Ci vai con un figlio o un nipote',cond:()=>vivi(['Figlio','Nipote']).length>0,sub:()=>eur(P(1000)),costo:()=>P(1000),fx:()=>{contaViaggio();const p=pick(vivi(['Figlio','Nipote']));relD(p,10);ricorda(p,'Ti ha portato a rivedere i posti della sua infanzia',3);mod('felicita',13);return [`${p.nome} ti accompagna e ti fa da guida a rovescio: sei tu a raccontargli i posti. Per una volta, tocca a lui ascoltare.`,'g']},pers:{A:1,O:1}},
+  {l:'Preferisci ricordarlo com\'era',fx:()=>{S.fatti.viaggiRif=(S.fatti.viaggiRif||0)+1},e:{f:-1},pers:{N:1},r:'Alcuni posti è meglio tenerli dentro, dove nessuno li cambia.'}]});
+
+ev({id:'vi_nipote',min:60,max:100,w:3,rip:1,chi:['Nipote'],cond:viaggiabile,pc:p=>p.eta>=10&&p.eta<=22&&!nv(p,'viag')&&p.rapporto>=55&&stileNonno()!=='distante',t:'Un viaggio con te',x:d=>{nvSet(d.p,'viag');return '{P} ti guarda come se avesse preparato il discorso: «Mi porti da qualche parte? In un posto che per te è importante?»'},c:[
+  {l:'Un weekend in treno',sub:()=>eur(P(350)),costo:()=>P(350),fx:d=>{contaViaggio();relD(d.p,12);ricorda(d.p,'Un weekend in treno con te',3)},e:{f:7},pers:{A:1},r:'Un posto piccolo, tre cose da vedere e una trattoria. Tornate con gli stessi ricordi e storie diverse da raccontare.'},
+  {l:'Un viaggio lungo, solo voi due',sub:()=>eur(P(1200)),costo:()=>P(1200),fx:d=>{contaViaggio();segnaVita('viaggio');relD(d.p,16);ricorda(d.p,'Un viaggio solo noi due, e non l\'ho più dimenticato',3);S.bis.energia=clamp(S.bis.energia-8)},e:{f:11},pers:{O:2,A:1},r:'Vi stancate, vi perdete due volte e vi capite sempre. Alla fine ti dice: «Il prossimo lo scelgo io».'},
+  {l:'«Magari quando sarai più grande»',fx:d=>{relD(d.p,-4);ricorda(d.p,'Hai rimandato il viaggio che ti chiedeva',-1)},pers:{O:-1},r:'Lui annuisce, ma capisce che «più grande» è lontano.'}]});
+
+ev({id:'vi_nozze_oro',min:70,max:100,w:6,once:1,chi:['Coniuge'],pc:p=>p.nozze!==undefined&&S.t-p.nozze>=600,t:'Cinquant\'anni insieme',x:'Cinquant\'anni di matrimonio. I figli, a un certo punto, hanno cominciato a sussurrare in cucina, e ora ti dicono: «Abbiamo pensato a una cosa».',c:[
+  {l:'Un viaggio a due, dove siete andati la prima volta',sub:()=>eur(P(1800)),costo:()=>P(1800),cond:()=>viaggiabile(),fx:d=>{contaViaggio();segnaVita('viaggio');d.p.intim=clamp((d.p.intim||50)+8);d.p.imp=clamp((d.p.imp||50)+8);ricorda(d.p,'Le nozze d\'oro, nello stesso posto della prima volta',3);return [`Lo stesso albergo, o quel che ne resta. Camminate lenti, mano nella mano, a guardare ciò che avete già visto e che sembra nuovo.`,'g']},e:{f:14},pers:{A:1}},
+  {l:'Una festa con tutta la famiglia',sub:()=>eur(P(1500)),costo:()=>P(1500),fx:d=>{famigliaViva().forEach(p=>{p.rapporto=clamp(p.rapporto+6);ricorda(p,'Alle nozze d\'oro, tutti insieme',3)});d.p.imp=clamp((d.p.imp||50)+6);return ['Una torta a quattro piani e tre generazioni a tavola. Il discorso lo fai in piedi, senza foglietto, e per una volta non ti tremano le mani.','g']},e:{f:12},pers:{E:2}},
+  {l:'Una cena in due, e basta',fx:d=>{d.p.intim=clamp((d.p.intim||50)+5);d.p.imp=clamp((d.p.imp||50)+5)},e:{f:8},r:'Una candela, il vostro piatto, il vecchio disco. Cinquant\'anni e non avete più nulla da dimostrare.'}]});
+ev({id:'vi_stop',link:1,t:'L\'ultimo viaggio',x:()=>`Il medico è stato chiaro: niente più viaggi lunghi. Sul tavolo ci sono le foto di ${S.fatti.viaggiAnz===1?'quel viaggio':'questi '+S.fatti.viaggiAnz+' viaggi'}, in una scatola di scarpe.`,c:[
+  {l:'Le riguardi una per una',e:{f:3},pers:{N:-1},r:'Hai viaggiato fin dove potevi. A pensarci, è un buon conto.'},
+  {l:'Le dai ai nipoti',cond:()=>vivi(['Nipote']).length>0,fx:()=>{vivi(['Nipote']).forEach(p=>{relD(p,5);ricorda(p,'Ti ha dato le foto dei suoi viaggi, con i nomi sul retro',2)})},e:{f:4},pers:{A:2},r:'Sul retro hai scritto data e luogo. Lo faceva anche tua madre, e non lo sapevi.'},
+  {l:'Ti arrabbi con il medico',e:{f:-3},pers:{N:2},r:'Dici che ne sa meno di te, e poi per tre giorni non mangi la minestra.'}]});
+
 /* ================= AZIONI ================= */
 function fatto(k){return !!S.azioni[k]}
 function cdAzione(k){
@@ -9294,7 +9331,7 @@ ev({id:'amico_confessa',min:15,max:70,w:.6,rip:6,chi:['Amico'],pc:p=>p.rapporto>
 ev({id:'borsa_grazie',link:1,t:'Una lettera',x:()=>`Ti arriva una lettera scritta a mano: «Ho potuto studiare grazie alla sua borsa di studio. Oggi sono ${pick(['medico','ingegnere','ricercatrice','insegnante','veterinaria'])}. Volevo che lo sapesse.»`,auto:{e:{f:8,k:2},r:'Una lettera scritta a mano: chi ha studiato grazie alla tua borsa di studio ti ringrazia. La rileggi tre volte.',k:'g'}});
 
 /* ================= SALVATAGGI: browser, file, codice, online ================= */
-const VERSIONE='398da008';   // build.py la sostituisce con l'impronta dei sorgenti
+const VERSIONE='eb1a76cc';   // build.py la sostituisce con l'impronta dei sorgenti
 const SALVA={locale:false,db:null,uid:null,dl:null,cloud:null,ultimoCloud:0,sporco:false,timer:null};
 try{localStorage.setItem('vm_test','1');SALVA.locale=localStorage.getItem('vm_test')==='1';localStorage.removeItem('vm_test')}catch(e){SALVA.locale=false}
 
